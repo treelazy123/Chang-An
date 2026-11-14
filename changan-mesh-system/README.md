@@ -28,6 +28,5 @@ uv sync --locked
 uv run --locked python tools/run_tests.py
 ```
 
-启动与迁移交接见 [运行说明](docs/bringup/host.md)，代码边界见 [仓库结构](docs/architecture/repository.md)，本次变更见 [迁移记录](docs/acceptance/repository-migration-2026-11-14.md)。旧的 `tools/ugv_service.py`、`tools/serial_tcp_bridge.py`、`tools/mqtt_terminal.py` 命令继续可用。
+启动与迁移交接见 [运行说明](docs/bringup/host.md)，代码边界见 [仓库结构](docs/architecture/repository.md)。
 
-本次未运行固件编译或烧录，也未切换正在运行的硬件服务。Micro-001 曾出现的无操作重启仍需单独排查。

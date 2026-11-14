@@ -1,0 +1,8 @@
+[project]
+name = "changan-car-terminal"
+version = "0.2.0"
+description = "Independent car operator terminal for the UGV MQTT service"
+requires-python = ">=3.11,<3.13"
+dependencies = ["pyserial>=3.5,<4", "paho-mqtt==2.1.0"]
+[tool.uv]
+package = false
