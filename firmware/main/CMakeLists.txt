@@ -1,0 +1,10 @@
+set(role root)
+if(CONFIG_APP_ROLE_UGV)
+    set(role ugv)
+elseif(CONFIG_APP_ROLE_UAV)
+    set(role uav)
+elseif(CONFIG_APP_ROLE_MICRO_UAV)
+    set(role micro_uav)
+endif()
+idf_component_register(SRCS "app_main.c" "../apps/${role}/app.c" INCLUDE_DIRS "."
+    REQUIRES node_role network_mesh_lite transport_tcp mqtt_serial serial_gateway service_discovery freertos)

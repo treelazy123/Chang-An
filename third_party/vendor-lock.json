@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "idf_baseline": "6.1.0",
+  "migration": "ESP-IDF 6.1 / ESP32-C6 port of changan-mesh-lab; vendored dependencies; build-local NAPT extensions.",
+  "components": [
+    {
+      "component": "cmake_utilities",
+      "directory": "third_party/cmake_utilities",
+      "version": "0.5.3",
+      "registry_component_hash": "351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f",
+      "original_tree_sha256": "e2817ee665ec2043222600e91e40abda6da43b790ebb842304c0fcf327bb7c8f",
+      "original_file_count": 36
+    },
+    {
+      "component": "esp_modem",
+      "directory": "third_party/esp_modem",
+      "version": "1.4.3",
+      "registry_component_hash": "71c9f54fc512c60d93ea9763377ceb1d5b575a4616f3f3344440b97e2a38da29",
+      "original_tree_sha256": "94c13eeb3ee42b436a389b162441881e26f65574d04a51f18da6280cca476288",
+      "original_file_count": 216
+    },
+    {
+      "component": "iot_bridge",
+      "directory": "third_party/iot_bridge",
+      "version": "1.0.1",
+      "registry_component_hash": "3e76bec97bb82596162249f30951f30daf67ddc5a6d1a625eadcbdd9528a8fb6",
+      "original_tree_sha256": "6098c740f1ac7ec431ee8f87f69c65ae0ff79c3ca9557eec5ed6298ad3884864",
+      "original_file_count": 118
+    },
+    {
+      "component": "mesh_lite",
+      "directory": "third_party/mesh_lite",
+      "version": "1.0.2",
+      "registry_component_hash": "3a19dbc45a795d9625ac8e3bc54189c51c36a72b5c12ba3ba8081ed71a0bbfac",
+      "original_tree_sha256": "1207c5bd9733b304f299ed4f4ffa55e55f059e5e946260ffc31a21e7e614acc8",
+      "original_file_count": 145
+    },
+    {
+      "component": "qrcode",
+      "directory": "third_party/qrcode",
+      "version": "0.1.0~2",
+      "registry_component_hash": "3b493771bc5d6ad30cbf87c25bf784aada8a08c941504355b55d6b75518ed7bc",
+      "original_tree_sha256": "9d5de77b1c3405aba194977143806149b05b3595f9b8fc401856386ced692df2",
+      "original_file_count": 11
+    },
+    {
+      "component": "cjson",
+      "directory": "third_party/cjson",
+      "version": "1.7.19",
+      "source_url": "https://github.com/DaveGamble/cJSON/tree/v1.7.19",
+      "files_sha256": {
+        "cJSON.c": "298581a04a36c0165da4b0aade235c23088cb2faa58651d720ea2f3706ed0b0d",
+        "cJSON.h": "25b0145150d500498e4d209cec69c18c42cf818bffcc54690be3b895a2a16dee",
+        "LICENSE": "a36dda207c36db5818729c54e7ad4e8b0c6fba847491ba64f372c1a2037b6d5c"
+      }
+    },
+    {
+      "component": "mqtt",
+      "directory": "third_party/mqtt",
+      "version": "1.1.0",
+      "url": "https://codeload.github.com/espressif/esp-mqtt/zip/refs/tags/v1.1.0",
+      "archive_sha256": "294f33a6bbf4863b3450f8a3731e736dfa799c0f889ccb14a6f38e168fe86b63",
+      "license": "Apache-2.0",
+      "note": "Official tag archive; examples/test/.github excluded; no library source patches."
+    }
+  ],
+  "local_changes": {
+    "mesh_lite/CMakeLists.txt": "Local cjson and bridge dependencies; IDF 6.1 adapter; legacy provisioning explicitly unsupported.",
+    "mesh_lite/src/esp_mesh_lite_idf61.c": "Provide old netif iterator ABI through TCP/IP execution; requires stable interface lifetime.",
+    "iot_bridge/CMakeLists.txt": "Explicit modern dependencies; optional modem; no SDK patch application.",
+    "iot_bridge/src/bridge_wifi.c": "WIFI_IF constants and bounded SoftAP SSID read.",
+    "iot_bridge/src/customer_hook.c": "Serialize NAPT clear in TCP/IP context.",
+    "iot_bridge/include/esp_bridge_internal.h": "Route NAPT clear calls through the serialized wrapper.",
+    "mesh_lite/src/esp_mesh_lite.c": "Use IDF 6.1 IP_EVENT_ASSIGNED_IP_TO_CLIENT instead of deprecated compatibility enum; report callback unchanged.",
+    "iot_bridge/src/esp_eth_netif_glue_wrap.c": "Use IDF 6.1 assigned-IP event and event-data type, including handler registration and unregistration.",
+    "../firmware/cmake/mesh_lite_idf61.cmake": "Generate and compile build-local NAPT compatibility source."
+  },
+  "idf_source_baseline": "5.5.5"
+}

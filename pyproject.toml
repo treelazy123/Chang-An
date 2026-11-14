@@ -1,7 +1,7 @@
 [project]
-name = "changan-mesh-lab-host"
+name = "changan-mesh-system"
 version = "0.7.0"
-description = "Host tools for the Mesh-Lite USB tunnel and MQTT/TLS lab"
+description = "UGV host runtime and administration for the Changan Mesh system"
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "pyserial>=3.5,<4",
@@ -9,5 +9,14 @@ dependencies = [
     "cryptography>=43,<47",
 ]
 
-[tool.uv]
-package = false
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["host/src"]
+
+[project.scripts]
+ugv-service = "changan_ugv.service.server:main"
+ugv-console = "changan_ugv.cli:main"
+ugv-serial-bridge = "changan_ugv.transport.serial_bridge:main"

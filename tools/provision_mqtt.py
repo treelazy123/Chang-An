@@ -51,7 +51,7 @@ def provision(root):
         (directory/'client.pem').write_bytes(cert.public_bytes(serialization.Encoding.PEM))
         save_key(directory/'client.key',key)
         (directory/'ca.pem').write_bytes(ca_bytes)
-    runtime = root/'host/runtime'
+    runtime = root/'runtime'
     runtime.mkdir(parents=True, exist_ok=True)
     write_inventory(root,inventory)
     write_acl(root,inventory)
@@ -67,7 +67,7 @@ def provision(root):
                          'persistence false','log_type error','log_type warning','log_type notice'])
     (runtime/'mosquitto.conf').write_text(config+'\n',encoding='utf-8')
     refresh_clock(root)
-    print('Created lab identities and host/runtime/mosquitto.conf. Private keys are in ignored secrets/.')
+    print('Created lab identities and runtime/mosquitto.conf. Private keys are in ignored secrets/.')
 def refresh_clock(root):
     root=Path(root)
     if not (root/'secrets/ca.pem').is_file():

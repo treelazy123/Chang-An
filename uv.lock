@@ -39,9 +39,9 @@ wheels = [
 ]
 
 [[package]]
-name = "changan-mesh-lab-host"
+name = "changan-mesh-system"
 version = "0.7.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
     { name = "paho-mqtt" },

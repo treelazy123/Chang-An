@@ -32,7 +32,7 @@ class IdentityEnrollment(unittest.TestCase):
             self.assertEqual(record['certificate_sha256'],check_identity(self.root,node))
         self.assertEqual(4,len(fingerprints));after=self.hashes()
         for name,digest in before.items():self.assertEqual(digest,after[name])
-        acl=(self.root/'host/runtime/acl.conf').read_text()
+        acl=(self.root/'runtime/acl.conf').read_text()
         self.assertIn('user micro-002',acl)
         self.assertIn('topic read mesh/v1/nodes/micro-002/commands',acl)
         self.assertNotIn('topic write mesh/v1/nodes/+/commands',acl)
@@ -46,7 +46,7 @@ class IdentityEnrollment(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):provision(root)
             check_identity(root,'gateway_017');check_identity(root,'camera_028')
             self.assertFalse((root/'secrets/uav-001').exists())
-            self.assertIn('user camera_028',(root/'host/runtime/acl.conf').read_text())
+            self.assertIn('user camera_028',(root/'runtime/acl.conf').read_text())
     def test_repeat_enrollment_reuses_identical_certificate_and_key(self):
         first=enroll(self.root,'micro_uav','micro-002');before=self.hashes()
         second=enroll(self.root,'micro_uav','micro-002')
@@ -78,12 +78,12 @@ class IdentityEnrollment(unittest.TestCase):
         self.assertNotIn('micro-002',clients(load_inventory(self.root)))
     def test_real_lab_dispatch_generates_isolated_identity_defaults_for_every_role(self):
         # Stub every IDF process; only local enrollment/default generation executes.
-        for path in ('tools','profiles','topologies','fake-idf/tools'):(self.root/path).mkdir(parents=True,exist_ok=True)
+        for path in ('tools','firmware/configs/profiles','firmware/configs/topologies','fake-idf/tools'):(self.root/path).mkdir(parents=True,exist_ok=True)
         (self.root/'fake-idf/tools/idf.py').write_text('# not executed')
-        for file in ('sdkconfig.defaults','profiles/mqtt_serial.defaults','topologies/chain.defaults'):
+        for file in ('firmware/sdkconfig.defaults','firmware/configs/profiles/mqtt_serial.defaults','firmware/configs/topologies/chain.defaults'):
             (self.root/file).write_text('# fixture')
         for role in ('ugv','pc_root','uav','micro_uav'):
-            (self.root/'profiles'/(role+'.defaults')).write_text('# fixture')
+            (self.root/'firmware/configs/profiles'/(role+'.defaults')).write_text('# fixture')
         import idf_env
         for role,node in [('ugv','ugv-002'),('pc_root','pc-root-002'),('uav','uav-002'),('micro_uav','micro-002')]:
             argv=['lab.py','--role',role,'--transport','mqtt_serial','--node-id',node,'--ugv-id','ugv-002','--port','COM_FAKE','flash']
@@ -112,7 +112,7 @@ class IdentityEnrollment(unittest.TestCase):
         controller.registry=Registry(nodes=['pc-root-001'])
         controller.registry.nodes['pc-root-001']['preserved']='yes'
         controller.condition=threading.Condition();controller.connected=threading.Event();controller.connected.set()
-        controller.inventory_path=self.root/'host/config/nodes.json'
+        controller.inventory_path=self.root/'config/nodes.json'
         controller.inventory_text=None;controller.inventory_error=None
         subscriptions=[];controller.client=SimpleNamespace(subscribe=lambda topics:subscriptions.extend(topics))
         enroll(self.root,'uav','inspection_017')
@@ -127,8 +127,8 @@ class IdentityEnrollment(unittest.TestCase):
         write_inventory(self.root,data);controller.refresh_inventory()
         self.assertNotIn('inspection_017',controller.registry.nodes)
     def test_mismatched_cached_board_identity_never_reaches_flash(self):
-        for path in ('tools','profiles','topologies','fake-idf/tools'):(self.root/path).mkdir(parents=True,exist_ok=True)
-        for file in ('sdkconfig.defaults','profiles/micro_uav.defaults','profiles/mqtt_serial.defaults','topologies/chain.defaults','fake-idf/tools/idf.py'):
+        for path in ('tools','firmware/configs/profiles','firmware/configs/topologies','fake-idf/tools'):(self.root/path).mkdir(parents=True,exist_ok=True)
+        for file in ('firmware/sdkconfig.defaults','firmware/configs/profiles/micro_uav.defaults','firmware/configs/profiles/mqtt_serial.defaults','firmware/configs/topologies/chain.defaults','fake-idf/tools/idf.py'):
             (self.root/file).write_text('# fixture')
         cache=self.root/'build/mqtt_serial/nodes/micro-002/micro_uav-chain';cache.mkdir(parents=True)
         config=cache/'sdkconfig';config.write_text('CONFIG_APP_ROLE_MICRO_UAV=y\nCONFIG_APP_TOPOLOGY_CHAIN=y\nCONFIG_APP_ARCHITECTURE_VERSION=2\nCONFIG_MESH_LITE_MAXIMUM_LEVEL_ALLOWED=4\nCONFIG_APP_TRANSPORT_MQTT_SERIAL=y\nCONFIG_APP_UGV_NODE_ID="ugv-001"\nCONFIG_APP_NODE_ID="micro-001"\n')

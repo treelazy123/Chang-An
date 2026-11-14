@@ -1,0 +1,11 @@
+{
+  "idf.buildPath": "${workspaceFolder}/../build/mqtt_serial/nodes/pc-root-001/pc_root-chain",
+  "idf.sdkconfigFilePath": "${workspaceFolder}/../build/mqtt_serial/nodes/pc-root-001/pc_root-chain/sdkconfig",
+  "idf.sdkconfigDefaults": [
+    "sdkconfig.defaults",
+    "configs/profiles/pc_root.defaults",
+    "configs/topologies/chain.defaults",
+    "../secrets/pc-root-001/clock.defaults"
+  ],
+  "files.encoding": "utf8"
+}

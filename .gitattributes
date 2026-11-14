@@ -1,7 +1,7 @@
-* text=auto
-*.c text eol=lf
-*.h text eol=lf
-*.md text eol=lf
-*.yml text eol=lf
-*.defaults text eol=lf
+* text=auto eol=lf
 *.ps1 text eol=crlf
+# Preserve upstream bytes and pre-existing whitespace in vendored trees.
+third_party/** -text -whitespace
+third_party/README.md text eol=lf whitespace
+third_party/vendor-lock.json text eol=lf whitespace
+third_party/mqtt-source-lock.json text eol=lf whitespace

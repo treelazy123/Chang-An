@@ -62,22 +62,23 @@ def main():
             parser.error('A UGV must advertise its own --node-id as --ugv-id')
     except (ValueError,OSError) as exc:
         parser.error(str(exc))
+    firmware_root = project_root / 'firmware'
     build_dir = project_root / 'build' / 'four-node' / (args.role + '-' + args.topology)
     if args.transport != 'legacy':
         build_dir = project_root / 'build' / args.transport / (args.role + '-' + args.topology)
     if args.node_id:
         build_dir = project_root / 'build' / args.transport / 'nodes' / node_id / (args.role+'-'+args.topology)
     sdkconfig_path = build_dir / 'sdkconfig'
-    defaults = [project_root / 'sdkconfig.defaults',
-                project_root / 'profiles' / (args.role + '.defaults'),
-                project_root / 'topologies' / (args.topology + '.defaults')]
+    defaults = [firmware_root / 'sdkconfig.defaults',
+                firmware_root / 'configs/profiles' / (args.role + '.defaults'),
+                firmware_root / 'configs/topologies' / (args.topology + '.defaults')]
     if args.transport == 'mqtt_serial':
-        defaults.append(project_root / 'profiles/mqtt_serial.defaults')
+        defaults.append(firmware_root / 'configs/profiles/mqtt_serial.defaults')
         provisioned = project_root / 'secrets' / node_id / 'clock.defaults'
         if not provisioned.is_file():
             provisioned = project_root / 'secrets/clock.defaults'
         defaults.append(provisioned)
-    local_defaults = project_root / 'sdkconfig.local.defaults'
+    local_defaults = firmware_root / 'sdkconfig.local.defaults'
     if local_defaults.is_file():
         defaults.append(local_defaults)
     instance_defaults = None
@@ -107,7 +108,7 @@ def main():
         if not path.is_file() and not (args.dry_run and (path==instance_defaults or path.name=='clock.defaults')):
             parser.error('Missing config file: ' + str(path))
 
-    idf_args = ['-C', str(project_root), '-B', str(build_dir),
+    idf_args = ['-C', str(firmware_root), '-B', str(build_dir),
                 '-D', 'IDF_TARGET=esp32c6', '-D', 'SDKCONFIG=' + str(sdkconfig_path),
                 '-D', 'SDKCONFIG_DEFAULTS=' + ';'.join(str(p) for p in defaults)]
     if args.port:

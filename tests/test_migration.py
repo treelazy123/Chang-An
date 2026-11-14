@@ -24,7 +24,7 @@ class NaptCompatibility(unittest.TestCase):
         cls.source_bytes = cls.source_path.read_bytes()
         cls.source = cls.source_path.read_text(encoding='utf-8')
         cls.ip4 = (sdk/'ip4.c').read_text(encoding='utf-8')
-        cls.patch = (ROOT/'components/iot_bridge/patch/ip4_napt.patch').read_text(encoding='utf-8')
+        cls.patch = (ROOT/'third_party/iot_bridge/patch/ip4_napt.patch').read_text(encoding='utf-8')
 
     def test_generated_source_and_idempotence(self):
         generated = napt.prepare(self.source, self.ip4, self.patch)
@@ -69,7 +69,7 @@ class BuildConfiguration(unittest.TestCase):
             self.assertIn('Provide --port', result.stderr)
 
     def test_partition_preserves_nvs_and_fits_two_mib(self):
-        lines = (ROOT/'partitions.csv').read_text(encoding='utf-8').splitlines()
+        lines = (ROOT/'firmware/partitions.csv').read_text(encoding='utf-8').splitlines()
         partitions = [line.split(',') for line in lines if line.strip() and not line.startswith('#')]
         nvs, phy, app = [[field.strip() for field in row] for row in partitions]
         self.assertEqual((0x9000, 0x6000), (int(nvs[3], 0), int(nvs[4], 0)))

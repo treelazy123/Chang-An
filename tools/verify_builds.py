@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     validation = ROOT / 'build' / 'four-node' / 'validation'
     validation.mkdir(parents=True, exist_ok=True)
-    sdk = Path('D:/esp/v6.1/esp-idf')
     from idf_env import prepare_idf_environment
     env, python = prepare_idf_environment(ROOT)
     sdk = Path(env['IDF_PATH'])
