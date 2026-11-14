@@ -1,0 +1,19 @@
+{
+  "version": "0.7.0",
+  "car_version": "0.2.0",
+  "recorded_at": "2026-11-14T18:30:11.379008+08:00",
+  "scope": "M1 generic task management only",
+  "host_tests": 95,
+  "car_tests": 9,
+  "actual_isolated_mosquitto_test": "passed; mTLS, lifecycle, two executors, cross-topic ACL, service restart without repeated start",
+  "firmware_build_run": false,
+  "firmware_flash_run": false,
+  "firmware_hardware_acceptance": "pending user build and board acceptance",
+  "existing_broker_or_serial_services_restarted_by_agent": false,
+  "existing_runtime_acl_regenerated_by_agent": false,
+  "supported_execution_kind": "diagnostics",
+  "scenario_apis_implemented": false,
+  "uv_locks_updated": true,
+  "details": "docs/m1-task-management.md",
+  "host_test_log": "build/m1-host-tests.log"
+}

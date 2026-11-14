@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-11",
+  "application_version": "0.3.0",
+  "architecture": 2,
+  "firmware_build": "not_run_at_user_request",
+  "device_tests": "not_run",
+  "host_tests": {
+    "command": "python -m unittest discover -s tests -v",
+    "passed": 21
+  },
+  "tcp_endpoints": [
+    "uav -> ugv:9001",
+    "micro_uav -> ugv:9001",
+    "ugv -> pc_root:9000"
+  ],
+  "pc_transport": "native USB Serial/JTAG",
+  "latest_fix": "TCP address byte order, direct-parent address selection, diagnostics and prompt output",
+  "user_provided_runtime_observations": {
+    "pc_root": "USB protocol replies and level 1 telemetry observed",
+    "ugv": "level 2 / 192.168.5.2 with gateway 192.168.5.1 observed; TCP offline before fix",
+    "uav": "level 3 / 192.168.4.2 observed",
+    "after_latest_fix": "not yet verified on devices"
+  },
+  "association_diagnostics": {
+    "added": [
+      "AP_TRACKING actual inactive_s and API results",
+      "AP_ASSOC MAC/AID/RSSI record",
+      "AP_JOIN/AP_LEAVE driver events"
+    ],
+    "timeout_changed": false,
+    "firmware_build": "not_run",
+    "device_result": "pending user rebuild and measurement",
+    "user_reported_off_duration": "less than 1 minute or uncertain"
+  }
+}

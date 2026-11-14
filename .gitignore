@@ -1,0 +1,16 @@
+/build/
+/sdkconfig
+/sdkconfig.old
+/sdkconfig.local.defaults
+/.idea/
+__pycache__/
+/experiments/runs/
+# Vendor versions and source hashes are recorded in components/vendor-lock.json.
+
+/build-*.log
+/.refactor*.py
+
+/secrets/
+/host/runtime/
+
+/.venv/

@@ -1,0 +1,104 @@
+menu "Changan mesh device roles and MQTT gateway"
+    config APP_ARCHITECTURE_VERSION
+        int
+        default 2
+    choice APP_TRANSPORT
+        prompt "Application transport"
+        default APP_TRANSPORT_LEGACY
+        config APP_TRANSPORT_LEGACY
+            bool "Legacy framed JSON TCP"
+        config APP_TRANSPORT_MQTT_SERIAL
+            bool "MQTT mutual TLS through UGV USB byte tunnel"
+    endchoice
+    config APP_MQTT_PORT
+        int "UGV MQTT TLS tunnel port"
+        default 8883
+        range 1024 65535
+    config APP_MQTT_MAX_CHANNELS
+        int "Maximum concurrent MQTT USB tunnel channels on UGV"
+        default 8
+        range 1 8
+    config APP_MQTT_SERVER_NAME
+        string "Expected TLS broker identity"
+        default "ugv-broker.lab"
+    config APP_TLS_BOOTSTRAP_UNIX
+        int "Trusted UTC at lab provisioning (Unix seconds)"
+        default 0
+        help
+            MQTT clients refuse to start without a provisioned clock floor.
+            Regenerate before a lab deployment; this is not a battery-backed clock.
+    choice APP_DEVICE_ROLE
+        prompt "Physical device role"
+        default APP_ROLE_PC_ROOT
+        config APP_ROLE_PC_ROOT
+            bool "PC-attached C6 (fixed root and USB serial gateway)"
+        config APP_ROLE_UGV
+            bool "UGV (non-root relay)"
+        config APP_ROLE_UAV
+            bool "UAV (non-root relay)"
+        config APP_ROLE_MICRO_UAV
+            bool "Micro UAV (non-root leaf)"
+    endchoice
+    choice APP_TEST_TOPOLOGY
+        prompt "Experiment topology"
+        default APP_TOPOLOGY_CHAIN
+        config APP_TOPOLOGY_STAR
+            bool "Star: all vehicles at level 2"
+        config APP_TOPOLOGY_CHAIN
+            bool "Chain: root=1, UGV=2, UAV=3, micro=4"
+        config APP_TOPOLOGY_AUTO
+            bool "Automatic non-root parent selection"
+    endchoice
+    config APP_NODE_ID
+        string "Stable node ID (1-32 ASCII letters, digits, dash or underscore)"
+        default "pc-root-001" if APP_ROLE_PC_ROOT
+        default "ugv-001" if APP_ROLE_UGV
+        default "uav-001" if APP_ROLE_UAV
+        default "micro-001" if APP_ROLE_MICRO_UAV
+    config APP_MESH_CHANNEL
+        int "Common lab Wi-Fi channel"
+        range 1 11
+        default 6
+    config APP_SOFTAP_PREFIX
+        string "Shared SoftAP SSID prefix"
+        default "changan"
+    config APP_SOFTAP_PASSWORD
+        string "Shared lab SoftAP password (8 to 63 characters)"
+        default "changan-lab-only"
+    config APP_STATUS_PERIOD_MS
+        int "Status/telemetry period in milliseconds"
+        range 1000 10000
+        default 5000
+    config APP_TCP_PORT
+        int "Root TCP server port"
+        range 1024 65535
+        default 9000
+    config APP_UGV_TCP_PORT
+        int "UGV TCP server port for UAV and micro"
+        range 1024 65535
+        default 9001
+    config APP_UGV_NODE_ID
+        string "UGV service identity"
+        default "ugv-001"
+    config APP_UGV_IP_OVERRIDE
+        string "Optional UGV STA IPv4 (empty uses mesh service announcements)"
+        default ""
+    config APP_TCP_MAX_CLIENTS
+        int "Maximum registered TCP clients"
+        range 3 4
+        default 3
+    config APP_TCP_IDLE_TIMEOUT_MS
+        int "Close connections without valid frames for this interval"
+        range 15000 120000
+        default 20000
+    config APP_ROOT_IP_OVERRIDE
+        string "Optional root SoftAP IPv4 (empty uses Mesh-Lite discovery)"
+        default ""
+        help
+            Every client must connect to the root AP address, not its immediate
+            parent's gateway. Leave empty for esp_mesh_lite_get_root_ip().
+    config APP_SERIAL_QUEUE_LENGTH
+        int "Bounded queues for PC commands and gateway output"
+        range 4 16
+        default 8
+endmenu
