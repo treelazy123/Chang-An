@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-14",
+  "source": "D:\\esp\\mesh_lite_node",
+  "destination": "D:\\changan\\changan-mesh-system",
+  "baseline_commit": "44201f7",
+  "source_files_verified_unchanged": 723,
+  "host_tests": {
+    "run": 102,
+    "failed": 0,
+    "skipped": 0,
+    "log": "build/migration-host-tests.log"
+  },
+  "independent_car_tests": {
+    "run": 9,
+    "failed": 0,
+    "log": "build/migration-car-tests.log"
+  },
+  "entry_and_device_dry_runs": 9,
+  "cmake_role_transport_wirings": 8,
+  "cmake_check_scope": "script-only source declaration checks; no IDF configure or compiler",
+  "keys_and_certificates_verified_unchanged": 23,
+  "runtime_snapshot_integrity": "ok",
+  "production_services_switched": false,
+  "firmware_built": false,
+  "firmware_flashed": false,
+  "open_issue": "Micro-001 uncommanded reset; unchanged by repository migration"
+}

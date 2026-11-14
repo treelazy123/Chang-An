@@ -1,0 +1,2907 @@
+{
+  "source": "D:\\esp\\mesh_lite_node",
+  "date": "2026-11-14",
+  "excludes": [
+    ".git",
+    ".venv",
+    ".vscode",
+    "__pycache__",
+    "build",
+    "host/runtime",
+    "secrets"
+  ],
+  "files": [
+    {
+      "path": ".clangd",
+      "sha256": "b64f692298e718f35ed78bfdff2d4eccba2d5f8e7b995a119a7cfffba463b931"
+    },
+    {
+      "path": ".gitattributes",
+      "sha256": "1a64d339585b462d1b5a5dafa64c85abc43dc39eadfad8e55fd47ee6b837ea98"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "545e0ff2e84017f24c7c5b52288f8a19c86e17cdf5d5bec32daac12fb8b2be92"
+    },
+    {
+      "path": ".python-version",
+      "sha256": "ceba8fa5c10f40fbed8feb7eb5238b63dda568908acfd874ee413747b29936c8"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "1601ce79d047281d643576d2f80afc21cc2a034e9b0a0a5ba1a82bdc0475d55e"
+    },
+    {
+      "path": "partitions.csv",
+      "sha256": "513ede820f7f7f6b3b2136de66bdbe759bcb2a5531b46fb2dc976dbedc5cdfe5"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "9f705de20972d825f17a53362a0c54dc9c170a3e05b0be6c9cd1b87f483187e5"
+    },
+    {
+      "path": "README.md",
+      "sha256": "8b5dcbea8e029fe881a67d2c8386910a890bd937ce0b88d820249ab0e7c56db1"
+    },
+    {
+      "path": "sdkconfig.defaults",
+      "sha256": "d8991a3c48a2bda328011bb561af9ac1d2c027a16b807970d1475c469afece62"
+    },
+    {
+      "path": "uv.lock",
+      "sha256": "bfa34961bd0276d563442b47cda84528f155c400cebe79f879d3947713101302"
+    },
+    {
+      "path": "cmake/mesh_lite_idf61.cmake",
+      "sha256": "97e92330c02cd543a193fa9401c56bce202db075ecb72301c4b5c6feda7b3641"
+    },
+    {
+      "path": "components/mqtt-source-lock.json",
+      "sha256": "564cfed89dbb719c3932c5556521faa4c777d747be43210ceee8039b5be7f2d1"
+    },
+    {
+      "path": "components/README.md",
+      "sha256": "2a68f4d3211e0b32b59ad7e8fed1111efff87cc7648a655940f9e7752ae92675"
+    },
+    {
+      "path": "components/vendor-lock.json",
+      "sha256": "16e0606459b3bd52dde669cb9d87ba1ec7842289263b749bcbe6761c15e7601c"
+    },
+    {
+      "path": "components/app_protocol/app_protocol.c",
+      "sha256": "f9156e969ee0085dc9a793f02fe58f5cd26740133b5e6bf56fc0b070eca2602f"
+    },
+    {
+      "path": "components/app_protocol/CMakeLists.txt",
+      "sha256": "5f0c0f827b1464c364eefaa4bbf6fbd16577a55cd4c657506f68b9a6e1322773"
+    },
+    {
+      "path": "components/app_protocol/include/app_protocol.h",
+      "sha256": "04138590118a058e4b69d45428685435fdb50bf0617ff700307da86bfe428faa"
+    },
+    {
+      "path": "components/car_gateway/CMakeLists.txt",
+      "sha256": "2fda44a2924fb2be814dcdb9908fab50a2e6715649f93ecff6b694bdb532134c"
+    },
+    {
+      "path": "components/car_gateway/root_car.c",
+      "sha256": "ac951e9928ae401884ed0768d202f9249dcf9e2cf76f6af43f472de4109117bf"
+    },
+    {
+      "path": "components/car_gateway/include/car_gateway.h",
+      "sha256": "2f433fc1e6c5a214c0ac26babc294fa3e82fed9a108bfa79042157ed89531692"
+    },
+    {
+      "path": "components/cjson/cJSON.c",
+      "sha256": "298581a04a36c0165da4b0aade235c23088cb2faa58651d720ea2f3706ed0b0d"
+    },
+    {
+      "path": "components/cjson/cJSON.h",
+      "sha256": "25b0145150d500498e4d209cec69c18c42cf818bffcc54690be3b895a2a16dee"
+    },
+    {
+      "path": "components/cjson/CMakeLists.txt",
+      "sha256": "0593b4609b6f4bbd08a938456432f7b96140b1b43e40524b154c5360595c63f2"
+    },
+    {
+      "path": "components/cjson/idf_component.yml",
+      "sha256": "79d09a77fc577f46cf87cd0586e09718f9364b588ede2465629af1a521caa4ef"
+    },
+    {
+      "path": "components/cjson/LICENSE",
+      "sha256": "a36dda207c36db5818729c54e7ad4e8b0c6fba847491ba64f372c1a2037b6d5c"
+    },
+    {
+      "path": "components/cmake_utilities/.component_hash",
+      "sha256": "1e683cf58fd7794d1f9604b9c2e6eabc26687da6f567146a4acad5402493a28e"
+    },
+    {
+      "path": "components/cmake_utilities/CHANGELOG.md",
+      "sha256": "4779bc99678035cbd48addd07e6c5246213d7a93fb34ec469eb838fb64840c63"
+    },
+    {
+      "path": "components/cmake_utilities/CHECKSUMS.json",
+      "sha256": "8a8857db28aa1ed552b027319b6c4434c98dc01a6d92cb3004ad4d5a70a4003e"
+    },
+    {
+      "path": "components/cmake_utilities/CMakeLists.txt",
+      "sha256": "1b07b2a81841a6e12fc589126fca551dfa39cd6db0646f802740972b48a2cf1b"
+    },
+    {
+      "path": "components/cmake_utilities/cmake_utilities.cmake",
+      "sha256": "307c1feb59598ff2351967009f1c6424820178b1da6903f40cc01dd52eb703ef"
+    },
+    {
+      "path": "components/cmake_utilities/gcc.cmake",
+      "sha256": "47674577242d2be68d6bc1c71bbe664a7e1d0047170ee1fe78f71b987c810620"
+    },
+    {
+      "path": "components/cmake_utilities/gen_compressed_ota.cmake",
+      "sha256": "8309efee996bd2e5da0f55d26a0df1d199efb9c562eba07e410d49744401659a"
+    },
+    {
+      "path": "components/cmake_utilities/gen_single_bin.cmake",
+      "sha256": "34bc2100e339538edc47e86aa63cbeb7bc98c06a93105027a4603ba7f96b1dc2"
+    },
+    {
+      "path": "components/cmake_utilities/idf_component.yml",
+      "sha256": "8c21ccd7648224f955d0f8e694fca3e5c469db87ceea389ebbf66b6e5c5da239"
+    },
+    {
+      "path": "components/cmake_utilities/Kconfig",
+      "sha256": "e776e604c4395f8aa8d869a363d042e08eeea372887ff0e2b57535455f1bf3c0"
+    },
+    {
+      "path": "components/cmake_utilities/license.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "components/cmake_utilities/package_manager.cmake",
+      "sha256": "1e7f6ba9cdcc8fc9f0a7dde5c5e1ec03ef699c210caf381181cc4a35f95f0ca1"
+    },
+    {
+      "path": "components/cmake_utilities/project_include.cmake",
+      "sha256": "ca2f4fbba0ae2524cabe17844a79021d587cce6ec5fef53b36c21ae4d7257972"
+    },
+    {
+      "path": "components/cmake_utilities/README.md",
+      "sha256": "26229d274cc1e1add77cfe70eab0997059458894aff066ee2e227bf2c1fd9b7e"
+    },
+    {
+      "path": "components/cmake_utilities/relinker.cmake",
+      "sha256": "52ac755b429ee9cf6a45fd22121485d69f883d56c3b9f5d8eaa325156a070ad3"
+    },
+    {
+      "path": "components/cmake_utilities/docs/gcc.md",
+      "sha256": "908f5108283c7e3d0a046711ab8215fe6ccd59f09924d55cef0bbaf6a5a4ff3a"
+    },
+    {
+      "path": "components/cmake_utilities/docs/gen_compressed_ota.md",
+      "sha256": "c7779477fb4989379898ad18b70af7738ff2bffe624e5d549a3b776aa983ca0b"
+    },
+    {
+      "path": "components/cmake_utilities/docs/relinker.md",
+      "sha256": "0cbffe09354d7e66ac05cf6de02bcdcf76dd2db69072e998e15ee268a5dd2384"
+    },
+    {
+      "path": "components/cmake_utilities/scripts/gen_custom_ota.py",
+      "sha256": "64822db67089a6fdcde610d5ec31369aaa62441441f09d2ed8d4aae2a396e353"
+    },
+    {
+      "path": "components/cmake_utilities/scripts/relinker/configuration.py",
+      "sha256": "7f5c80c0dd3504bcab89b585786b805544a8e39b17b59fc0ef911cb0813fba09"
+    },
+    {
+      "path": "components/cmake_utilities/scripts/relinker/relinker.py",
+      "sha256": "07c1ec82d9f1843d3a12ade88295610ab78cc21c2dd90b02fe314d88d9085eac"
+    },
+    {
+      "path": "components/cmake_utilities/scripts/relinker/examples/esp32c2/function.csv",
+      "sha256": "5d608e6d35d7a2a6f5ac317ea5e993443b5baef0ce788eb2464aca37246bcb29"
+    },
+    {
+      "path": "components/cmake_utilities/scripts/relinker/examples/esp32c2/library.csv",
+      "sha256": "5ca43f2ded3f5b3e1d1398949c86080ac1ff7d06e7d147dc5ecf21d0ec034e61"
+    },
+    {
+      "path": "components/cmake_utilities/scripts/relinker/examples/esp32c2/object.csv",
+      "sha256": "761467fbbe3adbf544adcfaa50b2fca1a79208786070784b000961c43a23744d"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/CMakeLists.txt",
+      "sha256": "a851b56d24811c45175a960701596367c9a575b34a6fa8b7ab01bc2c1334c129"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/pytest_cmake_utilities.py",
+      "sha256": "5f60d02cdcaed3503bc259c51cff9af0c267887c86be825c097ed8f57a6a13fa"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/components/TEST-component2/CMakeLists.txt",
+      "sha256": "441a6b60573d3146386d56ccbf12cf4451eeef01cac2905b18259bb2a1912b64"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/components/TEST-component2/idf_component.yml",
+      "sha256": "dbbd16387c7b0ea7378126e87cafdf8b3bc58fdcf472e7d853b38ea24d813a2b"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/components/TEST-component2/test_component2.c",
+      "sha256": "d949b85dd1ce045b724cd463ac6549b372db9935ed07dc3dad250660d3b3f27f"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/components/TEST-component2/test_component2.h",
+      "sha256": "42a6a9a527a8b78a6373a432a1d2c8c540bae91d7c604bbc12be5f709a16fb37"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/components/test_component1/CMakeLists.txt",
+      "sha256": "441a6b60573d3146386d56ccbf12cf4451eeef01cac2905b18259bb2a1912b64"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/components/test_component1/idf_component.yml",
+      "sha256": "70631b0633adbaa92bb26785dee0369f889cc93bc9a22635f1553f864522607b"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/components/test_component1/test_component1.c",
+      "sha256": "fe9ce9a01d53cfbc1970f0a9ee9c8d382c399e0c9aeb93ce843af01bd70b5411"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/components/test_component1/test_component1.h",
+      "sha256": "e77976253127f05cbbfae7a635c9455d584b66cceae69ef8f8465fd4ce85aadf"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/main/CMakeLists.txt",
+      "sha256": "1b582805eb1d7d515bac70643308b0bacf18dccee565df745051267635b09c1a"
+    },
+    {
+      "path": "components/cmake_utilities/test_apps/main/test_cmake_utilities.c",
+      "sha256": "6ff7025750c8c59bbd379af839def4427c6f59149e19885ac674740e45eccdac"
+    },
+    {
+      "path": "components/esp_modem/.build-test-rules.yml",
+      "sha256": "bdf93942b5233a3ca0cc4265f55a313eeb3cebe32490a90d056de016a4dfc4f6"
+    },
+    {
+      "path": "components/esp_modem/.component_hash",
+      "sha256": "bd17a26646f347aa0b5655dc6e4aa016655d4e29992df03b0422604e69aa481c"
+    },
+    {
+      "path": "components/esp_modem/.cz.yaml",
+      "sha256": "b673b714583aabb3b99661689414252d957538abbb976d03ca69e91f6ebdb49e"
+    },
+    {
+      "path": "components/esp_modem/CHANGELOG.md",
+      "sha256": "932f8a97fa023b6fef64542b8bee48ed2ae1e6c7ef106c8720abe33f1a9f88a7"
+    },
+    {
+      "path": "components/esp_modem/CHECKSUMS.json",
+      "sha256": "d26d36ec6980432c46e20a18e4514c5f5aa1ba519814b405b83f52904a2ee7f1"
+    },
+    {
+      "path": "components/esp_modem/CMakeLists.txt",
+      "sha256": "d5eb411e7fee946922d3e893322b279fa16925d27545f2d5517f5af75639bb6c"
+    },
+    {
+      "path": "components/esp_modem/idf_component.yml",
+      "sha256": "64362663423d532382203ddc2b1ec41ea561096cd46a3db959d73a9fbf9c08b8"
+    },
+    {
+      "path": "components/esp_modem/Kconfig",
+      "sha256": "a598f037503f571ce64bdab694e77802b26b3137597222206240e3affa6601d0"
+    },
+    {
+      "path": "components/esp_modem/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "components/esp_modem/pre_upload.sh",
+      "sha256": "d82ea3636bdc2d4df271b84e99c84324c17dc354c098415970bd9ad35d31b76a"
+    },
+    {
+      "path": "components/esp_modem/README.md",
+      "sha256": "51d6170d72371af66de80cb94756b80ed6354ab03991e7ee938393ec806bce65"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/CMakeLists.txt",
+      "sha256": "2e426d59fc9a77a2b0b1e83d3fc36a0fef0d38e50f6d8aea2d723f42e05719a0"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/README.md",
+      "sha256": "034872e8fbab12fdf070f68a04e59404286669bee6cef33c9d4df15f1a30af6c"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/sdkconfig.defaults",
+      "sha256": "3c73bd1f43969f463b22b6c0d7d987082628a902b852f512186a3aa7afc9067b"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/main/ap_to_pppos.c",
+      "sha256": "808c1d4ee8b3bc00217b41d8b4d3901f8b9097b55835471d10a17372d9fc63b7"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/main/CMakeLists.txt",
+      "sha256": "40c1281bed8f9850451df6164e2a9bb6e1bd1d9f57244ceb05f514dd8e2c1f16"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/main/idf_component.yml",
+      "sha256": "db7b59b1f947973e2e2f423f2675285e2b537fff0069ddc483d13ddf957c32cd"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/main/Kconfig.projbuild",
+      "sha256": "771507713f84cdffa0145ab581af29269a57ae7ad05d74f6ed98786d58e1822e"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/main/network_dce.c",
+      "sha256": "9bbe69406c43e9fb29fd5def2ab8076aa964daa9000bf58fbecba249a1701bf3"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/main/network_dce.cpp",
+      "sha256": "34b7d29dcc5a20fb5c3ca7dbe423c955a825d2ffa327924bd2cc563b693331fa"
+    },
+    {
+      "path": "components/esp_modem/examples/ap_to_pppos/main/network_dce.h",
+      "sha256": "62eb1279918a129b772c0c50c787cea3c77ed11dd8ba6414aba2cba8a3eb3ed5"
+    },
+    {
+      "path": "components/esp_modem/examples/linux_modem/CMakeLists.txt",
+      "sha256": "049a0aa2db3297e633e3d5568924e4aca9fc6b78958bb2601267d1a898ded4fc"
+    },
+    {
+      "path": "components/esp_modem/examples/linux_modem/make_tun_netif",
+      "sha256": "6c419b758dbc97233bbb5ca4fbbd4ac2debac3d77a45d23464e6def17ee1487d"
+    },
+    {
+      "path": "components/esp_modem/examples/linux_modem/README.md",
+      "sha256": "7f98ef547cac178d1891006ca02a2bd6b36a9bbeecfd693a61816eca6d588176"
+    },
+    {
+      "path": "components/esp_modem/examples/linux_modem/sdkconfig.ci.linux",
+      "sha256": "49e6050e3ab51c3eb082c185cf8b29f568b5bdd1aedc303590b86ea7363079d0"
+    },
+    {
+      "path": "components/esp_modem/examples/linux_modem/sdkconfig.defaults",
+      "sha256": "49e6050e3ab51c3eb082c185cf8b29f568b5bdd1aedc303590b86ea7363079d0"
+    },
+    {
+      "path": "components/esp_modem/examples/linux_modem/main/CMakeLists.txt",
+      "sha256": "74e5b007848d8802d7c0218c8a89ee18e8ff31953607ad02fbf6c071bc2d5029"
+    },
+    {
+      "path": "components/esp_modem/examples/linux_modem/main/idf_component.yml",
+      "sha256": "db7b59b1f947973e2e2f423f2675285e2b537fff0069ddc483d13ddf957c32cd"
+    },
+    {
+      "path": "components/esp_modem/examples/linux_modem/main/modem_main.cpp",
+      "sha256": "bd2fd43c8bf303b778153e910e59e8baced29aca157abb3631bf4a5b51df6894"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/CMakeLists.txt",
+      "sha256": "f8bfeb3c6f3df6c5bd47b09f558288a0e17581ec2a9a1fb592b28fd22c1885a0"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/README.md",
+      "sha256": "4fa0a72c644fcab31b40805ffb313f88a393c84470dc8959db712d0bba3ef5b8"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/sdkconfig.ci.usb_p4",
+      "sha256": "97641867655fdfabf5bf289fca09ab25f90c7200095db9f6b81b343d41961c1f"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/sdkconfig.ci.usb_s2",
+      "sha256": "2a198d1be246562e28e59e515ca26a41fc920f8e1eeed8e1c44c1b17444c8212"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/sdkconfig.ci.usb_s3",
+      "sha256": "eaf46200c7e3e402f72020d4c38e629410db4d062a51a3f3b13e0ce7fee4cb52"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/sdkconfig.defaults",
+      "sha256": "0e699e5a7965ec4f94e4eec7f1e95ee23fa44b00bd7083d8cd56d154e3260b22"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/CMakeLists.txt",
+      "sha256": "829f4b503d364e1975a5cb86947ca04a0f01eceffefcf10cc93433e2ce22bd90"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/console_helper.cpp",
+      "sha256": "4500092c4409051c2cccbe8d00df3327ef82b76c28cd1ed31dc87a77fb92bedd"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/console_helper.hpp",
+      "sha256": "a1bb650926e2473c52572e6981e62337eaa884de7689ec865236ce54816e0336"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/httpget_handle.c",
+      "sha256": "82c4caff8bf98ff39897b8f442a83baa3f5772c16e593801e0ab5fd761015149"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/idf_component.yml",
+      "sha256": "9570d995217763b370e610946e507bd0f5b5d6cfbb40af15c8cf5bf1fb49d72b"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/Kconfig.projbuild",
+      "sha256": "c3deafa20f4ccef3361cb0844490c7a682b43694165099eca678c5474dab9fe5"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/modem_console_main.cpp",
+      "sha256": "f35db6d1d1d8096c41b42062b2b2ae212d52a6151d145cf7706c54baa259435a"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/my_module_dce.cpp",
+      "sha256": "9932cf67238fb0271381865ae93b0c7e018419ca8b48f571b3114dc779f6bb68"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/my_module_dce.hpp",
+      "sha256": "80877a09e7a1c0eb3cf5e44bf26b86158434c4c0bff098606cb66fdad2158e21"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/ping_handle.c",
+      "sha256": "c98749ffe0e9e7ba9cc2d61910ef17037f00a19076226feb9a057f6cd2a215d9"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_console/main/repeat_helper.inc",
+      "sha256": "433da11444503c8a01dc832538569f0263bef218c3b3cf2436969d4230e3c3b8"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_psm/CMakeLists.txt",
+      "sha256": "bbdce1f2033927e243fdac53bd84b1a0e152b1da05f9aa8d2528fd1f4401f7ea"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_psm/README.md",
+      "sha256": "898b2997a8455ca9f2f425a689a8083c999874120906f0439416612e7fa584b4"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_psm/sdkconfig.defaults",
+      "sha256": "cb4ae93d1babd88b4958292931a1a5914ee98761ae37e0abc60073c3723fbae9"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_psm/main/CMakeLists.txt",
+      "sha256": "6a6176b5a56fdb393731e51f8fd33ed13c79c061913c219057f2db2cc846a851"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_psm/main/idf_component.yml",
+      "sha256": "db7b59b1f947973e2e2f423f2675285e2b537fff0069ddc483d13ddf957c32cd"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_psm/main/Kconfig.projbuild",
+      "sha256": "19b3eb1f4713a4a5ecc8b7096ddec1cfa067da9bc19ac34621ed04631f50c23b"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_psm/main/modem_psm.c",
+      "sha256": "85b3cc8ccf8c397dafa08e7482f850da8de1683bf74025dc08a193a546b03161"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/at_client_localhost.png",
+      "sha256": "56a12477fbc59ad3265c8223b8641df4c95f5cfb7077aee4405558d698b4114e"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/at_client_tcp_transport.png",
+      "sha256": "3c5b753f0f3f4973ad7f0aeec90119971c894b36e159ada83632ea9c048d1930"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/CMakeLists.txt",
+      "sha256": "e6d78dd010a5dbe1d0914ff91867ea96eeed883b65973319a53db450c0435d94"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/README.md",
+      "sha256": "b35f71e719bbea3fc7f943e5f8c4d2774edbad5f0ea1fd7deef9625942835734"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/components/extra_tcp_transports/CMakeLists.txt",
+      "sha256": "e6ddf3296bb687be6ba68791a7341c6240f592fd20a4d9c983d07a9b9aab8007"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/components/extra_tcp_transports/README.md",
+      "sha256": "4edcf9cbea5a339a8e2fb16a34bf87f469f9bb863decebfc41d8b2c05236f4b3"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/components/extra_tcp_transports/tls_transport.cpp",
+      "sha256": "422e0a83a53215d6c2f6ffb481bb3bf190298d77a79dc16f8fdcca97753d7eea"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/components/extra_tcp_transports/include/tcp_transport_mbedtls.h",
+      "sha256": "bcddf53f668f0250ff212395c3f3089f62604319bb4f50aa43b43b56dc7b0463"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/CMakeLists.txt",
+      "sha256": "a6b714927dcf17bb2fa14a2c72ec26b1528dc1bd9fb9ade792c90d40c861439a"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/idf_component.yml",
+      "sha256": "338a36c06893b10af0e8c366962ff1f6ad6e6ecaaa44618255f15363433544b8"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/Kconfig.projbuild",
+      "sha256": "7bf69b9d835be838b83c8d2bafa745811185707f0aa50449b62b91fe01cd4327"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/modem_client.cpp",
+      "sha256": "98f61c700149ab089c41c6e8e4a77f963a2d207c4699fe5de155a0d34996ee7d"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/socket_commands.inc",
+      "sha256": "f77fb2682696718ff2d1199cc1c2d40de853627739bb565ef8fbcebdacea30d1"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/sock_commands.hpp",
+      "sha256": "b9619977ae4e18ad9a8bfc8abfe20fbe8a3ed6fcd1a354eaf5e8f594190dcd90"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/sock_commands_bg96.cpp",
+      "sha256": "1e350bb51995a415aa399d97df9c93a92717dd1cf60a45bebf7bc6efbef2d3cf"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/sock_commands_sim7600.cpp",
+      "sha256": "db0b5f9fceb920a32a39b5a0be6bf3926aa96c95eb372db42ae9f60295b17419"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/sock_dce.cpp",
+      "sha256": "289e638ae55fb07e1d5c9dabd427bb940edcd53ad9cb7b442afd45313ada9ed1"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/sock_dce.hpp",
+      "sha256": "0ba54dc44fa5eeb028bc3ee3a51af23cd13a1ae261368b602185adbce426a6c3"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/tcp_transport_at.cpp",
+      "sha256": "5412737d1634728c865d8dba080491e40cd85d02abf942bd6da9061817d5b6cb"
+    },
+    {
+      "path": "components/esp_modem/examples/modem_tcp_client/main/tcp_transport_at.h",
+      "sha256": "e637c38505ce7db709d873643c84184782cdf7ea699465fe0cde0a6634d163d9"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/CMakeLists.txt",
+      "sha256": "15d083736ab57ef138e4b8c61380400310106e5539246fe40952570ae5e92a28"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/pytest_pppos_client.py",
+      "sha256": "afa7b73f2ee783f97a3934ed356830d04703b4d6d51ac02282a51fa07a26316c"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/README.md",
+      "sha256": "4ac2500b09130bfe40ede441c356ba68c060c696d25bb0fcea321ddf3b88c8a1"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/sdkconfig.ci.sim800_c3",
+      "sha256": "644e3e652ac646da34c1b18a9c38d860ab682e82a0741d3795eaf65bbc270e39"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/sdkconfig.ci.usb_a7670_s2",
+      "sha256": "53f533c47a9a92206dd9eb0e9fe78862f470c0432d18118d66d12164c08802ac"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/sdkconfig.ci.usb_p4",
+      "sha256": "97641867655fdfabf5bf289fca09ab25f90c7200095db9f6b81b343d41961c1f"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/sdkconfig.ci.usb_s2",
+      "sha256": "2a198d1be246562e28e59e515ca26a41fc920f8e1eeed8e1c44c1b17444c8212"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/sdkconfig.ci.usb_s3",
+      "sha256": "eaf46200c7e3e402f72020d4c38e629410db4d062a51a3f3b13e0ce7fee4cb52"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/sdkconfig.defaults",
+      "sha256": "c5bbb403a8d3c55cc02034ef5ac47642b735a61944e0300420be799f838df249"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/main/CMakeLists.txt",
+      "sha256": "4ea3bee265ac6a324dc43508383e43e628529883c96054747be6e9e321e9fd20"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/main/custom_module.hpp",
+      "sha256": "c8efe6cec274a71aefc0fb285d53d4c97f6150f1b82b886157df225a4c15c61b"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/main/idf_component.yml",
+      "sha256": "5fae3cadbdad8ab12390b158facdde5484f50ed5e87d2a35d50df1da254f0b1d"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/main/Kconfig.projbuild",
+      "sha256": "4d690a915b82f2af5e03ef1f9b95afb5c32a791f1e4f40b99217880241cc386a"
+    },
+    {
+      "path": "components/esp_modem/examples/pppos_client/main/pppos_client_main.c",
+      "sha256": "f439838614a3550415073defa3fd04d9fe304370b7d4702bd4114ac2bef49be4"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/CMakeLists.txt",
+      "sha256": "cbff477800772db3a1e9cc9435015af00a92d54753502e36b30c634b3c058e3d"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/pytest_cmux.py",
+      "sha256": "f4be99a76806bfd43cccc634a62951e16934bf4795d708e807835032dfc6e01f"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/README.md",
+      "sha256": "829b3186322135c26ad366aadbc2a1db731c93bff142e6b5f3dcedfabcfca6d1"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/sdkconfig.ci.sim800_cmux",
+      "sha256": "1f71052a254ca66bc09d8bae0a05c3032cf6eb6a94a1b5f4e07a85a821d81d81"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/sdkconfig.defaults",
+      "sha256": "3e1b1726717230521a4d687194367e97437cfe7468a8aebe5dceaaf71644e53d"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/components/SIM7070_gnss/CMakeLists.txt",
+      "sha256": "2e4d58fd9b00a653f3cad6f2d197a1a5f340986bf637466e319b23fe4eea88a9"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/components/SIM7070_gnss/SIM7070_gnss.cpp",
+      "sha256": "0baf4aab36cc50f86feeeec2998469c2e54d1756901f54a695259281bd9f02cd"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/components/SIM7070_gnss/SIM7070_gnss.hpp",
+      "sha256": "aecdfdb1e260aa46d764dbe4938d948c14578efcd22c1f00abadc6a03f741254"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/components/SIM7070_gnss/sim70xx_gps.h",
+      "sha256": "5ef1d3cb5619399b7d6fc3254213eb2e5c4384193fd0e041ee3cee548d1df0c3"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/main/CMakeLists.txt",
+      "sha256": "3836d7a62729a64eb7e06b1a62c2871751b7edc909ed1bf91a8c36c492995f5f"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/main/idf_component.yml",
+      "sha256": "f248b4530147dd9c6eda9716d00e0919563a5608fb16f6af71c4b9d2fb5e9baf"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/main/Kconfig.projbuild",
+      "sha256": "ff2642432328714e41901fa9e6b7aa000d138ce9e319758aae39455a674d8461"
+    },
+    {
+      "path": "components/esp_modem/examples/simple_cmux_client/main/simple_cmux_client_main.cpp",
+      "sha256": "8700e3a6ef8e28cfcf799fb5be58ba9e2af4075f0af39e26caad6c3dd0493b6a"
+    },
+    {
+      "path": "components/esp_modem/include/esp_modem_api.h",
+      "sha256": "c649e5baf1658e59a6eaa701606faccf39235b242a81fc8b07167380f4cfb10c"
+    },
+    {
+      "path": "components/esp_modem/include/esp_modem_config.h",
+      "sha256": "b0efde0eff911187a1fb31d251204e0002e917efedabf83daa4c42f6dffb4c85"
+    },
+    {
+      "path": "components/esp_modem/include/esp_modem_c_api_types.h",
+      "sha256": "0081140f7cec041ddc9f00199fe3abb3b085ec2d8b114b4e7b68374505bec8a7"
+    },
+    {
+      "path": "components/esp_modem/include/esp_modem_dce_config.h",
+      "sha256": "6697551ffcf7209953560f374fd1e8cfc121da272a75f80323cda309c847a846"
+    },
+    {
+      "path": "components/esp_modem/include/cxx17_include/esp_modem_command_library_17.hpp",
+      "sha256": "ff8d15737b9a64e4a9dd03bfa4dcca2b5531d599229d9b235b0e92e2cc1ee9d8"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_api.hpp",
+      "sha256": "88be00e7e8705586ece7e0bf42646495952aee7fdac8c7fd5cb69657a3478bbd"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_buffer.hpp",
+      "sha256": "4ce42b95b015be1de1ebb3dece43c2b4916f51e2500a560c69ef89e41994ba33"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_cmux.hpp",
+      "sha256": "ac4c85397dcb314b554278c26fea2ad5533b24e4ba8e4cf3c8106bb9bb5a5bce"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_command_library.hpp",
+      "sha256": "ebe1d63aeec0fb2324664063045b89ab24d906ab71853d56430b432c48c161b4"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_command_library_utils.hpp",
+      "sha256": "5c3c838b645ab3eaf35e2a54a920d0092e65d304d66e2d0d31a0fb3bad37d073"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_dce.hpp",
+      "sha256": "d823702fc175a3926c0f75f595ac29257c94d0dad3f09765ecb340c21af0aeb4"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_dce_factory.hpp",
+      "sha256": "87abcf63e7bc3cc59356672e7b8f269c5ede397e218538e73297eb08f56ee7b0"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_dce_module.hpp",
+      "sha256": "42d64acbc1af5d62bb7ea438452d28cee4d4c1d2eb203e8dd8c5a0ffffd2a02b"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_dte.hpp",
+      "sha256": "82af45421855dc6c9cf112198a703bdcf65f4af8a7a1cb1f9a5e145bdbe75f1e"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_exception.hpp",
+      "sha256": "91d8d1d574f8924fc5edd9721de9aaf307728f709de590b393cdde80c9cedd78"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_netif.hpp",
+      "sha256": "7dfcc25b25edc8885863446805bc95ad7efc02d4676bc3455804a35d286f17a8"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_primitives.hpp",
+      "sha256": "bc9b1d1700033a3dac97f06792f585bdf0248d101bcc5c2d123df76058519ccf"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_terminal.hpp",
+      "sha256": "0b8124ef1570dc59e0c25665ab7cd5fa7a0c56a6f084822b9aa2bcc49b6a8817"
+    },
+    {
+      "path": "components/esp_modem/include/cxx_include/esp_modem_types.hpp",
+      "sha256": "f8008972eb835a72d8b5725d00cd543c7b7b700ba11fb9cb011aff0178fd9660"
+    },
+    {
+      "path": "components/esp_modem/include/esp_private/c_api_wrapper.hpp",
+      "sha256": "afdec23398bd22779176bcd37309b45308cac993139150af3cde5aeb4ce2b3c9"
+    },
+    {
+      "path": "components/esp_modem/include/generate/esp_modem_command_declare.inc",
+      "sha256": "a907bad6507176e03d3e961647e53566e4cccb9d627309239ac82db306798d64"
+    },
+    {
+      "path": "components/esp_modem/include/generate/esp_modem_command_declare_helper.inc",
+      "sha256": "ec34b2ad59614bd2f5bb9ee9dc670763421a58a3e30006bd8bbe1001247a7cf1"
+    },
+    {
+      "path": "components/esp_modem/include/vfs_resource/vfs_create.hpp",
+      "sha256": "f80bbc8b27bc7dedbd67d805c4c44240b8219880d7c03a0cadbe27bd22e10b60"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_event_mock/CMakeLists.txt",
+      "sha256": "fd9929d29ecf026a04b10a262bd148af2c1dd7cc6f2dbbaaabb0e52aaa7c4696"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_event_mock/esp_event_mock.c",
+      "sha256": "534891be48b03eec5ac7c59184dd3c1d689732b71ae51335cb0ffc887a1d1754"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_event_mock/include/esp_event.h",
+      "sha256": "4356469810d802f685b058b2a37774db8c6640cd32b1b9b6dad8d495739c0c60"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_event_mock/include/esp_event_base.h",
+      "sha256": "3048fc32d57c53207b9444f837be9354342c19d41ddea93d774071d045c95b02"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/CMakeLists.txt",
+      "sha256": "9f04b5388247208fa28466a7dcbd12fcccec2ba5d064bf08565d41468989725b"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/esp_netif_linux.cpp",
+      "sha256": "1bbb2545f2827825b0948475d05af596488b8e3e16da18192bc7f035fc9b58ee"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/ip4_stub.c",
+      "sha256": "09251dc05092a1cd0cae41a98abb2626794d9ae30be28b734762d5612f4c7bd7"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/ip6_stub.c",
+      "sha256": "561992f3054eb2c2e1c81a880a7b11ea912e11c5056a6ed1433e0cddecbfbf67"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/lwipopts.h",
+      "sha256": "8b3b2b24cf4b1fb275eaaa33cb5437cfaa949b732ff162feca8ad4c42d9a40b6"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/tun_io.c",
+      "sha256": "a0f4a9f11c76891831712d346cb921b77c2d0b5850853335449f81f6149a46d4"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/include/esp_netif.h",
+      "sha256": "06c033c4bff474ac2386895b36d9a20f338dc67530006897997c6279d7de45d4"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/include/esp_netif_ip_addr.h",
+      "sha256": "0a2f92bb0339dc5853a38c2155ffe80ff1bbeef78fa4fcf506f64dd1e66600e8"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_netif_linux/include/esp_netif_ppp.h",
+      "sha256": "7c4a690178dfb66afa01907543a262ecdeceb887d28a7ac5530a6fd5b660fccd"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_system_protocols_linux/CMakeLists.txt",
+      "sha256": "c598b1ae10b2b7906f3a291ae56b984c2ddff84c7499c0b7e34d33208251eecf"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_system_protocols_linux/esp_err_to_name.c",
+      "sha256": "d65b99d463b28cbcdb5b810a24ec910f12827d91d97d19c530ac6547ca9b3c45"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_system_protocols_linux/include/esp_err.h",
+      "sha256": "7f90116152dc72d296f1803dc83b9705367d89929cc080e93a0c87371995561d"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_system_protocols_linux/include/esp_log.h",
+      "sha256": "d5610e7cd56ffd011daaa79050230c69d69d96a06edcf204a9017fe099a72c05"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_system_protocols_linux/include/driver/uart.h",
+      "sha256": "04b59d35378087642080f43d1701bb38f97641bb575de0f2a8d6d77bdddc6b9a"
+    },
+    {
+      "path": "components/esp_modem/port/linux/esp_system_protocols_linux/include/machine/endian.h",
+      "sha256": "9425745521bf0390e9c58f426aa0fe511a1980e81d46ddfb7376e4a39f7545c6"
+    },
+    {
+      "path": "components/esp_modem/private_include/exception_stub.hpp",
+      "sha256": "ea6541aa01a7a237e2479cbeff1a18bc5d505a69a93551a79cacb1f7273c4fdd"
+    },
+    {
+      "path": "components/esp_modem/private_include/uart_compat.h",
+      "sha256": "0a2df88c3f7032c88cca98ef84c9072d991d90dd8ac8e4848ecc69d738b73cd8"
+    },
+    {
+      "path": "components/esp_modem/private_include/uart_resource.hpp",
+      "sha256": "ff2b5a102c1806477270070e6a83c7ca8e4e7c574385b8b6fe16aec37b49d65e"
+    },
+    {
+      "path": "components/esp_modem/private_include/uart_terminal.hpp",
+      "sha256": "f9cdc24e0a5eb478ccb16e4bc80ca6fec6a7c348af6e0fdd7495a7006a3e66a9"
+    },
+    {
+      "path": "components/esp_modem/private_include/vfs_termial.hpp",
+      "sha256": "51e65cf4ac4a43d20a631dacb87e7be6be205d33b068ff38bb40487abd61a852"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_api.cpp",
+      "sha256": "269a462457eb4cdb63f97a13c45db6a38269a2db5f6dacee5691bb19ae1dfd0e"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_api_target.cpp",
+      "sha256": "94b98a64c4b968e4a125c2df20a739396c02cb12290272a14427eb5cb587a2fd"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_cmux.cpp",
+      "sha256": "faf0c4f16e42937fd7bfff7d29589ca78d51e4b12ec40dc51c2218a36c30276b"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_command_library.cpp",
+      "sha256": "f4faa99b560a9aacc68f25db63b6276c13bfdf6f4f90b9658ca32e36dc8677be"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_c_api.cpp",
+      "sha256": "5cb7daa3cf74d93c208d37ef10aa47e5460ac6f7d2deaa4120b4b22bdd8f0d89"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_dce.cpp",
+      "sha256": "3dee93d18ada85004a9b4276ba1c49490a7aa918cb53f1aed5ec329a5254c912"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_dte.cpp",
+      "sha256": "fb3e061d17f471c12c1a85a6419aa32b438cfcc1b747410939cabea54d7f058c"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_factory.cpp",
+      "sha256": "c834b1ff4da740db43c1d3c5788b7cf659313eeb2d25bbedf59a37bd9339909f"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_modules.cpp",
+      "sha256": "1418e6de0389f3b5c8550078cd4f086b68fa14b407001f5f8c086b37e249d78b"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_netif.cpp",
+      "sha256": "48e72cfab138eab04db95308660dc606c4bce88aa5fb7bd6a1e4e3d437a7c33a"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_netif_linux.cpp",
+      "sha256": "53f624d1a8bf4b694d0e3ee6eb22b89e45be2eb08d25c62db27210243caf916a"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_primitives_freertos.cpp",
+      "sha256": "50ee9f89e9796ca1c418ad63077c0eb26b33a5136221dabd56f30c4e672bfb09"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_primitives_linux.cpp",
+      "sha256": "1081e46bcfbfaf1291394a303020e25c005ceaeaa78331d0040ceb57032a83ae"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_term_fs.cpp",
+      "sha256": "ccfa58e8edd9d59d7aab64501f8b9a7573d99707197fd20dae28dc0cbf70dc16"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_term_uart.cpp",
+      "sha256": "b8a576d4692e30292fe89ad862da66c69ac0452fe6597e0fb1b9808082a73e1e"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_uart.cpp",
+      "sha256": "5614203eb5fc9218a8984644f05d0f3e3e429d442595cc007599313f636b5285"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_uart_linux.cpp",
+      "sha256": "547ff416cadac47a18c18354c70c19bcc4fe43a06dbe437bf03646a3bbe850f0"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_vfs_socket_creator.cpp",
+      "sha256": "ae20ba29a25f7aaf130252c5ecce456a5b41785d6cd611707c857bd237143929"
+    },
+    {
+      "path": "components/esp_modem/src/esp_modem_vfs_uart_creator.cpp",
+      "sha256": "8f0c6888656f5a2572a8f92b78a1c0dc8fa724c92bf6fb3dde14bedd08473e26"
+    },
+    {
+      "path": "components/esp_modem/test/README.md",
+      "sha256": "a5f1203e781613be982c916e76b9c7fd48ccdcdaa9e33f4c4feee59d0d1ca6d3"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/CMakeLists.txt",
+      "sha256": "c8c6705472989f734a669aca0c46fa2086446c29a7413ed2eb8ae67bb7d1e7b3"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/env.sh",
+      "sha256": "dfe5205f5c415d7af3f908dbe8a93f1eacc44d7ffcff8d564052ede2132e6aa1"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/README.md",
+      "sha256": "7dfa94e192a755c7f2b13e5ab7cafb8cc27c9042a20bc7f1dd7511bae232e57b"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/sdkconfig.ci.coverage",
+      "sha256": "f888b8617855ffd079ad2279225b432e71557a0d4d546d2274a9d5e75a6df38d"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/sdkconfig.ci.linux",
+      "sha256": "49e6050e3ab51c3eb082c185cf8b29f568b5bdd1aedc303590b86ea7363079d0"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/sdkconfig.defaults",
+      "sha256": "49e6050e3ab51c3eb082c185cf8b29f568b5bdd1aedc303590b86ea7363079d0"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/main/CMakeLists.txt",
+      "sha256": "d9c08ce15b9d9300413f567a597dd498b08ac04d1d48c800f513d4854826bf62"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/main/idf_component.yml",
+      "sha256": "d9dced0a99b27c9e83bc69cf7ac64a759bf758e120ca94d9171f94390452426c"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/main/Kconfig",
+      "sha256": "730c41554097e863b3d4ce93c55635fc77c24e1bb24756a32457fc036842806b"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/main/LoopbackTerm.cpp",
+      "sha256": "7204838d76519830536e869bb02d8c2cfbe625e76f45978a1744618dedca83b3"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/main/LoopbackTerm.h",
+      "sha256": "6c490a2325dae8511e0a6b8143ed0636b6feb2204e9bb06d506ad48c0f6e2184"
+    },
+    {
+      "path": "components/esp_modem/test/host_test/main/test_modem.cpp",
+      "sha256": "a2a64b64752ccab9ce96ee3bb5ec0985b5005cec403486c367016eee6ea5ccf8"
+    },
+    {
+      "path": "components/esp_modem/test/target/CMakeLists.txt",
+      "sha256": "ff869e8b56800b7e99bab6fd5bd4da9fd16d1d0b1ac1013ff4f63713f5d5ce8b"
+    },
+    {
+      "path": "components/esp_modem/test/target/pytest_pppd.py",
+      "sha256": "6b6fa73724363a0be7be1d47391d5d61b60c8d2cc427a2f8dd3e265e1d758caa"
+    },
+    {
+      "path": "components/esp_modem/test/target/sdkconfig.ci.pppd_chap_auth",
+      "sha256": "ea8b6a429884643b7f2b51cd7aaa5e6e35818aec4aa1b1c8c9bd2f8c429a5f08"
+    },
+    {
+      "path": "components/esp_modem/test/target/sdkconfig.defaults",
+      "sha256": "0a18204f515bff3ccae17a260a81749655690495b381303ac2b39fac2ade4efb"
+    },
+    {
+      "path": "components/esp_modem/test/target/main/CMakeLists.txt",
+      "sha256": "cd4c452ea29554e3af1395ef517afa4b8bf47b353caaf9ca9eb27ecc4af5762f"
+    },
+    {
+      "path": "components/esp_modem/test/target/main/idf_component.yml",
+      "sha256": "cf73604a27e1a7feb13ff6fd37e7d92f1a57966ed773919232dee60a905345a7"
+    },
+    {
+      "path": "components/esp_modem/test/target/main/Kconfig.projbuild",
+      "sha256": "f826f5d398442f20b981619a78afe290100142941a1a039cf2c53d590e4b8fae"
+    },
+    {
+      "path": "components/esp_modem/test/target/main/NetworkDCE.cpp",
+      "sha256": "c6c7b4a6e1d32f4ad08e41dfec0f9a44addb2ba925345d51f9ef3c55c5c271e3"
+    },
+    {
+      "path": "components/esp_modem/test/target/main/pppd_test.cpp",
+      "sha256": "8e166e98f17304e3eb8fa118f0faa0bea094b6c4a05b575e589e89f8512d2794"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/CMakeLists.txt",
+      "sha256": "dd0b4cc37a284c54ab780ae4844c756d1d47476c7a844ce4e389025576fd484e"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/pytest_ppp_iperf.py",
+      "sha256": "296e67a25261d0d8f5f87a90fff25da658f3f0bdb3f93809e70c2e4bd0f13c80"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/README.md",
+      "sha256": "67cf659db12dde1f7b61b82716caeb570094387fca31f081335b73b33452ad42"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/sdkconfig.defaults",
+      "sha256": "f4713be53288b9a0e20e379d794087a0cf199f14e9c35ae70ee0bba82d628744"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/main/CMakeLists.txt",
+      "sha256": "90ba67c5c10ccb236a870ec71f52af6eb7735f248990c222169231385279b79e"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/main/cmd_pppclient.c",
+      "sha256": "8b035b7f9b1a55fe9f34fa8de53fcc226f04f0aa4cad1a9ee6d078a77dedd661"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/main/idf_component.yml",
+      "sha256": "194a0e11a873c68e439bf8ff12fc6b1824dc0c550627f460b8b8dd4d74f18c45"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/main/NetworkDCE.cpp",
+      "sha256": "bc6cdb4b81c1d8ca9ba4acfc79e25ae5c2c3024fb1916c1052ade0009cb79cae"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/main/network_dce.h",
+      "sha256": "6526eb6cffd644031847973cf55237de0f29f932afbf337983c19424a3f723fe"
+    },
+    {
+      "path": "components/esp_modem/test/target_iperf/main/pppd_iperf_main.c",
+      "sha256": "a6d0ac364cfa21a8e948ca89e581f7bb61179c376d76800b3a9bd732e4284c26"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/CMakeLists.txt",
+      "sha256": "5dc530c10b53f9d60f907fbaa8c524a4c345c1da3d16a80ae20a8f0dd4cd6396"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/http_server.py",
+      "sha256": "c443ea576ba5f91c1b56a477441ecae5d18dd4e86a8904956ef3bbcbefb94cf0"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/README.md",
+      "sha256": "a9430a68188c302781a73e43ce033f11ef5f573bded3ffe07fd6291e0c85d063"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/sdkconfig.ci.1",
+      "sha256": "0eeb44a2bed42a8a721a054f9a6d0a009553636acda252b3b03911c0a4a92a6a"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/sdkconfig.ci.2",
+      "sha256": "9fed0a347c6a14a43411ccf0b6bb22a0c8c2bd47801eaa4224d413610d9464d7"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/sdkconfig.ci.3",
+      "sha256": "f975a6eaf050ea367e8e2933bd4fac05f460973eb4786314a9c3b7daf8bbc92d"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/sdkconfig.defaults",
+      "sha256": "f7940a67b6c071fa0ac3de30110c4398b8cc5c0f1858e9bf979d132c009df7ef"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/bin/blink.bin",
+      "sha256": "9fd9b4d02b6b2f2d0ce14b6bf18a11dcad5f1324c31ee22df3f8059f48fd931f"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/components/manual_ota/CMakeLists.txt",
+      "sha256": "9c2b3baabb753e0058181fed86ea5958becb12cc9b481b67a569eebea31bbd7d"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/components/manual_ota/manual_ota.cpp",
+      "sha256": "17ce852a4fc90d4f18921a737a531634a8391545c008f9bc736b6f7954f3d66d"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/components/manual_ota/manual_ota.hpp",
+      "sha256": "aa0038c731cf2623510f14b71c3301a8a17afe41e72f5eb2917e8493a49b8e13"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/components/manual_ota/transport_batch_tls.cpp",
+      "sha256": "b7c7ad15450d76db094e7b7a569a4855cd10f1ac7549701377e3062d4d6b5fbe"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/components/manual_ota/transport_batch_tls.hpp",
+      "sha256": "2e2f9cb75acc9048202b035172afdef567fe57cfa3a9e44beed1888dbc1cb3fe"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/main/CMakeLists.txt",
+      "sha256": "29765d8f58536a37ac23e0f8212e80920b1c1e6b69b185e4020dcaea0ede80b2"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/main/idf_component.yml",
+      "sha256": "0d299ef7df15264bdb3af7a0e5ad296e80bb28175f7987bc0a011bb94e8e057d"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/main/Kconfig.projbuild",
+      "sha256": "f28c7d40513083ccdbcacf89f90399d2844581a60158d3360e3f39009ecb8119"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/main/network_dce.hpp",
+      "sha256": "380f2a41adff8373b58540f7ac9488735f4dbfa9df4d9b8a1a06fc9a6f49222e"
+    },
+    {
+      "path": "components/esp_modem/test/target_ota/main/ota_test.cpp",
+      "sha256": "bfd51a35f5ada92327b7f28405d14135c808b0ca040789dea5ffe4b8f5586d6c"
+    },
+    {
+      "path": "components/iot_bridge/.component_hash",
+      "sha256": "fc78a67236b65dd4e25705138aa3285177f3bc34996cc1991d1663695f8701d5"
+    },
+    {
+      "path": "components/iot_bridge/CHANGELOG.md",
+      "sha256": "6a1b1c081d623b2eee1ffc5a54165af8c7d3d613aff08a00369f57bf7847c5de"
+    },
+    {
+      "path": "components/iot_bridge/CHECKSUMS.json",
+      "sha256": "e197e9f170e5c2a641d39f7e98b2cfce269798b9b94faac98f2102bee8925a9f"
+    },
+    {
+      "path": "components/iot_bridge/check_sdk.cmake",
+      "sha256": "13661c84c12c0e0619f61e31cddd7dec92d13d87e6ea29079ee1b88c1adc774f"
+    },
+    {
+      "path": "components/iot_bridge/CMakeLists.txt",
+      "sha256": "4c449089995f99233bd6a9cfdf5893286984a43067a7fef9c9accd1165069ed3"
+    },
+    {
+      "path": "components/iot_bridge/idf_component.yml",
+      "sha256": "7be717e2c1b793126fe4f13e0723884156445de4e1bf6da8d544949fd209b27a"
+    },
+    {
+      "path": "components/iot_bridge/Kconfig",
+      "sha256": "e8d980fd3d69f0e20e2257d87da97ad7902339cc8cb072c9e9fb52467a5fe92c"
+    },
+    {
+      "path": "components/iot_bridge/license.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "components/iot_bridge/README.md",
+      "sha256": "9901ff1bdcf33b99c05c0e96bc3032f89dd1eb084592af839267129f18b8d8ac"
+    },
+    {
+      "path": "components/iot_bridge/User_Guide.md",
+      "sha256": "49a14d49c5aa92ebe71772e07e332c6576de3f0bd1605426012395926672f354"
+    },
+    {
+      "path": "components/iot_bridge/User_Guide_CN.md",
+      "sha256": "ac33fd0ff8a8ae824c19e5338b095904b6bd32d4a028f77ac99fbb085a41bc6b"
+    },
+    {
+      "path": "components/iot_bridge/docs/Linux_based_readme.md",
+      "sha256": "4666dd8d2f2de438aaa78b266ee4af3179549bae0965f86f6d756d76f20ab7a9"
+    },
+    {
+      "path": "components/iot_bridge/docs/SDIO_setup.md",
+      "sha256": "eee58d1f969630f063d7cc4b71edf551fdab30330123202f266bd0e7deb352e0"
+    },
+    {
+      "path": "components/iot_bridge/docs/SPI_setup.md",
+      "sha256": "7d30ab8957e923767149ee89f881de306d4613462f63371a16862541471f20d8"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/4g_nic.png",
+      "sha256": "889461ba755bab5c519eb9ca5943658c154268bd838015b6cd81e8f3620bab90"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/4g_nic_en.png",
+      "sha256": "ce2c8a09c6663cf0114ce8e157f0374b551046b91060bdb07a633dca8909c7b6"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/4g_router.png",
+      "sha256": "0ab2b632f0f7d3a2053640f44efc844f45bd4a42269cfa169134b14d94dae37a"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/4g_router_en.png",
+      "sha256": "80c35e755ba585c7e627410d48e67775b862d660bfd30c141f4ba6758dcb5f21"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/data_forwarding.png",
+      "sha256": "795217c585083438435f1a5d897597f1e7b6f42f64fc401652ea321ccc6c38ff"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/esp_iot_bridge.png",
+      "sha256": "242ba97965e211dab416dd0202faf38c7594e1df0dc4555b892c953d5edcffd3"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/esp_iot_bridge_en.png",
+      "sha256": "013da62e75e723bdf963b5655d5f2038819a20f080caa7e56f5e65f308d5f501"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/eth.png",
+      "sha256": "0180fd7cc76e55bfc0e24a58649ecb6e913f544edfe145f4b82e18058c47e854"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/external.png",
+      "sha256": "e4490056c6453ef02875306b15b2f47e71658dbd0fda1df5a6ebc09c8567ef4e"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/gpio_map.png",
+      "sha256": "edf36d6b76b8d9c508b267e4f69c94f2c745d36b1d0bf3627d9abce558d89969"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/modem.png",
+      "sha256": "f2ffc6e32a815543a95463d8d215c7df6dbb5240c85a07c8eb946330182133bb"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/web_ota.png",
+      "sha256": "8511bccedb3e06f0bfcfefd5b7b5815ff0a6cb9e6320e70fbffded51f4c65151"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/web_server.png",
+      "sha256": "521cb83461ed7e9aca56d0024ea991496dcb383d420a0156b5e721b08e4a7d46"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/web_server_en.png",
+      "sha256": "09859cb1be5fbd0eec49f453dcfb2d99398c18f133fe633dab92cfc70760bc7d"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/wifi_router.png",
+      "sha256": "0c3353c122319499af1c62ef888f88bedfa6d55a46540aca67dedd3d9f2ad7d6"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/wifi_router_en.png",
+      "sha256": "c3d800f8959a35fd5ad1691ccf7c5e4469e8900abf1737e1130aad807500574b"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/wired_nic.png",
+      "sha256": "51745bd15d67ed08c605f45e0cf751204c68c308c15ecef47d3ff7087862b7c5"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/wired_nic_en.png",
+      "sha256": "21aefc03d57ac81ac4211f16e01b7ee45fadc9c71be481e6121bd55ac57e31e7"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/wireless_nic.png",
+      "sha256": "b74e6e350a9a86b958edde00469aff5abc6b7643303d6d97cd174164efb80bfb"
+    },
+    {
+      "path": "components/iot_bridge/docs/_static/wireless_nic_en.png",
+      "sha256": "12f6a4931c2dac505c66c3d985db99072909371d900937a545b237f18a58c699"
+    },
+    {
+      "path": "components/iot_bridge/drivers/CMakeLists.txt",
+      "sha256": "fa5dd5eff3fe8cb6a695458ab3567fbdbe5068526e5f2d2af6d4c04f4aca1a74"
+    },
+    {
+      "path": "components/iot_bridge/drivers/Kconfig",
+      "sha256": "3f2d7b7f68f11af75d76f37001647f3b481b0544a05f17283daf4c981d0aa89a"
+    },
+    {
+      "path": "components/iot_bridge/drivers/VERSION",
+      "sha256": "fded772c22216644d2fd521be00de8bc3fc57905e26e0a4b1dc6809dfbfad02b"
+    },
+    {
+      "path": "components/iot_bridge/drivers/include/interface.h",
+      "sha256": "f4c483d6ba955553e775ec23dea50daa22df3dc6ca575e87cb409422cff2710f"
+    },
+    {
+      "path": "components/iot_bridge/drivers/include/mempool.h",
+      "sha256": "206cab9e986fc6bee8e7c98cb63a9d7c36f3a0e68eda82002a93ae572afa4927"
+    },
+    {
+      "path": "components/iot_bridge/drivers/include/mempool_ll.h",
+      "sha256": "bd888cec166a2cdf98ddd0a99a3fdf85cbe68e67ce83ea77ae91dfc1242ddc04"
+    },
+    {
+      "path": "components/iot_bridge/drivers/include/network_adapter.h",
+      "sha256": "0c46a52d4b3a4bd427920aa29619ac75fb9bb8ab39f33a3290d73ee893490202"
+    },
+    {
+      "path": "components/iot_bridge/drivers/include/sdio_slave_api.h",
+      "sha256": "364d98c12bdf0b3f665d24b8437e3e4ed955dd1b3015879f12443a9f36f29cc3"
+    },
+    {
+      "path": "components/iot_bridge/drivers/include/slave_bt.h",
+      "sha256": "131f76d33ba81c9a1520fd33a450be0cb9cc1f83d3ec4440cabff32021ff1fd5"
+    },
+    {
+      "path": "components/iot_bridge/drivers/include/wifi_dongle_adapter.h",
+      "sha256": "f95f906a67de6f3ec73e52c55cd19c49e842085921e4aef0952465d55ddd2fd1"
+    },
+    {
+      "path": "components/iot_bridge/drivers/src/mempool.c",
+      "sha256": "6d82099c7c6c83b2b5ac7df2b3a8dc97b09ae24f73e91b96bfba9237e567773c"
+    },
+    {
+      "path": "components/iot_bridge/drivers/src/mempool_ll.c",
+      "sha256": "e2eddac2bf33fe03e420573a863e26dbc7f19d79568ffb9b783579606b178e93"
+    },
+    {
+      "path": "components/iot_bridge/drivers/src/network_adapter.c",
+      "sha256": "a06325c5c28ff0a7383fc24d5ca4dcb20043fb6399657294d4223ba24b717c40"
+    },
+    {
+      "path": "components/iot_bridge/drivers/src/sdio_slave_api.c",
+      "sha256": "24851fdd80d422743d95c4ebc56fbd101bd5091d31bc502da6fff978fb4a14a7"
+    },
+    {
+      "path": "components/iot_bridge/drivers/src/slave_bt.c",
+      "sha256": "a65b7ed9c55cf08c9d8f0e6fdb3c42de430f2beb5195c946664ab8ca4730af64"
+    },
+    {
+      "path": "components/iot_bridge/drivers/src/spi_slave_api.c",
+      "sha256": "3fd920debd6bdbf1dfe1613bba510539789f56b14f60f180e41c345391e7889b"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_hotspot/CMakeLists.txt",
+      "sha256": "d7b9f2defcf3a93ccc5c4fca74ab7ab69f0eabc81a4812c17f99d392c9e8d5d5"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_hotspot/README.md",
+      "sha256": "826cbd9e4718815c09fb2109589b37f0e03bf8bbc74f01fe9322b765421faae9"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_hotspot/sdkconfig.defaults",
+      "sha256": "923aedb1821b0461bc6b60ed1a80498fa9995237b548f6b0908a7c0f66e442cd"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_hotspot/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_hotspot/main/app_main.c",
+      "sha256": "297109a7c6093a34100ccd000ba8c235236f8219ea68266b32a8320f79085ae1"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_hotspot/main/CMakeLists.txt",
+      "sha256": "47114157940dc826fa2b7f81beeb00d95b0249d410ea516565916871a4247846"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_hotspot/main/idf_component.yml",
+      "sha256": "15e9c931c5d4f5942020ca2d13cdbe1168cd9f10cb573790bf53c62fd0c3e7de"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/CMakeLists.txt",
+      "sha256": "d7b9f2defcf3a93ccc5c4fca74ab7ab69f0eabc81a4812c17f99d392c9e8d5d5"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/README.md",
+      "sha256": "03852e0eec8795df586abc71f69285c744f52245181230061c5e632cfcf3b932"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/sdkconfig.defaults",
+      "sha256": "d3cb1ef4494675318bec19bfd57a97d7797de7b369490e73ee1b3dc9582537af"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/sdkconfig.defaults.esp32",
+      "sha256": "723b127704c0a3da57cdb8c16272032ab3d13e806f3b9f89e74e5ef3f1a6fc33"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/sdkconfig.defaults.esp32s2",
+      "sha256": "d068604e8302b63e6c5bcb15d9b2a1bc3b682c03a378f778eb58c7f7645cc0f4"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/sdkconfig.defaults.esp32s3",
+      "sha256": "b78282224b9f24dbab4e0193f13f0a59c7a1f4a3ab18d85f24d426f85b60159c"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/main/app_main.c",
+      "sha256": "9e553d9f4e891f28479283a6428f67a3a6bdc8de17f48baab5015fbf8904fbb4"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/main/CMakeLists.txt",
+      "sha256": "47114157940dc826fa2b7f81beeb00d95b0249d410ea516565916871a4247846"
+    },
+    {
+      "path": "components/iot_bridge/examples/4g_nic/main/idf_component.yml",
+      "sha256": "15e9c931c5d4f5942020ca2d13cdbe1168cd9f10cb573790bf53c62fd0c3e7de"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/CMakeLists.txt",
+      "sha256": "d7b9f2defcf3a93ccc5c4fca74ab7ab69f0eabc81a4812c17f99d392c9e8d5d5"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/partitions.csv",
+      "sha256": "5458f51e273db757e4c953a4559cf3cb8dfca91aaf0a6eb68998977199ad91aa"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/README.md",
+      "sha256": "e7f05c84aa9b99ecdf01a23eaf7ad6665e64f439d0ce31d17b87b528574dee6d"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/sdkconfig.defaults",
+      "sha256": "0daab0fd821068fd001bbac38d31f4432e1160d24e1db2feab940e08328e335e"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/sdkconfig.defaults.esp32",
+      "sha256": "a43aad635a4bd5e2228d94721ae1324053ed51bc1bacd512779a1e52fe8b1a0a"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/sdkconfig.defaults.esp32s2",
+      "sha256": "d068604e8302b63e6c5bcb15d9b2a1bc3b682c03a378f778eb58c7f7645cc0f4"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/sdkconfig.defaults.esp32s3",
+      "sha256": "b78282224b9f24dbab4e0193f13f0a59c7a1f4a3ab18d85f24d426f85b60159c"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/main/app_main.c",
+      "sha256": "5b8a1b4bae7292b1d89e6d6f8c0db1a996a98eaa8f59bbc1de38600952203eda"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/main/CMakeLists.txt",
+      "sha256": "47114157940dc826fa2b7f81beeb00d95b0249d410ea516565916871a4247846"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/main/idf_component.yml",
+      "sha256": "e6c436ad1cfd61b8c007a3312d7be0e5a53beadadd6e847eeff04fae10feb5df"
+    },
+    {
+      "path": "components/iot_bridge/examples/wifi_router/main/Kconfig.projbuild",
+      "sha256": "6b14a0d12d3a7329543b0725dca4ab79b21871608ca7253faf6bc343783ad0e2"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/CMakeLists.txt",
+      "sha256": "d7b9f2defcf3a93ccc5c4fca74ab7ab69f0eabc81a4812c17f99d392c9e8d5d5"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/README.md",
+      "sha256": "61a01f3f7400fbe61a610c36ac89d289b1855be42e93467428e8683bcf511112"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/sdkconfig.defaults",
+      "sha256": "bb9879d3e2598c79ff46b540bc5fb77d62f3d21447a675c258c06e32b6e13657"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/sdkconfig.defaults.esp32",
+      "sha256": "723b127704c0a3da57cdb8c16272032ab3d13e806f3b9f89e74e5ef3f1a6fc33"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/sdkconfig.defaults.esp32s2",
+      "sha256": "d068604e8302b63e6c5bcb15d9b2a1bc3b682c03a378f778eb58c7f7645cc0f4"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/sdkconfig.defaults.esp32s3",
+      "sha256": "b78282224b9f24dbab4e0193f13f0a59c7a1f4a3ab18d85f24d426f85b60159c"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/main/app_main.c",
+      "sha256": "9e553d9f4e891f28479283a6428f67a3a6bdc8de17f48baab5015fbf8904fbb4"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/main/CMakeLists.txt",
+      "sha256": "47114157940dc826fa2b7f81beeb00d95b0249d410ea516565916871a4247846"
+    },
+    {
+      "path": "components/iot_bridge/examples/wired_nic/main/idf_component.yml",
+      "sha256": "15e9c931c5d4f5942020ca2d13cdbe1168cd9f10cb573790bf53c62fd0c3e7de"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/CMakeLists.txt",
+      "sha256": "d7b9f2defcf3a93ccc5c4fca74ab7ab69f0eabc81a4812c17f99d392c9e8d5d5"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/partitions.csv",
+      "sha256": "5458f51e273db757e4c953a4559cf3cb8dfca91aaf0a6eb68998977199ad91aa"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/README.md",
+      "sha256": "ea225280143f41b925d0078585cc2122e43dff4687d0eeda985317b04afdf3f3"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/sdkconfig.defaults",
+      "sha256": "269c4aa41db38ab75dbe63370b9aa78cb68329c9a232ac60916c42a45615c0a1"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/sdkconfig.defaults.esp32",
+      "sha256": "a43aad635a4bd5e2228d94721ae1324053ed51bc1bacd512779a1e52fe8b1a0a"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/sdkconfig.defaults.esp32s2",
+      "sha256": "d068604e8302b63e6c5bcb15d9b2a1bc3b682c03a378f778eb58c7f7645cc0f4"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/sdkconfig.defaults.esp32s3",
+      "sha256": "b78282224b9f24dbab4e0193f13f0a59c7a1f4a3ab18d85f24d426f85b60159c"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/main/app_main.c",
+      "sha256": "f0729734ed40ec737dff293e7e93393e651f6785d3cbb993f1d80739c2f5e686"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/main/CMakeLists.txt",
+      "sha256": "47114157940dc826fa2b7f81beeb00d95b0249d410ea516565916871a4247846"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/main/idf_component.yml",
+      "sha256": "e6c436ad1cfd61b8c007a3312d7be0e5a53beadadd6e847eeff04fae10feb5df"
+    },
+    {
+      "path": "components/iot_bridge/examples/wireless_nic/main/Kconfig.projbuild",
+      "sha256": "6b14a0d12d3a7329543b0725dca4ab79b21871608ca7253faf6bc343783ad0e2"
+    },
+    {
+      "path": "components/iot_bridge/include/customer_hook.h",
+      "sha256": "679e4cd04a72f8fe91513da6b712238e8e2ef1880333f06043c24511d968f7d3"
+    },
+    {
+      "path": "components/iot_bridge/include/esp_bridge.h",
+      "sha256": "51c390c9e7386a4a7247582231cc277ffbbe8c7e59a1088e66bc2695f961b8eb"
+    },
+    {
+      "path": "components/iot_bridge/include/esp_bridge_config.h",
+      "sha256": "38ea72594323510d4ac322511e616e3d1bd4a4c97d2b222927fde232990834d1"
+    },
+    {
+      "path": "components/iot_bridge/include/esp_bridge_internal.h",
+      "sha256": "1311edd45dd2b68b577a170e6cecce6c8891fcdd0236da3fe822ea33b03f5959"
+    },
+    {
+      "path": "components/iot_bridge/include/esp_bridge_wifi.h",
+      "sha256": "f75bbf6efe31082ebaa2fabd1808231065cc5f57ce05a35f45cb7d1706fa21e0"
+    },
+    {
+      "path": "components/iot_bridge/patch/dhcp.patch",
+      "sha256": "281d16a59e8f9a99b62db472828d4625a050b5de0145292fd1265291fca191e3"
+    },
+    {
+      "path": "components/iot_bridge/patch/dhcpserver.patch",
+      "sha256": "5bb784dc0440180d541fe1c694333ca416cf713eb479bc86ccad4b5cef143210"
+    },
+    {
+      "path": "components/iot_bridge/patch/ip4_forward.patch",
+      "sha256": "f3b8ab9202b934e8d95498bafe52e474db5ec7c96ef68bf7c50f9d3d97ad1c33"
+    },
+    {
+      "path": "components/iot_bridge/patch/ip4_napt.patch",
+      "sha256": "f91231747f430b3b4c60d2f2040464c2e3dd7a374a8f60acd7ac19ace4d0e0ba"
+    },
+    {
+      "path": "components/iot_bridge/src/bridge_common.c",
+      "sha256": "c8122b610dac41cdf813d2d23c13cfea474e924349d4c2cfb5506b20150a08a6"
+    },
+    {
+      "path": "components/iot_bridge/src/bridge_eth.c",
+      "sha256": "512ab8d5a40aa9345e9bb9fc09b2df68c2fe87e441effceb0c14f8e6221f9b55"
+    },
+    {
+      "path": "components/iot_bridge/src/bridge_modem.c",
+      "sha256": "39eac3fd17bb201f29b97215c7ad0c4677ca089646df8ea6d9216b5a3935f7cd"
+    },
+    {
+      "path": "components/iot_bridge/src/bridge_sdio.c",
+      "sha256": "1d7d4c416a5ecab308ac9abc1980896768df1053c1b5db1e4377853ae235ac2c"
+    },
+    {
+      "path": "components/iot_bridge/src/bridge_spi.c",
+      "sha256": "00556892e4912a1f990adcf3c19a6fbf5141148205c4054dcf5f6ac90ae0a7fa"
+    },
+    {
+      "path": "components/iot_bridge/src/bridge_usb.c",
+      "sha256": "29a825e8145de0afbd4fc3abff9270a4f84647a9756fb5d4b627153a67d33e60"
+    },
+    {
+      "path": "components/iot_bridge/src/bridge_wifi.c",
+      "sha256": "0f1dbcb1d32a62268c5b33bd9a3a691c2b85a3ca66bf5d40babbf47597dd1743"
+    },
+    {
+      "path": "components/iot_bridge/src/customer_hook.c",
+      "sha256": "8cd4de861f61711a50d024344c9c420fd42c55621192d0021c11dafac38415c2"
+    },
+    {
+      "path": "components/iot_bridge/src/esp_eth_netif_glue_wrap.c",
+      "sha256": "9f303ac0c7d519b0b2837aabe4219300d8d517f3140be21171f99c75f5510923"
+    },
+    {
+      "path": "components/mesh_lite/.component_hash",
+      "sha256": "a6a9888050c43a68df3cba3ca6efb2fe2ac3f71f6439ef49222d98f4412fc03e"
+    },
+    {
+      "path": "components/mesh_lite/CHANGELOG.md",
+      "sha256": "354a67a017ecec45de91e7b616134cf5c70c2f71ed95aa629612aea04a6184db"
+    },
+    {
+      "path": "components/mesh_lite/CHANGELOG_CN.md",
+      "sha256": "5a6a51e8264efa04448eeb2a9c00aaee5ed946dffda4d508b1511513cb75d2e7"
+    },
+    {
+      "path": "components/mesh_lite/CHECKSUMS.json",
+      "sha256": "3692652f24e349494f8e6713c7c230fa63cced9183ebf02c53387bf38a58a9b7"
+    },
+    {
+      "path": "components/mesh_lite/CMakeLists.txt",
+      "sha256": "2b61c22d90eab08c6891b7903ffe2660a908c2193d6403884356bbcfb5eb300e"
+    },
+    {
+      "path": "components/mesh_lite/idf_component.yml",
+      "sha256": "85e2bc200292b3b43fe9e27eaa6524dc69a48b9c37339c1c5807f807c6bd43a6"
+    },
+    {
+      "path": "components/mesh_lite/Kconfig",
+      "sha256": "2d53c88bff26283a27477b4f58e4c7a4facce2d0c18111efc7697a6736c32ea0"
+    },
+    {
+      "path": "components/mesh_lite/license.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "components/mesh_lite/README.md",
+      "sha256": "1f57b85fe9e3393cfaca808fba2c53497ce91e740ad89575beb421c574bdef13"
+    },
+    {
+      "path": "components/mesh_lite/User_Guide.md",
+      "sha256": "8f5ad4be0b63626273b79106ef1c1a7fdfd0a0edfb581c463f574d79b8f74c35"
+    },
+    {
+      "path": "components/mesh_lite/User_Guide_CN.md",
+      "sha256": "bb77dbdfb503ff6fda8ed764352cee3452af750186770ad996da1796d9876c2a"
+    },
+    {
+      "path": "components/mesh_lite/docs/_static/mesh-root-node-failure.png",
+      "sha256": "589f8d7a4feb58f899992976bac6dff7feda7b1e1b7ad09f54e4dfbfcb2d4de3"
+    },
+    {
+      "path": "components/mesh_lite/docs/_static/Network_Construction_Example.png",
+      "sha256": "b8a8f147987b6ce87ed78718c976f821a43522de25962b4da1a24f5197d18241"
+    },
+    {
+      "path": "components/mesh_lite/docs/_static/root_node_election.png",
+      "sha256": "d35a6ce73a6e04ddaf020b79a79d5ae613772a66a283d980e3b7558858c52a1c"
+    },
+    {
+      "path": "components/mesh_lite/docs/_static/Schematic_diagram_of_bidirectional_data_flow.jpg",
+      "sha256": "c2eaf1bb0bc157fab29724f7a4aeee6f8c21d688c520738217a1d210e5019ce4"
+    },
+    {
+      "path": "components/mesh_lite/docs/_static/wireless_debug.drawio",
+      "sha256": "389e56e583dbc865805ecd525956cfd05838a1174ed2bad8f478888baff609c6"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/CMakeLists.txt",
+      "sha256": "ca307d2a1697e33f37618e9d32cc8b170d789bbfdb860eeb5fa57ffd778ef4e7"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/README.md",
+      "sha256": "b9ce34ba6e333a9c6ebe71953561db295a7928cbdca3c1fca557971ad3efb16d"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/README_CN.md",
+      "sha256": "a2fd18acd1e5b3ce332ac488d09d7c4a2d94c98fb725a794415b2eaa6ed865c7"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/sdkconfig.defaults",
+      "sha256": "75675f2189093b1a0740d619311ea477f8a4957368558a775c1f7a1b88420bdc"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/main/CMakeLists.txt",
+      "sha256": "7b3469c29ea6466d6ba6fc8b40cd59505687ab01b18b17de7b6d35144ff7b166"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/main/idf_component.yml",
+      "sha256": "b21eab316f7203f1b8ef09d9e094942e67d872e2a02e861673a351a1b1577e5b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/main/Kconfig.projbuild",
+      "sha256": "8aa65d35bd718fb6b367bc4c4edff9eb48507cb5f9a27ceb9dabf62fb790e85e"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/530a64cb/mesh_wifi_provisioning/main/mesh_wifi_provisioning.c",
+      "sha256": "7f26ad0193bb5b85fc1d23411b4325028a828706bd9460afffd924ef086db886"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/CMakeLists.txt",
+      "sha256": "03ee2c77696659145ab0f923fe61e59d6bf8ad331e32e0bdf7659a8401ef3b30"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/README.md",
+      "sha256": "05c8176f5e0c73e1e6f3334715ee5047bf967b0c7dd6250666444e34c9df374b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/README_CN.md",
+      "sha256": "96b19e437471162c3fb76b592dbfe5c9faa0d33f9af31f7ccd012f0400401cfa"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/sdkconfig.defaults",
+      "sha256": "5210b08caba6cdfab6a27f3cf1f5b891238c843fe56d40c7800763f9ac3bc4a1"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/sdkconfig.eth",
+      "sha256": "683c188e4df1b17fd5df370f4094f582e000f6eb271901faaeb9b5b04f7d5b6b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/sdkconfig.leafnode",
+      "sha256": "31b54db3d143d5f565082e84b9196a96fcb8cb527b7fd5636ffe9804f40b936c"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/main/CMakeLists.txt",
+      "sha256": "08e0b955294a0d5722df0eb12c37fb19ab9a3adba9facb51561a90a69ad804a0"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/main/idf_component.yml",
+      "sha256": "1861df81d0a40bf4e04501fe66a1cf83b04d118b00d4046e808881c8644d0616"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/main/Kconfig.projbuild",
+      "sha256": "9e20d084bc29c60ee99e0a9810cfe1b05bb8cf461ad6e4d1d984767fa9b4557d"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/64004a57/wireless_debug/main/wireless_debug.c",
+      "sha256": "d320e30be3798227ab194baf5093ee83bbfd5eb061159147a545ccddebff992e"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/CMakeLists.txt",
+      "sha256": "784908c7241319e61b243623080b72cdbbae5864507e9ef5349d1db964a5009a"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/device_config.png",
+      "sha256": "02ae1aff13176cc12da998cb86e5744d3b538f39ed9e881fb5f6ed65312beb0d"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/README.md",
+      "sha256": "48752ffd5ffc1f9a6076d7ab57cf09dc825dbc7c2678e2effa53085549e00383"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/README_CN.md",
+      "sha256": "cbce39a28978fb1771a62cef072a6bfac9b32cf58a05796ff105df5a08b446e5"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/sdkconfig.defaults",
+      "sha256": "618b2f040da81ead60c35eb5637a5e6af9621c1226236d4db965a6dd80187d0c"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/sdkconfig.eth",
+      "sha256": "683c188e4df1b17fd5df370f4094f582e000f6eb271901faaeb9b5b04f7d5b6b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/main/CMakeLists.txt",
+      "sha256": "84290040b8b2c3a5d654a2d6a5a6cdaa1107888484eb5b02114705b4c00db695"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/main/idf_component.yml",
+      "sha256": "88023168a6d9be50819912cc14e9f92d99a50de1ee3d85051700b807c3ec7e19"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/main/Kconfig.projbuild",
+      "sha256": "dfab20ab6396e0dd3473b7c529d6aa1e865f239da6faf9d7b8b1d98f7c373002"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/8617121a/mesh_local_control/main/local_control.c",
+      "sha256": "ded9e9cebd032133ed8ed49efc60cf3f88cc37e2edd5ae7364d7e6c5257d3535"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/CMakeLists.txt",
+      "sha256": "70e32008317cef318c8f214866430e1a70b6f9b596cc151295003997b657c98f"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/partitions_4mb_optimised.csv",
+      "sha256": "bd208b8ebf585d9752d34fac2ab5b903b9d4621293c50333c20fdb7930ceaf0c"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/README.md",
+      "sha256": "553e55a6a1b24a6d2a14b1347a023c4ee15b11a0a91e2ef22ad9856c9c7e9fa5"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/README_CN.md",
+      "sha256": "5c2cc513200344fb107d9f21944bf56e5dae8eda722082e124912b77f5edfd96"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/sdkconfig.defaults",
+      "sha256": "c523081470deaa3b61ce46b484e60b0bf11aeb83d613903fe2d77cf285dff48b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/sdkconfig.defaults.esp32",
+      "sha256": "45cf140de97fdbe10f5d480afa0c707ad175cb15ba2aa3ee83fe6328566da8bb"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/sdkconfig.defaults.esp32c2",
+      "sha256": "70d66527dbbd1fd0f51f5b88dec124675ac8100f7932f2a7ac470bb15330f169"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/sdkconfig.defaults.esp32c3",
+      "sha256": "8a0e9990acdd4350e9ecaec2267e30b238df5def90407d26c4531ec0329e4974"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/sdkconfig.defaults.esp32c6",
+      "sha256": "20f853ecd78325edfe7b8a93bf0488b825f95ace8b48bc58007d0782ef3758a0"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/sdkconfig.defaults.esp32s3",
+      "sha256": "5fb8e5954ab5ca5cc02ec50e52d18a52956a114ed04a9e268c047414ce2d34eb"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_bridge/app_bridge.c",
+      "sha256": "fdb99e904d073246cfa3c56b2b743b7a2bfaa2585c11cca0acfede6ee5fceb19"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_bridge/app_bridge.h",
+      "sha256": "b4e6a07c485abe43dcadaa812c4048e638b53bfb67c407316d58de28e1d434dd"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_bridge/app_mesh_lite_comm.c",
+      "sha256": "fd057fc6432af4daf3e9a9a8b21bd7bf117cdac8420406a89836837e93450aa4"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_bridge/CMakeLists.txt",
+      "sha256": "57dc3284f75ace99c568aadb68b1266590881315d0ab4f7f4776228f9db8c8c8"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_insights/app_insights.c",
+      "sha256": "6c42a2aea29727867c6d9e29ef3d45f3be461417e29ccc58a051b202ef368bc5"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_insights/app_insights.h",
+      "sha256": "4b30d6f4027e9c4a1405653d3ae1dd9acf8f48af2c4dd71a6f280364cef81caa"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_insights/CMakeLists.txt",
+      "sha256": "a6c2aedcee82af44d7ff81423069b9a176828dc518257c62d5c5c955f8a714ef"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_insights/component.mk",
+      "sha256": "2d512b4f361df34193ced1d6791c2a52bf4bea78bc2be9f432179f98771e6fc0"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_insights/idf_component.yml",
+      "sha256": "f73025517668c5a00abb3b77bad91c622313aa83c67c7817fe8537a7eb4d7773"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_insights/Kconfig",
+      "sha256": "317c500f294d051cdac6e25f6933abc533f4102bd4a4531cc8451a14d63796b6"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_light/app_light.c",
+      "sha256": "606d169818867c3202579b1229337a340c19d92a75c28de09057061e3e491401"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_light/app_light.h",
+      "sha256": "9d1d897db5205729d128ef640b89ca70bfe130fbe6c657db1a85e274daf72294"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_light/CMakeLists.txt",
+      "sha256": "995cbf0c92efd2453002c3c602c05250875db6a21b792481520c29ba9dac1d2b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_light/idf_component.yml",
+      "sha256": "dff9df892ab40202970353f900e57568775f88fb94cea7f857ef33f22ea1d648"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_light/Kconfig.projbuild",
+      "sha256": "507303642af4e0823cd6b8e18a8d68b2e3ac416b3239dac2d884b94f80e4b411"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_rainmaker/app_rainmaker.c",
+      "sha256": "025d6e30e2de87387206450a5c228443ebb7f30263eb4e15c0dd80e1e5274f8f"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_rainmaker/app_rainmaker.h",
+      "sha256": "1b29e65949ba691fa5da9e8c3ac286cc761afbabc5b5bccad7f13e665cdfa855"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_rainmaker/app_rainmaker_ota.c",
+      "sha256": "b393468ee6c61f986d1fa3e7a3b5a2dd563bf39e2f9379170a428c54443cf26d"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_rainmaker/app_rainmaker_ota.h",
+      "sha256": "25a4782efd3cdc7fb252955f91bb49a57c56cdeee0a50f893cfc233b014ff0c3"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_rainmaker/app_rainmaker_ota_topic.c",
+      "sha256": "5345551113b73ec35799c7b8c36ec2646168111ccd1732a65caa3930bb7eb02f"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_rainmaker/CMakeLists.txt",
+      "sha256": "1c81ba05c669cd6c527dbca5e8508d702b1799ffa26e4c181e684ac0d6185aca"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_rainmaker/server.crt",
+      "sha256": "851d18a47016a9046bbfaa94d76a840a88303e9e01d965330f4501dbd4f12988"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_wifi/app_wifi.c",
+      "sha256": "5953573533a25df9b329b668935b2dfd752fc227542ed07fe14a20aa40e976ff"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_wifi/app_wifi.h",
+      "sha256": "3fcca8b7f03cdb04c95867b500987874ff8faf4afdc5c585d0313636ad1fae36"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_wifi/CMakeLists.txt",
+      "sha256": "04021d9dd7280f56abf1e3832c528f8cba6aedf1c94ecf01db339684255bc4f6"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/app_wifi/Kconfig.projbuild",
+      "sha256": "49a5af4348f356a8988677a59e61035457471ba68d898d6a20716d96e31ce2b2"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/group_control/app_espnow.c",
+      "sha256": "8825814df4b62e7bdf186c220d01b495631e4bac49796529bf5f03a9bc4298a4"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/group_control/app_espnow.h",
+      "sha256": "a7e0ff4f6253ea763830972db527111e41524e1ccdb8a23d84b169e694d10095"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/components/group_control/CMakeLists.txt",
+      "sha256": "d6b8b91e3426960e7915a855e06be8a59947f7a8cde1fd2dc5294797c5109ac5"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/main/app_main.c",
+      "sha256": "6e08a87affb918aafc6e4df2c93855564bdff637e012066a05f396e62c8f7c4b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/main/CMakeLists.txt",
+      "sha256": "677ada172a1826884b5145497f5f2fba7972e6e8e9f19c91287f46c5b988cb7a"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/main/idf_component.yml",
+      "sha256": "acf2e96e1784782451d0455aa73fc8f393019650e064e234771c936286af3bdb"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/main/Kconfig.projbuild",
+      "sha256": "4e1c0b5bbd70727ac3cb910513001296d2a9abc3e46954aa99302a68a8cf615d"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/partition_table/partitions_2MB.csv",
+      "sha256": "51dc616062d16a1ad53e1d00d39df9095ac789b081c93d3417c4d5144c0a0c17"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/partition_table/partitions_4MB.csv",
+      "sha256": "24683effb743f96a68b0a286060ce7e4a00a1c213168f68953c5994be47a966f"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/child_done.png",
+      "sha256": "f796738892fc8c3a3ea9bdfb4356c9aefa9ab7fc43b6aa526a9aa2e4aa60bd97"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/click_group.png",
+      "sha256": "3049c11b8d1e71c81bed383a0a871c8f61739a8d9cd57fe5721bcdbff10c1e28"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/find_devices.jpg",
+      "sha256": "6ec9edb341980afb6b59d22ffb4622a4d0c07730899626113193fdd0f80b1d65"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/group_control.png",
+      "sha256": "c300e104ae60686c87e47e926076477f46cfc5b5758d92a275138c92d77fbcc9"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/mesh_page.png",
+      "sha256": "e4ebd5f0be5ceb8282acec6bcce27f5aa11431921bbf1351351c519ef1a04358"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/root_control.png",
+      "sha256": "6f3df113350bf728a9b0c3db3b490d998f65eaf95df70163904d31c8f18fad94"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/root_device_of_common.png",
+      "sha256": "b1bf3ab171fbf2fe8e4cfe537c6e9ade17d845c134e2e55873718321e95e69ac"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/root_device_of_mesh.png",
+      "sha256": "3a398ded3a8885861d964a5f0b5a73e94b9cd14a68e216e3e3a914eeab270ece"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/root_done.png",
+      "sha256": "94d2851def646be04c8c39296aabece9a4a58b9fca74448a64c9ef612b52a719"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/select_child_devices.jpg",
+      "sha256": "7952c7ac61483e46b262d4fcc4e421689653a049d80dd3995daac84fac092e0a"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/select_device_for_group.png",
+      "sha256": "f616a3251383a7dd7cd08977221a9aa4d223541d48deb424db95cdc100891a88"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/select_network.jpg",
+      "sha256": "669e2438f0605788bb0094c9035296cc233e75db8a5dd7d59cd5d1381dab680b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/d4441e98/led_light/_static/select_root_node.png",
+      "sha256": "266dcb93f6f4c4ece14accbd5e2d32bd165245b6614c6eabbd15f36ed751025b"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/CMakeLists.txt",
+      "sha256": "76724174f5749075d55b78d081640977dd5a783c6d0e7b26623354dc2359adf9"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/example_config.png",
+      "sha256": "3acc8eaeb8d2b8f645c699a6fee19e9e836b787cd3c3ad99e57cc9dc827ac578"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/mesh_config.png",
+      "sha256": "dcb0ebda9526653d0acacb95ce2f61853edbba878a7f1dbf24396bbb8b1f1c77"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/README.md",
+      "sha256": "24be1893714756266e63dd47d956886cf9ac8a60aa47eb9152367265cf81b591"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/README_CN.md",
+      "sha256": "3b4c7e523859fc7f7d7050c86280dea866ca5fe2090467ad117bbbc0a8edbacd"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/sdkconfig.defaults",
+      "sha256": "b8024282f56c46e8b5a6ce1d8c75c14237ee4ac90139ddb1382e5ed45aaaaffa"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/sdkconfig.defaults.esp32c2",
+      "sha256": "b0fe83ac8764e473f93dbf88a28bf9eb10b47f06ed236ad12f22cd86d1f55c65"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/main/CMakeLists.txt",
+      "sha256": "2d8ec30df57602733fa020aaad33d2489f39a6466e74b6dcf379a639091dcbac"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/main/idf_component.yml",
+      "sha256": "88023168a6d9be50819912cc14e9f92d99a50de1ee3d85051700b807c3ec7e19"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/main/Kconfig.projbuild",
+      "sha256": "9f6bfde34e3912f786c5c16739c78eb5884a78663a1b9c6f072677d3f3f11dbe"
+    },
+    {
+      "path": "components/mesh_lite/external_examples/eb6dd5c6/no_router/main/no_router.c",
+      "sha256": "4f507a8c0b57e5cdad17847e1b5f2237fb5eeac7da936f309ee6d44b4084a7d1"
+    },
+    {
+      "path": "components/mesh_lite/include/esp_mesh_lite.h",
+      "sha256": "1636009b62dc850d17fe09434d5baaf3079234944e2d95283dbe2d8326ae6106"
+    },
+    {
+      "path": "components/mesh_lite/include/esp_mesh_lite_core.h",
+      "sha256": "be838bd973c8160aa4fd08b9cd8eb1f54bb299cb64b414bebb2b088f226cb05a"
+    },
+    {
+      "path": "components/mesh_lite/include/esp_mesh_lite_espnow.h",
+      "sha256": "e11b0ed6f9bb97b4c25613d26cbafbb857bd06627412e7b2b1dd7519463d1382"
+    },
+    {
+      "path": "components/mesh_lite/include/esp_mesh_lite_log.h",
+      "sha256": "bcf1acac5c816d7f598d25e778bb32be38d111c14077d986d0566fdc8df98bd5"
+    },
+    {
+      "path": "components/mesh_lite/include/esp_mesh_lite_port.h",
+      "sha256": "94c2a8733ecd5a1ae6bec45f8121becdc0ad6d2fcd59c5ef268257c858d0939e"
+    },
+    {
+      "path": "components/mesh_lite/include/esp_mesh_lite_wireless_debug.h",
+      "sha256": "78205e454148d93a206f7976b54ac1d9eea894b55c12cddbe6ab63645cd930ad"
+    },
+    {
+      "path": "components/mesh_lite/include/mesh_lite.pb-c.h",
+      "sha256": "cdbba39b5626b36c9cb6559be651cc0671529546595382bbcb0a8590633f6731"
+    },
+    {
+      "path": "components/mesh_lite/include/wifi_prov_mgr.h",
+      "sha256": "012b9cbc3d8b6dceed3dc3439d3ea1a0c3a4889b7d3244c9adbda77ca8097828"
+    },
+    {
+      "path": "components/mesh_lite/include/zero_provisioning.h",
+      "sha256": "595d85d968014a2a6574e2c2d57d47faa1e657ffc92f157faebc84940db0812d"
+    },
+    {
+      "path": "components/mesh_lite/lib/libesp_mesh_lite_esp32.a",
+      "sha256": "4bf2fa14d51543e0b05f0b13b1140f2cceacf4ae75b98976aeafa8817f698e03"
+    },
+    {
+      "path": "components/mesh_lite/lib/libesp_mesh_lite_esp32c2.a",
+      "sha256": "d83cae03468f68dd24f0e7cf790cc2dc448ebeec8a25a3ff9c4f5bea66d367d5"
+    },
+    {
+      "path": "components/mesh_lite/lib/libesp_mesh_lite_esp32c3.a",
+      "sha256": "dad225a7f606961f39a39f40e9e476144559992f67eca23048c91dc3a552a216"
+    },
+    {
+      "path": "components/mesh_lite/lib/libesp_mesh_lite_esp32c5.a",
+      "sha256": "2d8a2bcbbff9a8d2a46af3f14708cca37b7c646b7418fd96e91588a89bb1abc9"
+    },
+    {
+      "path": "components/mesh_lite/lib/libesp_mesh_lite_esp32c6.a",
+      "sha256": "7fe59ca025b6db585189c446b23171a7be8140384850c45ac2569b8b538b7675"
+    },
+    {
+      "path": "components/mesh_lite/lib/libesp_mesh_lite_esp32c61.a",
+      "sha256": "2a4aae7717372c98ec5ec17db8ab609808ca2d8449cf1a89d07bcb64b30624cc"
+    },
+    {
+      "path": "components/mesh_lite/lib/libesp_mesh_lite_esp32s2.a",
+      "sha256": "ffed946a4041d9b5dad0c5a2bcc7c6c6406b18db143bb0d30793467e036e3eea"
+    },
+    {
+      "path": "components/mesh_lite/lib/libesp_mesh_lite_esp32s3.a",
+      "sha256": "4e19a821eb3ebc27d44820daca28d1f8c7018ef5f30d0ff7a8a6f557595c2999"
+    },
+    {
+      "path": "components/mesh_lite/lib/VERSION",
+      "sha256": "7999a28a9d36045a495a5d461589788a881034fedc79f6d13ca31a5d8f7f7461"
+    },
+    {
+      "path": "components/mesh_lite/src/esp_mesh_lite.c",
+      "sha256": "15341ec122785ced143c39a47d9ddd53f5b0aec32d1c556576e89eb13c969d2f"
+    },
+    {
+      "path": "components/mesh_lite/src/esp_mesh_lite_espnow.c",
+      "sha256": "41606a12b925e910512918984facf385e2f2b3d1fc1dca5ca4d5472ed3eb142c"
+    },
+    {
+      "path": "components/mesh_lite/src/esp_mesh_lite_idf61.c",
+      "sha256": "8bf360f1e30de2b1e3ea2938e0ba161cc55882182b7ddee077141c5c479b63a2"
+    },
+    {
+      "path": "components/mesh_lite/src/esp_mesh_lite_log.c",
+      "sha256": "90f12d2a35bf35f5c2c5ca271acbb407834479c35c3b42164657d85c74050d11"
+    },
+    {
+      "path": "components/mesh_lite/src/esp_mesh_lite_port.c",
+      "sha256": "5c3b3c2015de048d871be156035c039f801e6b17e3041254729614428e798b80"
+    },
+    {
+      "path": "components/mesh_lite/src/esp_mesh_lite_wireless_debug.c",
+      "sha256": "e186108a792fdd193f79c37c8a2b0ea76d8efde4bf55caf7b13873ab8174f880"
+    },
+    {
+      "path": "components/mesh_lite/src/mesh_lite.pb-c.c",
+      "sha256": "9e7cbaff1040a7f8254e89863998451d7ddfd19c585011496463212ac8f05c9c"
+    },
+    {
+      "path": "components/mesh_lite/src/mesh_lite.proto",
+      "sha256": "d5ba76412f4e18f77758c2b54a6fd5ef5c2a177d1b3ec9a536a5dafc9e2fac28"
+    },
+    {
+      "path": "components/mesh_lite/src/proto_generate_CN.md",
+      "sha256": "7cf18be7e6334c91c714e290e8a8c7f5ded7e0826f7420830ca76bba7efc1de4"
+    },
+    {
+      "path": "components/mesh_lite/src/proto_generate_EN.md",
+      "sha256": "192aaed527d0ae443a90a43dfdee1d1b1cf67c01581c630155eb7a161018dc6b"
+    },
+    {
+      "path": "components/mesh_lite/src/wifi_prov/wifi_prov_mgr.c",
+      "sha256": "42bfb486aba71ed68873a6e9ace905ba937ea2f82d4803d7b4423f17e5a57042"
+    },
+    {
+      "path": "components/mesh_lite/src/wifi_prov/zero_provisioning.c",
+      "sha256": "c25f30cd0c4d784747887f7b0424dd7b68780276a9b3f8e616ec1060c12b9bf6"
+    },
+    {
+      "path": "components/mqtt/.build-test-rules.yml",
+      "sha256": "99466b225fa4b44d04f2162166fb748af41bed1512247a9f05a2d7a8244a51ae"
+    },
+    {
+      "path": "components/mqtt/.editorconfig",
+      "sha256": "0592d873d53552677f17072f27cd86c519ba07b9ae09c50e12fd4897d0462e16"
+    },
+    {
+      "path": "components/mqtt/.gitignore",
+      "sha256": "9e1961ecef9f51b57756d50e5aea336fe89a4b58b44f5d3c1ed69f7c93e9ba07"
+    },
+    {
+      "path": "components/mqtt/.gitlab-ci.yml",
+      "sha256": "219af344f7be047a9b5e81cc6f945d763767ce96784c0d93637b242c5c601f1a"
+    },
+    {
+      "path": "components/mqtt/.gitmodules",
+      "sha256": "d46bb91d83ad57d5e7f1f21e46611788494df54b017aea32f2739cf2f5f0df0b"
+    },
+    {
+      "path": "components/mqtt/.idf_build_apps.toml",
+      "sha256": "0b2142700fd70a0682050577d0448cd690aee239417989bd54db16eefb6c4612"
+    },
+    {
+      "path": "components/mqtt/.idf_ci.toml",
+      "sha256": "177dcff8a44e9d72aeb867241cec59629d459f3854b3c2a60efb09446db6e845"
+    },
+    {
+      "path": "components/mqtt/.pre-commit-config.yaml",
+      "sha256": "44dfa253a983ca1e15021200895682acd07bcb933b160704e94e1d118e5c710b"
+    },
+    {
+      "path": "components/mqtt/.release-please-manifest.json",
+      "sha256": "79cf15b51f109c82166f6b0b7ee298ff7024f9897014443d2a808b4c88800b19"
+    },
+    {
+      "path": "components/mqtt/CHANGELOG.md",
+      "sha256": "4fc1c14da50917694e5b013b0207c4c32384f43d6536c53cffac9b9a32c72093"
+    },
+    {
+      "path": "components/mqtt/CMakeLists.txt",
+      "sha256": "c497a329f336f801af4f697e956db5de23721a89000696e7d354e3f35ba158b6"
+    },
+    {
+      "path": "components/mqtt/conftest.py",
+      "sha256": "6cb4e812ccca4c5e7aa5bf905ae89a40b3f7acfc9bda825fdab35868f502db81"
+    },
+    {
+      "path": "components/mqtt/idf_component.yml",
+      "sha256": "0f2d0f2ade5774691c2390fef575ac8f751529eba8c5b965ffe7b31a09503e0a"
+    },
+    {
+      "path": "components/mqtt/Kconfig",
+      "sha256": "b80dcdfd895c1c0b93c40c10e1001963782c9ca41fd582f4bcdee3486c99b516"
+    },
+    {
+      "path": "components/mqtt/LICENSE",
+      "sha256": "20ed622a5f1a273258b415097609f6a236fb2f23f8c593c63e29e6cc77de0032"
+    },
+    {
+      "path": "components/mqtt/mqtt5_client.c",
+      "sha256": "8fecc7182072eaa360a0ae1acbaa9e650cf312f78fea3d399af44080af752f3b"
+    },
+    {
+      "path": "components/mqtt/mqtt_client.c",
+      "sha256": "83e5a7065b8774dce83dd6b9be0163caed3a4fdbbd7de38b328e7e01911487dc"
+    },
+    {
+      "path": "components/mqtt/pyproject.toml",
+      "sha256": "49e7ebe9dd51e0005bf1c7a3a59eb3e5e8b20a8e6ddbb92e8cb4f6da5af950be"
+    },
+    {
+      "path": "components/mqtt/pytest.ini",
+      "sha256": "22484fcbcfc87236f28e58d4d248e552da5fa1d772971158af2de4f3618df43a"
+    },
+    {
+      "path": "components/mqtt/README.md",
+      "sha256": "54d6257aad19abb52f97c8015a66bfad6adb1216db35a5092a9105b52f7bd61b"
+    },
+    {
+      "path": "components/mqtt/release-please-config.json",
+      "sha256": "45a8e8733863ffd95b7cd05c51db4e24a6c92e000464864defe2324beef3c54d"
+    },
+    {
+      "path": "components/mqtt/static-analysis-rules.yml",
+      "sha256": "5388e0824a15876b022b4b0efc09b17b9f25b0afa8f31e9520b0f4a0a02cc0b5"
+    },
+    {
+      "path": "components/mqtt/.ci/astyle-rules.yml",
+      "sha256": "43578da37e2e6fc7a4e2e3bf8576df7598f7fcce747068ecefeb8787c580a50e"
+    },
+    {
+      "path": "components/mqtt/.ci/check_copyright_config.yaml",
+      "sha256": "c7772dbc68dfcf2d55b80baf78934305bb0a9ed7960886c8e8893db3e2a3c2d2"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ignored_cases.txt",
+      "sha256": "07d34d26deacb635a73da35d0c0d2f4dec056c7df2a0071b663e65990178fac1"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ci/build.yml",
+      "sha256": "14e5fb88e861e351ed8bc0f9565568210e0e8dc8a4dfb5f48e3f6d65797d5297"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ci/deploy.yml",
+      "sha256": "678dd3f0eb5ce85a60ec077f2fc0621e60f9b57e4b4a0c343c5dfdda9d661605"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ci/docs.yml",
+      "sha256": "1c748744c61079525631bc155ca7d1f50bade52f26651ae2ebb3e0e4a1d78e81"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ci/ignore_build_warnings.txt",
+      "sha256": "2028b3ff74f12558d7559256c1875616cdc2494dee0844a68102b74660f07cd8"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ci/pre-check.yml",
+      "sha256": "eeb2c6b4e1aceb536af91dc79950f0b8a0969b1db9b7b19ffad4bf3d605f6f7b"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ci/prebuild_report.yml",
+      "sha256": "d2743cdd648359f068ff14c31150a4c8390a0375bbd3e3284208cf77abee53dc"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ci/test.yml",
+      "sha256": "61124466fcaa9ce64d659eff741a3b0ee6b9a4d933f1eb2730d8932dee5a5672"
+    },
+    {
+      "path": "components/mqtt/.gitlab/ci/utils.sh",
+      "sha256": "e681ea308d973609dac626a781f75f92426a6f5103cdc972f48992ec619e3fd5"
+    },
+    {
+      "path": "components/mqtt/cmake/CPM.cmake",
+      "sha256": "e33603e7c4a877b93365ae432acf0066afb0f2a27a3e9aab8f36bdc74466005c"
+    },
+    {
+      "path": "components/mqtt/cmake/RapidCheck.cmake",
+      "sha256": "ec9cba8d65c44d998be0b78d39d1208a8be951f9d6b189a3bad6f734d9fc8c35"
+    },
+    {
+      "path": "components/mqtt/docs/conf_common.py",
+      "sha256": "ffd9da35328fcafa8692702ad3d4315768e647e11d732c7922441dd7afb60788"
+    },
+    {
+      "path": "components/mqtt/docs/Doxyfile",
+      "sha256": "545fc773df03b18795aaf41cf878a73168fe76e8939a67a4c304aaa5bca29b79"
+    },
+    {
+      "path": "components/mqtt/docs/doxygen-known-warnings.txt",
+      "sha256": "c7b1fa469edfade63a9bf7a80b68ddf6ffba77f7dfc84ab7ec65bfff6d86ea93"
+    },
+    {
+      "path": "components/mqtt/docs/sphinx-known-warnings.txt",
+      "sha256": "98d8ae4d3baf501e6e865bdbd99f5a5d2fd0e9ad5cc66aeb5dc4f8c990c1dd32"
+    },
+    {
+      "path": "components/mqtt/docs/en/conf.py",
+      "sha256": "e29933a9408dfe9d596291f253f2eaa108b127a41a23e4f65c6f226d8bfb9075"
+    },
+    {
+      "path": "components/mqtt/docs/en/index.rst",
+      "sha256": "f2c57f0e9f44cb881c61ceedc6417fda452acfb45e39507f8a07ac55f2a5e157"
+    },
+    {
+      "path": "components/mqtt/docs/zh_CN/conf.py",
+      "sha256": "59206d603dba3d046486a41db5bc68742b0c9b3432c8dbb6fa219724d7c0467b"
+    },
+    {
+      "path": "components/mqtt/docs/zh_CN/index.rst",
+      "sha256": "9911b1d10bf4c43373fce756f6f6b6750f615bab3914333fd8a0bcc4ddcfb117"
+    },
+    {
+      "path": "components/mqtt/include/mqtt5_client.h",
+      "sha256": "93fce4cdcc0ed372f80866102696d4fe47f2fdd5e7649057648e6d549ffe43b4"
+    },
+    {
+      "path": "components/mqtt/include/mqtt_client.h",
+      "sha256": "da851009a71d3e381f7dd4973b84a0f0499f7090a8aaf215572ad7aaba60e179"
+    },
+    {
+      "path": "components/mqtt/include/mqtt_supported_features.h",
+      "sha256": "4f9a6d7ac6e01517722861a16276df8dfef9791339e35c169a57691b909a85f8"
+    },
+    {
+      "path": "components/mqtt/lib/mqtt5_msg.c",
+      "sha256": "c7166e1bce335b9803dfc27c23899bc3ceec921b5c60aba7b59160d2af6eb2a0"
+    },
+    {
+      "path": "components/mqtt/lib/mqtt_msg.c",
+      "sha256": "4f030f744316677de0d852968b5c6e8d99dfa9f3e8601c6800385779c05096cc"
+    },
+    {
+      "path": "components/mqtt/lib/mqtt_outbox.c",
+      "sha256": "5e17d0b15f699e241a89b28301d17507003813100e2f61cc4d0906362d51b5e3"
+    },
+    {
+      "path": "components/mqtt/lib/platform_esp32_idf.c",
+      "sha256": "cd94d14de26dddc0498683cb512e41e86bfa9d227e899de7d84aeadce95d4d28"
+    },
+    {
+      "path": "components/mqtt/lib/include/mqtt5_client_priv.h",
+      "sha256": "ab530bef1f1e35034fbe3ad907869527abb29a4ccd64000608da5a8cd4e634c5"
+    },
+    {
+      "path": "components/mqtt/lib/include/mqtt5_msg.h",
+      "sha256": "55a003857dc532f5e71b45b0aa8329c9827ff7db9b35f32e6c3406a943ad79a7"
+    },
+    {
+      "path": "components/mqtt/lib/include/mqtt_client_priv.h",
+      "sha256": "dc613a10765ad9d68648065400fb2c52bb081cca1951c64f7e6b7df574971c49"
+    },
+    {
+      "path": "components/mqtt/lib/include/mqtt_config.h",
+      "sha256": "b16062e703223bfff86e9834825411352e24fd4f9c185bd6e1b75c7905253cc7"
+    },
+    {
+      "path": "components/mqtt/lib/include/mqtt_msg.h",
+      "sha256": "c3dbd6b37f168662c995406af2f4119fe2cb869a376667cf11949b9fc3089009"
+    },
+    {
+      "path": "components/mqtt/lib/include/mqtt_outbox.h",
+      "sha256": "12c5e19841bd0a21e9445d9ffe480103d206255c37272ce43c26d5428783c34f"
+    },
+    {
+      "path": "components/mqtt/lib/include/platform.h",
+      "sha256": "95fe9b4feb2c78977a3506b6772997b64e58a173897d370d61ba0468a91b8d45"
+    },
+    {
+      "path": "components/mqtt/lib/include/platform_esp32_idf.h",
+      "sha256": "c7b3dde6f103bb0af86a653b0e263d57011b85d44e1264e69df7731a7631e80a"
+    },
+    {
+      "path": "components/mqtt/lib/mqtt_outbox/CMakeLists.txt",
+      "sha256": "32d7f919dce119a2238226c2676ed2ee19a44a6da72d259310c20a2874b71a85"
+    },
+    {
+      "path": "components/mqtt/lib/mqtt_utils/CMakeLists.txt",
+      "sha256": "3f78ae03420c5cfc1a63cb89a6682531d0cda38a69b004132f3e0f93c7dad12b"
+    },
+    {
+      "path": "components/mqtt/lib/mqtt_utils/mqtt_utils.c",
+      "sha256": "b59a589d9ce4aab80445eabc40ee070439834c26ae0f51151477b1af1794d3d7"
+    },
+    {
+      "path": "components/mqtt/lib/mqtt_utils/include/mqtt_utils.h",
+      "sha256": "9b49beb2592e31c206c337a33802c195d1957305da20916d5c4999a9492b3cba"
+    },
+    {
+      "path": "components/mqtt_serial/CMakeLists.txt",
+      "sha256": "3ea27b8966f01c8324f8c7411774de07251c9bee6dd83509d8f2dba4e2a985ce"
+    },
+    {
+      "path": "components/mqtt_serial/mqtt_serial.c",
+      "sha256": "c0fbb6b5bcac0f4705d87d1ae7de28c98b979eab4f325e3f3e4f0c4b79c0e70d"
+    },
+    {
+      "path": "components/mqtt_serial/serial_tunnel.c",
+      "sha256": "eb3cc07eeb38946e0679559d2b439fecb98b34e120c54f93a03cbcd5afcac4cd"
+    },
+    {
+      "path": "components/mqtt_serial/include/mqtt_serial.h",
+      "sha256": "fb5a170424822def798ec9c19a0dd74b2c88f9ce125b9ed892a2a1f583f2aa28"
+    },
+    {
+      "path": "components/mqtt_serial/roles/ugv_gateway.c",
+      "sha256": "81e2207b61f603ba743e9e57d70064c173bf9e9017db5d0f8693f58f472ef882"
+    },
+    {
+      "path": "components/network_mesh_lite/CMakeLists.txt",
+      "sha256": "443cb9f6246fe905156fe3148b4125e737e53b9daa11f5493c9a94a96de7fd1d"
+    },
+    {
+      "path": "components/network_mesh_lite/mesh_start.c",
+      "sha256": "825bb7eb0a50435bf6c43d52fdc30de74c7edd45fa505f93b70d0c3fa9a228dc"
+    },
+    {
+      "path": "components/network_mesh_lite/mesh_status.c",
+      "sha256": "35ff06b43d04c35af57c8ee01dee1a86aa600c1b4e68842a5afefef0b5aa0ffd"
+    },
+    {
+      "path": "components/network_mesh_lite/include/network_mesh_lite.h",
+      "sha256": "90646b791e6afe9ca731d01fe1854084f9a2bf84fad7f44c6862ac6a564f0f48"
+    },
+    {
+      "path": "components/node_role/CMakeLists.txt",
+      "sha256": "fff3f9b20bf955300ec9586412f75559a3a8b91b4613b8308511a18c45bf5641"
+    },
+    {
+      "path": "components/node_role/node_role.c",
+      "sha256": "ae1978b2721fbe918fe453406b04893929cb8fd9387ffab396512cee0d6be52b"
+    },
+    {
+      "path": "components/node_role/include/node_role.h",
+      "sha256": "3798e4a0ad56ff019113ddda8fac2a1f2107a402b2e5f128d8d70948fa39350e"
+    },
+    {
+      "path": "components/qrcode/.component_hash",
+      "sha256": "941b72a384ef5f04f467a7481ece825ea9c8e9282c9484e15db8c01aa2698f56"
+    },
+    {
+      "path": "components/qrcode/CHECKSUMS.json",
+      "sha256": "7c46430ad3a8c1f49de2fd316c35b10f425171003e400141ae678b38d60ab775"
+    },
+    {
+      "path": "components/qrcode/CMakeLists.txt",
+      "sha256": "bef5499f834549e3c2eac9cd7417c4f4d704d35810f8dfb8ef75e4ab13f7760d"
+    },
+    {
+      "path": "components/qrcode/esp_qrcode_main.c",
+      "sha256": "ff010e8324d0bbd15e0f69a175ee0c3e66a2899366e43286434bd0f3b611013c"
+    },
+    {
+      "path": "components/qrcode/esp_qrcode_wrapper.c",
+      "sha256": "9f043b92a50dcfe26b46627feb8ff53819b316e4ffe5a23d3b27eecd5d1c7cc0"
+    },
+    {
+      "path": "components/qrcode/idf_component.yml",
+      "sha256": "d6bf953451ab05816fda32a1cea1fc57d03d5e6372f5bb9062879ba27a17c2f5"
+    },
+    {
+      "path": "components/qrcode/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "components/qrcode/qrcodegen.c",
+      "sha256": "2e050dfb5d86a2e22842546efb034d27b5b5f56d29651c1e2eb5c5402870fb9c"
+    },
+    {
+      "path": "components/qrcode/qrcodegen.h",
+      "sha256": "d21849bb5509aa515cf3a61907dcc2e5f00245eb284a228dbab88043df8da743"
+    },
+    {
+      "path": "components/qrcode/README.md",
+      "sha256": "7c9999591459e3ec8a2edee2028e17a72212c37a4d9c33b31ac96b923fe87403"
+    },
+    {
+      "path": "components/qrcode/include/qrcode.h",
+      "sha256": "f6fb6a1b439a6097fed128ad079b48040d20a25063678e81f78daaeb623ee636"
+    },
+    {
+      "path": "components/serial_gateway/CMakeLists.txt",
+      "sha256": "ffffe70143711be6e4616ce5781aa083bb22005786d3b5a500c47f0c71e485ab"
+    },
+    {
+      "path": "components/serial_gateway/serial_gateway.c",
+      "sha256": "64e446a099769fe7057578e6ce464521f089abe51dc2de080606af40d2911681"
+    },
+    {
+      "path": "components/serial_gateway/include/serial_gateway.h",
+      "sha256": "0b2ae77fd6be4ace4cf94b639e189001473b2c95a70136b45f4a8bff02f3e8a8"
+    },
+    {
+      "path": "components/service_discovery/CMakeLists.txt",
+      "sha256": "8d4426cf9b01e159fc0964aba52c8e46166f621360909c6593306cc984a9cde5"
+    },
+    {
+      "path": "components/service_discovery/service_discovery.c",
+      "sha256": "4288644dc6cb5aa1accd9bbb4cae995e59fdafdfa41bc49c1a7d9961b20142be"
+    },
+    {
+      "path": "components/service_discovery/include/service_discovery.h",
+      "sha256": "87d3f4ea6792f413ee1030b226fe8dcf9afb9f7a52aa152ed11e5edb52bd4fbd"
+    },
+    {
+      "path": "components/task_agent/CMakeLists.txt",
+      "sha256": "ccb2f0212cda4c2e4872edcd7b43199908a041b995db29436e4b13691a458c2c"
+    },
+    {
+      "path": "components/task_agent/task_agent.c",
+      "sha256": "21ddda8ee4b5c1426719157448904a11d9cfaf81b3dfd2342dc5a4e33cba5b45"
+    },
+    {
+      "path": "components/task_agent/include/task_agent.h",
+      "sha256": "926975009f683fc9b36c6a4fa2dc4b7271a5994f5a82a500f5028b55b76566e1"
+    },
+    {
+      "path": "components/task_agent/roles/micro_uav.c",
+      "sha256": "9b7f9d2c16548c6f3b4d0fa7fcae793f39731e8d0e6c00bcd3d26de6cae70685"
+    },
+    {
+      "path": "components/task_agent/roles/pc_root.c",
+      "sha256": "cd7efd08b5827e0e0efc91284ea99d87459c4836dabea36d9381abc5edae6320"
+    },
+    {
+      "path": "components/task_agent/roles/uav.c",
+      "sha256": "aa9bde646f4508839e0ead7a84166fc32ad4d24005db303a346eb92d6c65427a"
+    },
+    {
+      "path": "components/task_agent/roles/ugv.c",
+      "sha256": "4c45871003e40b2e6975aecc6fb7625bd2599f12eff2cceb77e5ec9124919809"
+    },
+    {
+      "path": "components/transport_tcp/CMakeLists.txt",
+      "sha256": "d26bf2cfb4c14055684630c1737a37cb6333468dfb890215cf99c8e36328b230"
+    },
+    {
+      "path": "components/transport_tcp/transport_tcp.c",
+      "sha256": "99169efbfd4d62a05af9437885d23e69af8045e0d8dd2434283aa34eb39b89a4"
+    },
+    {
+      "path": "components/transport_tcp/include/transport_tcp.h",
+      "sha256": "42e4561a6fa2f89d411ca7220de2d90462eb1058894db0249ce2eed59d0ffd9b"
+    },
+    {
+      "path": "docs/architecture.md",
+      "sha256": "ef21827ebdd9f5c4b8d5d8e237e77254e3d10ebbc7bf81a903ded90c227f613b"
+    },
+    {
+      "path": "docs/bringup.md",
+      "sha256": "a5a5f70a3c8988197828f94ef6f97918fe508a6dd7303233644fa9ac704c3a7e"
+    },
+    {
+      "path": "docs/car-terminal-separation.md",
+      "sha256": "b9e23fbc8393aa33dc35dc4bc2c6625e6925a559268ac6de8a58efc8ce5eac8c"
+    },
+    {
+      "path": "docs/control-plane-design.md",
+      "sha256": "7a89ee4b0893c1a4b5794590426d316dcf4fcfad279c7dd8692369d111f2e64c"
+    },
+    {
+      "path": "docs/device-identity.md",
+      "sha256": "33610590c4083d2155451c23292e054b48e4620f24be1c68e302e7eb072ba437"
+    },
+    {
+      "path": "docs/m1-hardware-acceptance-2026-11-14.md",
+      "sha256": "da3805c4b17f0763ca8acb0da4fd8b050461f9d42580aeadcd11806747d46e22"
+    },
+    {
+      "path": "docs/m1-task-management.md",
+      "sha256": "72d9c0713590896133ce22165e7c4516700614283c93b36bfb59962301a778ee"
+    },
+    {
+      "path": "docs/migration-idf61.md",
+      "sha256": "17ee91f1c3c17373c98247bf451be3904e8370738eb9e049877029137892b950"
+    },
+    {
+      "path": "docs/mqtt-acceptance-4-6.md",
+      "sha256": "67a962cabcd33818f7d0c2e988d8d08540a54b8ac5d1cb9eae105deada80f674"
+    },
+    {
+      "path": "docs/mqtt-serial-bringup.md",
+      "sha256": "f6b8b1a4f9a6b5b680fedda17e58da66e6ba53f43f98beeafcac81efe7010cb1"
+    },
+    {
+      "path": "docs/protocol.md",
+      "sha256": "9b2fcd7cd77561ea669ec5670b36143ef24ce3538cbce2ffcf03ef2a3bf2f5f6"
+    },
+    {
+      "path": "docs/verification-car-separation.json",
+      "sha256": "a913e1158199223ee332e60d8325fd2c275990ad90c9f5b2eee84a2c6deb5454"
+    },
+    {
+      "path": "docs/verification-four-node.json",
+      "sha256": "20e849613b5ddcaaaadc510840726e67e0a8294eec0085a35557b930202fe02e"
+    },
+    {
+      "path": "docs/verification-m1-hardware-car-reconnect-micro001-retest.json",
+      "sha256": "b020f405eab3c07e16f7fc639bf0df83c14ed229ae904a8bcd587c3e93caca87"
+    },
+    {
+      "path": "docs/verification-m1-hardware-car-reconnect-micro002.json",
+      "sha256": "c7d6da44e30d4147c0735e70a8bd9f7df4fe83ea189cc977f200fce0fe5c6612"
+    },
+    {
+      "path": "docs/verification-m1-hardware-car-reconnect.json",
+      "sha256": "78d98ccd04e2cc9766d76f45fdbe7c77441cd8a5fc5fb8ee9da5ad1c5322b784"
+    },
+    {
+      "path": "docs/verification-m1-hardware-com7.json",
+      "sha256": "684c0955b1b64de632e593ed36410be986105ee388b9d01dc8df56ea059ec8ac"
+    },
+    {
+      "path": "docs/verification-m1-hardware-uptime-anomaly.json",
+      "sha256": "49842f9cbafe941da6d1daafd4f18d7a36b2f88d5c7ae81b7ab13c03575a62c1"
+    },
+    {
+      "path": "docs/verification-m1-tasks.json",
+      "sha256": "6df9652e16eb31f95bb69237e7f9b1811fd62d924f95f1a75bc5b98378938a88"
+    },
+    {
+      "path": "docs/verification-mqtt-serial.json",
+      "sha256": "189aa632d67356c1fa89bef51fc27253c51f4675ca8b6ca1239c3ce4d928b39a"
+    },
+    {
+      "path": "docs/verification-node-identity.json",
+      "sha256": "fc8d2343d9e48d6937c65548dc460af88382bb9a3a868c17696bc23fc4720917"
+    },
+    {
+      "path": "docs/wifi-task-management-plan.md",
+      "sha256": "7b1c4024912ebe35875c98566b8d6aae99e0996886b9c085a2ce06c3689777fd"
+    },
+    {
+      "path": "docs/archive/three-node-2026-11-10/architecture.md",
+      "sha256": "0b92aae531bee48157b7b134af4588762524ddbc132d25de2d386f6402408545"
+    },
+    {
+      "path": "docs/archive/three-node-2026-11-10/bringup.md",
+      "sha256": "2af113feaa038f4e5878ddb3a008ffb6256208698f638f01c0b1bf0dbbfffb65"
+    },
+    {
+      "path": "docs/archive/three-node-2026-11-10/control-plane-design.md",
+      "sha256": "48b3f00e5440161fa366c7e61939a285aca8eb35a37279a3e801b21e7b64adcd"
+    },
+    {
+      "path": "docs/archive/three-node-2026-11-10/migration-idf61.md",
+      "sha256": "3593a9f0d8ce703be778305b6d3745f98440bd3abf45361f6d6ec11619717679"
+    },
+    {
+      "path": "docs/archive/three-node-2026-11-10/README.md",
+      "sha256": "2792c5026382fabfdaa0248996c274083e5d1fe52d7af0eb04d544ca85b83bd4"
+    },
+    {
+      "path": "docs/archive/three-node-2026-11-10/ugv_root.defaults",
+      "sha256": "966c8375429b1cc94120525bffc10b259d0dc3498da85c504093b40b679a2685"
+    },
+    {
+      "path": "experiments/README.md",
+      "sha256": "b0ba4a815bf0b0fb612f065ea79acc33c74bab780882c7af956f0f12bed115e9"
+    },
+    {
+      "path": "experiments/results.csv",
+      "sha256": "34911c837cca150758ab6c82f81205c92c72774bc94da2d60e88544973cb33be"
+    },
+    {
+      "path": "hardware/nodes.csv",
+      "sha256": "422a2f8e27ce4853e0a74b27728c68967cec6bbc5e41824d23972c36a4be52cc"
+    },
+    {
+      "path": "host/config/nodes.json",
+      "sha256": "20d1aba2dd72dc62e902c5f1cca929e066441b1d30f41c586c39e2b480c8cc3d"
+    },
+    {
+      "path": "main/app_main.c",
+      "sha256": "5986bbfa893d880d6138ff5df6dee9d116440e5bed242fa62790c6d1c44dd6b8"
+    },
+    {
+      "path": "main/CMakeLists.txt",
+      "sha256": "f0b74fdb637aeb9f8ce1bc2520c655d0e0f07f8bb2d6c26fec01e74205827cae"
+    },
+    {
+      "path": "main/Kconfig.projbuild",
+      "sha256": "eb67a8d57dd769664922257675e8ab091316ef96dd94897ea9ba76ad8b399c3d"
+    },
+    {
+      "path": "profiles/micro_uav.defaults",
+      "sha256": "09dbd3a5389d6c0ad5d2585f2aec4ab2763c72e22bc9194fb2c5ef3ff03a6f0f"
+    },
+    {
+      "path": "profiles/mqtt_serial.defaults",
+      "sha256": "36f2d39988fd9d99e7145f490f6aa0d405ad21b59d2b718e0a0343da5122bb78"
+    },
+    {
+      "path": "profiles/pc_root.defaults",
+      "sha256": "c45a0fb9c745abd7277675aa3eb57bc4e459cb07ce8805225ad1bc219b70efbd"
+    },
+    {
+      "path": "profiles/uav.defaults",
+      "sha256": "5bc9eecbaf263b9b921a418e324cc1f7d6bbfe34ea1af9aa4aad1b6d1d1c5e13"
+    },
+    {
+      "path": "profiles/ugv.defaults",
+      "sha256": "5ed40ec3dbb5016a2e7b9bee1e1c9d8496d926c7805de45dbbd8b5b7999e708c"
+    },
+    {
+      "path": "tests/test_acceptance_tools.py",
+      "sha256": "eb1d867c85571ba2f2971e0646e4b48e2f767dfe5519edfecf1ba42a6b6934e3"
+    },
+    {
+      "path": "tests/test_identity_env.py",
+      "sha256": "aa9f26c9e8090cd82371d2c32039fc03b9dec335f276b2d60d09b1ef70625c0c"
+    },
+    {
+      "path": "tests/test_lab_cache.py",
+      "sha256": "57e90178d1d324de2d07ac1845755d87cfe2278326a32e66b93eae0264c957a1"
+    },
+    {
+      "path": "tests/test_migration.py",
+      "sha256": "e66348f264884451b32669bfcdb29eaf5d3c4bc2d1b7297949efe382d17b1252"
+    },
+    {
+      "path": "tests/test_mqtt_serial.py",
+      "sha256": "ba64ade89221aab137164fa6882afe57d6c4f5c638eef1593f32d1c5f5b778a1"
+    },
+    {
+      "path": "tests/test_node_identity.py",
+      "sha256": "5b1f932d56417f3312ab661a6f6fd3090858c1a589732957d98a819bdecd3987"
+    },
+    {
+      "path": "tests/test_pc_terminal.py",
+      "sha256": "a615a2b944d6e3ae76eb0bb3c14f002b845a382d60efeace36893add304fb6e1"
+    },
+    {
+      "path": "tests/test_task_broker.py",
+      "sha256": "d2eebda0dbb0c36eda9ca0262217407128a07a5fa4303eddaf2408590a89ce1a"
+    },
+    {
+      "path": "tests/test_task_management.py",
+      "sha256": "4d8ad434ef3eb833d69733510df8f87b9278fc95b06f7c36ad86ac446ed98721"
+    },
+    {
+      "path": "tests/test_ugv_service.py",
+      "sha256": "5a1764f0a5027e46d01eebf59684cc83d4a385824077e394ffeda8e0d90074da"
+    },
+    {
+      "path": "tools/check_firmware_size.py",
+      "sha256": "2ffda43efda2bd847f9908f027392ec2889ff5f66e8b912d66352e690d429eda"
+    },
+    {
+      "path": "tools/controller_lease.py",
+      "sha256": "e6cbaf2d90fea049e15a19d30a45404e6530822c27546fbf029008be910329ac"
+    },
+    {
+      "path": "tools/identity_env.py",
+      "sha256": "1257412bf7c73c3d062457f39b504d8b151bbf16862b9ced3e45ea8fb8568a74"
+    },
+    {
+      "path": "tools/identity_worker.py",
+      "sha256": "99f6ab781ff17e1773d086bd9bd5b8923ebc24f209b741e0763006aa4145b3c5"
+    },
+    {
+      "path": "tools/idf_env.py",
+      "sha256": "0cf52a87c8e68bf96a4c3c1cf0ee8d939edb771e9d4820111c08a135bb985319"
+    },
+    {
+      "path": "tools/lab.py",
+      "sha256": "aef37c2ffe1bff204f86721e2cdc55bf6f0ca8f7c7446d1c0ed385954ca0ec3d"
+    },
+    {
+      "path": "tools/mesh_protocol.py",
+      "sha256": "3d4ad17e2e90aad508e77318ddb2e9622099a634114a654d2f01026e63245a87"
+    },
+    {
+      "path": "tools/mqtt_controller.py",
+      "sha256": "381e16b2abf4f590a1b45e7703cf0e067816ead15445af650417f666ce1fbbf4"
+    },
+    {
+      "path": "tools/mqtt_terminal.py",
+      "sha256": "3350a795aac0b034b436b88bd1a1d822f89a3c361a42b4d67125c74b32414872"
+    },
+    {
+      "path": "tools/node_identity.py",
+      "sha256": "6fdef7426826de43e762c2e23bcbfadf86de2f9fd5c6a2d429edbaa211f5adcc"
+    },
+    {
+      "path": "tools/node_inventory.py",
+      "sha256": "8569d3345328a7b8cb025f95439905d551f4f93fc60208ce88644b4dbc1d77af"
+    },
+    {
+      "path": "tools/pc_terminal.py",
+      "sha256": "2bcc0b8ccf31b2213c64771518538368a1c78229a3d11cf327777a9e7da21c99"
+    },
+    {
+      "path": "tools/prepare_napt.py",
+      "sha256": "1d19b210c35fcdbc21374b8aa096be90d5d51d0932a709b1d016dbcc35d9815e"
+    },
+    {
+      "path": "tools/provision_mqtt.py",
+      "sha256": "64a4e0e7c0dd09ef255d488023c568db072db2bc57b7afb8b28370e2c593c528"
+    },
+    {
+      "path": "tools/requirements-mqtt.txt",
+      "sha256": "3cf377203c32a311af4ce8772ee9f55ed3f08070e26357410b773b1a335048e9"
+    },
+    {
+      "path": "tools/requirements-pc.txt",
+      "sha256": "95fdad543f34e4a191cd17219e1a73b4ab4b0b5ad9806a25c3b49e7b48ab8ca0"
+    },
+    {
+      "path": "tools/serial_tcp_bridge.py",
+      "sha256": "157087f4fc129063df2985170e6839fdb01e2176aaccaf0598c0d670c3482f57"
+    },
+    {
+      "path": "tools/task_runtime.py",
+      "sha256": "b16117752cbb9f78151727c1512f96aab63702d7432edb5497d88974cb19672b"
+    },
+    {
+      "path": "tools/task_store.py",
+      "sha256": "12dd1cb496f322dda383684e965815c4c73e2bd0ac8418f51392800a4c25238d"
+    },
+    {
+      "path": "tools/tunnel_protocol.py",
+      "sha256": "beb4eeb550f65fba542f8cf06842adcbd1a6e4cbba03c3458c809f3496a0dfc3"
+    },
+    {
+      "path": "tools/ugv_requests.py",
+      "sha256": "18ea85b53de3bbde09fd470dd23d137a1a27c560230adeaf6d8eb092366af97d"
+    },
+    {
+      "path": "tools/ugv_rpc.py",
+      "sha256": "5bdb65a738c75640ef502c417360b97b27cb5bfab90706f2c1c6deaeb609632e"
+    },
+    {
+      "path": "tools/ugv_service.py",
+      "sha256": "b77f9e8efc88168774a8b175712db742e4b0769e3737d492cac5e9da68e9ccfc"
+    },
+    {
+      "path": "tools/verify_broker_security.py",
+      "sha256": "a5ef5dc8151796c7c5bbe27ef76fc575a4830beddf09be1135202f3279220ac5"
+    },
+    {
+      "path": "tools/verify_builds.py",
+      "sha256": "92cc281a0336292962674e17d013dce48ff643df3476da335e6fa5535ad25648"
+    },
+    {
+      "path": "tools/task_agents/ugv.py",
+      "sha256": "122f744c5f1f745b6a4e6b6a9140f1438b57fcf1914764105de712e3e3e64148"
+    },
+    {
+      "path": "tools/task_agents/__init__.py",
+      "sha256": "593942d2b23a1c90583bae2e955524b413d7c2fffa2806707f2034ac58f7658f"
+    },
+    {
+      "path": "topologies/auto.defaults",
+      "sha256": "c77be5f83299b75d9bffa77b6c47c03251a24ae5adcd3ccfdafaa99d96c6d029"
+    },
+    {
+      "path": "topologies/chain.defaults",
+      "sha256": "4f3818a64ad085086d34f3adc24dd20b8683f15bcaf092a2b3530e528a37f44b"
+    },
+    {
+      "path": "topologies/star.defaults",
+      "sha256": "ef156361c25f5cd918a7fa678194bc9f815f4cf42863e8dd08eaae01143554f9"
+    }
+  ]
+}

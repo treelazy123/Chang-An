@@ -1,0 +1,5 @@
+node_id,role,target,sta_mac,ap_mac,serial_port,board_model,notes
+pc-root-001,pc_root,esp32c6,,,,,Native USB Serial/JTAG to PC; fixed root level 1
+ugv-001,ugv,esp32c6,,,,,Relay level 2 in chain
+uav-001,uav,esp32c6,,,,,Relay level 3 in chain
+micro-001,micro_uav,esp32c6,,,,,Leaf level 4 in chain

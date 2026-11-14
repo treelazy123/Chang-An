@@ -1,0 +1,181 @@
+{
+  "date": "2026-11-13",
+  "app_version": "0.4.0",
+  "mode": "mqtt_serial",
+  "topology": "chain",
+  "firmware_build": "not_run_by_agent; user-built firmware used for confirmed hardware acceptance",
+  "flash_or_serial_access": "no agent firmware flash; agent started UGV COM4 serial tunnel",
+  "host_tests": {
+    "passed": 45,
+    "failed": 0,
+    "command": "python -m unittest discover -s tests -v",
+    "tls_scope": "Python multiplexing engine + standard-library TLS server, three actual mutual-TLS client identities",
+    "negative_tls": [
+      "unknown_ca",
+      "wrong_service_name",
+      "missing_client_certificate"
+    ],
+    "other_checks": [
+      "framing_crc_header_and_body",
+      "flow_control",
+      "stream_eof_after_ack",
+      "stale_epoch_token_isolation",
+      "command_ack_correlation",
+      "no_retry_on_timeout",
+      "fresh_boot_and_telemetry_gate",
+      "16_isolated_build_command_dry_runs",
+      "Windows ready USB with zero sockets avoids select(10022)",
+      "connection-refused startup reports broker endpoint without traceback"
+    ]
+  },
+  "broker_integration": "Actual Mosquitto loopback 8883: user-supplied tool output confirms all 10 mTLS/ACL checks passed, including positive controls, cross-node publish/read denial, and missing/untrusted client certificate rejection.",
+  "hardware_integration": "User confirms acceptance items 1-6 complete. Actual Broker security output and root/UGV/UAV size output supplied; Micro artifact and numeric heap_min evidence not supplied.",
+  "endpoints": {
+    "pc_root": "advertised UGV STA:8883",
+    "uav": "advertised UGV SoftAP:8883",
+    "micro_uav": "advertised UGV SoftAP:8883"
+  },
+  "limitations": [
+    "lab provision-time floor then authenticated controller time, not production RTC/revocation",
+    "8-entry in-RAM deduplication for idempotent ping/status/echo only",
+    "UGV telemetry remains UART; no MGMT extension this round",
+    "no UDP/SRT this round",
+    "Micro binary not found in default build directory; its image size and per-node numeric minimum heap evidence are not attached despite overall user acceptance"
+  ],
+  "observed_hardware": {
+    "pc_root": "Broker log confirms authenticated pc-root-001, command/clock subscriptions, capabilities, presence and periodic telemetry through UGV COM4 USB tunnel",
+    "ugv": "COM4 tunnel running; Windows empty-select bug fixed",
+    "uav": "User supplied successful uav-001 status ACK; acceptance items 1-3 confirmed passed",
+    "micro_uav": "User confirms Micro included in three-node acceptance items 1-3; COM port not supplied",
+    "ports": {
+      "pc_root": "COM7",
+      "ugv": "COM4",
+      "uav": "COM5"
+    }
+  },
+  "acceptance": {
+    "date": "2026-11-13",
+    "source": "user_report_with_actual_broker_output_and_three_role_size_output",
+    "items": [
+      {
+        "id": 1,
+        "status": "passed",
+        "description": "root uses UGV STA; UAV/Micro use UGV SoftAP; all three simultaneously online/ready"
+      },
+      {
+        "id": 2,
+        "status": "passed",
+        "description": "all three nodes completed ping/status/echo; ACK node_id/msg_id matched"
+      },
+      {
+        "id": 3,
+        "status": "passed",
+        "description": "UGV USB disconnect closes all channels; reconnect authenticates again without inherited commands"
+      },
+      {
+        "id": 4,
+        "status": "passed",
+        "description": "Broker stop/restart, node reboot, UAV power loss: offline detection and recovery",
+        "source": "user_report_all_six_completed"
+      },
+      {
+        "id": 5,
+        "status": "passed",
+        "description": "actual Broker rejects missing/invalid certificates and unauthorized cross-node topics",
+        "source": "user_supplied_actual_broker_tool_output",
+        "command": "uv run --locked python tools/verify_broker_security.py --broker-port 8883 --clients-stopped",
+        "checks": [
+          "controller_read_ack_positive",
+          "micro_own_command_subscribe_positive",
+          "micro_own_ack_publish_positive",
+          "cross_node_publish_denied_by_mqtt5_puback",
+          "forbidden_publish_not_delivered",
+          "own_command_receive_positive",
+          "controller_command_publish_positive",
+          "cross_node_command_read_blocked",
+          "missing_client_certificate_rejected",
+          "untrusted_client_certificate_rejected"
+        ]
+      },
+      {
+        "id": 6,
+        "status": "passed",
+        "description": "measure compiled app partition usage and TLS minimum free heap",
+        "source": "user_report_all_six_completed",
+        "evidence_note": "User states acceptance complete. Supplied size output independently covers root, UGV and UAV only; Micro artifacts MISSING in default build directory. Micro image size and per-node heap_min values were not supplied and are not inferred."
+      }
+    ]
+  },
+  "acceptance_tools": {
+    "guide": "docs/mqtt-acceptance-4-6.md",
+    "offline_tests_passed": 5,
+    "actual_broker_security_tool": "passed: user provided complete 10-PASS output from actual Broker on 8883",
+    "new_heap_min": "Instrumentation implemented; user states acceptance complete; per-node measured values not supplied",
+    "existing_image_size_snapshot": [
+      {
+        "directory": "build\\mqtt_serial\\pc_root-chain",
+        "status": "PASS",
+        "image_bytes": 1194416,
+        "partition": "factory",
+        "partition_offset": 65536,
+        "partition_bytes": 2031616,
+        "free_app_bytes": 837200,
+        "used_percent": 58.79
+      },
+      {
+        "directory": "build\\mqtt_serial\\ugv-chain",
+        "status": "PASS",
+        "image_bytes": 1077408,
+        "partition": "factory",
+        "partition_offset": 65536,
+        "partition_bytes": 2031616,
+        "free_app_bytes": 954208,
+        "used_percent": 53.03
+      },
+      {
+        "directory": "build\\mqtt_serial\\uav-chain",
+        "status": "PASS",
+        "image_bytes": 1194560,
+        "partition": "factory",
+        "partition_offset": 65536,
+        "partition_bytes": 2031616,
+        "free_app_bytes": 837056,
+        "used_percent": 58.8
+      },
+      {
+        "directory": "build\\mqtt_serial\\micro_uav-chain",
+        "status": "MISSING",
+        "missing": [
+          "build\\mqtt_serial\\micro_uav-chain\\mesh_lite_node.bin",
+          "build\\mqtt_serial\\micro_uav-chain\\partition_table\\partition-table.bin"
+        ]
+      }
+    ]
+  },
+  "resource_evidence": {
+    "source": "user_pasted_check_firmware_size_output",
+    "pc_root": {
+      "image_bytes": 1194416,
+      "partition_bytes": 2031616,
+      "free_app_bytes": 837200,
+      "used_percent": 58.79
+    },
+    "ugv": {
+      "image_bytes": 1077408,
+      "partition_bytes": 2031616,
+      "free_app_bytes": 954208,
+      "used_percent": 53.03
+    },
+    "uav": {
+      "image_bytes": 1194560,
+      "partition_bytes": 2031616,
+      "free_app_bytes": 837056,
+      "used_percent": 58.8
+    },
+    "micro_uav": {
+      "artifact_status": "MISSING in build/mqtt_serial/micro_uav-chain",
+      "image_size": "not_supplied"
+    },
+    "heap_min_measurements": "user acceptance complete; individual numeric values not supplied"
+  }
+}

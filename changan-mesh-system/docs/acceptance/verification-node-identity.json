@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-14",
+  "app_version": "0.5.0",
+  "feature": "per-device identity for every role",
+  "enrollment": [
+    {
+      "role": "pc_root",
+      "node_id": "pc-root-001",
+      "created": false
+    },
+    {
+      "role": "ugv",
+      "node_id": "ugv-001",
+      "created": true
+    },
+    {
+      "role": "uav",
+      "node_id": "uav-001",
+      "created": false
+    },
+    {
+      "role": "micro_uav",
+      "node_id": "micro-001",
+      "created": false
+    },
+    {
+      "role": "micro_uav",
+      "node_id": "micro-002",
+      "created": true
+    }
+  ],
+  "existing_certificate_key_files_unchanged": 17,
+  "host_tests": {
+    "passed": 69,
+    "failed": 0,
+    "command": "uv run --locked python -m unittest discover -s tests -v",
+    "actual_tls_clients_tested_simultaneously": 4,
+    "host_channel_8_boundary_test": "passed",
+    "idf_execution_in_build_tests": "mocked; no IDF compiler or flash invoked"
+  },
+  "firmware_build": "not_run_at_user_request",
+  "flash": "not_run",
+  "online_broker_reload_or_restart": "not_run",
+  "serial_or_device_restart": "not_run",
+  "new_hardware_validation": "pending user build/flash and restart Broker/bridge/controller",
+  "gateway_identity": "UGV identity and certificate are provisioned; transparent gateway does not authenticate to MQTT with this certificate",
+  "generic_registration": {
+    "roles": [
+      "pc_root",
+      "ugv",
+      "uav",
+      "micro_uav"
+    ],
+    "arbitrary_valid_ids": true,
+    "explicit_id_required_for_real_mqtt_operations": true,
+    "identity_bound_role_and_certificate": true,
+    "controller_inventory_hot_reload": true,
+    "new_broker_acl_requires_admin_reload": true,
+    "default_tunnel_concurrent_capacity": 8,
+    "max_configurable_capacity": 8,
+    "inventory_count_not_hardcoded": true
+  },
+  "static_checks": "Python AST and C delimiter checks passed; not a firmware compilation",
+  "identity_python_environment": {
+    "fix": "certificate operations delegate to project uv .venv when launcher lacks cryptography; IDF environment remains independent",
+    "new_tests": 5,
+    "idf_python_dependency_install": "not_performed",
+    "firmware_build_or_flash": "not_performed"
+  }
+}

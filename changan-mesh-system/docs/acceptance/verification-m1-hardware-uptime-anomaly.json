@@ -1,0 +1,49 @@
+{
+  "manual_power_reset_or_usb_action_reported_by_user": false,
+  "observations": [
+    {
+      "source": "initial direct COM7 list",
+      "root_uptime_ms": 1424786,
+      "micro001_uptime_ms": 1130541,
+      "relative_boot_offset_ms": 294245
+    },
+    {
+      "source": "verification-m1-hardware-com7.json",
+      "root_uptime_ms": 2119352,
+      "micro001_uptime_ms": 263149,
+      "relative_boot_offset_ms": 1856203
+    },
+    {
+      "source": "later direct COM7 list",
+      "root_uptime_ms": 2685636,
+      "micro001_uptime_ms": 323349,
+      "relative_boot_offset_ms": 2362287
+    },
+    {
+      "source": "verification-m1-hardware-car-reconnect-micro002.json",
+      "root_uptime_ms": 2996103,
+      "micro001_uptime_ms": 271704,
+      "relative_boot_offset_ms": 2724399
+    },
+    {
+      "source": "verification-m1-hardware-car-reconnect-micro002.json",
+      "root_uptime_ms": 3031243,
+      "micro001_uptime_ms": 306912,
+      "relative_boot_offset_ms": 2724331
+    },
+    {
+      "source": "verification-m1-hardware-car-reconnect-micro001-retest.json",
+      "root_uptime_ms": 3582058,
+      "micro001_uptime_ms": 355879,
+      "relative_boot_offset_ms": 3226179
+    },
+    {
+      "source": "verification-m1-hardware-car-reconnect-micro001-retest.json",
+      "root_uptime_ms": 3612186,
+      "micro001_uptime_ms": 390979,
+      "relative_boot_offset_ms": 3221207
+    }
+  ],
+  "interpretation": "Multiple Micro-001 restarts indicated by uptime rollback and large relative boot-offset changes while root uptime continues. Sampling times are asynchronous; no exact restart count or cause is asserted.",
+  "unresolved": "Reset reason and startup/crash log unavailable through current car CLI. First queued follow-up task became UNKNOWN; causality with restarts undetermined."
+}

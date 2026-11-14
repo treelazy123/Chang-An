@@ -1,0 +1,13 @@
+/build/
+/.venv/
+/secrets/
+/runtime/
+**/__pycache__/
+*.pyc
+*.egg-info/
+/firmware/sdkconfig
+/firmware/sdkconfig.old
+/firmware/sdkconfig.local.defaults
+/.idea/
+/legacy/experiments/runs/
+/build-*.log

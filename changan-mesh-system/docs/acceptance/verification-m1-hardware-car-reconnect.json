@@ -1,0 +1,1920 @@
+{
+  "recorded_at": "2026-11-14T20:16:39.159913+08:00",
+  "transport": "User car_terminal CLI via COM7, existing physical Mesh-Lite network",
+  "checks": [
+    {
+      "name": "one active task per physical C6",
+      "status": "PASS",
+      "first_state": "RUNNING",
+      "second_state": "QUEUED",
+      "first": "8053f964b8c14b2786b46ed161f786ea",
+      "second": "88a3dfefa4c4455784d666d55660a531"
+    },
+    {
+      "name": "car CLI quit/reconnect preserves running task without repeated start",
+      "status": "PASS",
+      "before_samples": 2,
+      "after_samples": 6,
+      "command_id": "caf88e16ebc0478bbcec9ca66079ae08"
+    }
+  ],
+  "failures": [
+    "State timeout {'task_id': '88a3dfefa4c4455784d666d55660a531', 'target': 'micro-001', 'kind': 'diagnostics', 'state': 'UNKNOWN', 'revision': 1, 'priority': 0, 'execute_before': None, 'created': 1794658527, 'updated': 1794658582, 'state_seq': 7, 'progress': 0, 'error': None, 'last_operation': {'command_id': '9302d0c0e6f34311b9fd260f605136b9', 'op': 'start', 'status': 'reconciled', 'op_seq': 1}, 'config': {'duration_s': 5, 'period_ms': 1000}}"
+  ],
+  "final_tasks": {
+    "queue_first": {
+      "task_id": "8053f964b8c14b2786b46ed161f786ea",
+      "target": "micro-001",
+      "kind": "diagnostics",
+      "state": "SUCCEEDED",
+      "revision": 1,
+      "priority": 0,
+      "execute_before": null,
+      "created": 1794658527,
+      "updated": 1794658551,
+      "state_seq": 25,
+      "progress": 100,
+      "error": null,
+      "last_operation": {
+        "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+        "op": "start",
+        "status": "acked",
+        "op_seq": 1
+      },
+      "config": {
+        "duration_s": 20,
+        "period_ms": 1000
+      },
+      "result": {
+        "heap_min": 194476,
+        "rssi_max": -13,
+        "rssi_min": -16,
+        "samples": 20,
+        "source": "c6"
+      }
+    },
+    "queue_second": {
+      "task_id": "88a3dfefa4c4455784d666d55660a531",
+      "target": "micro-001",
+      "kind": "diagnostics",
+      "state": "CANCELLED",
+      "revision": 1,
+      "priority": 0,
+      "execute_before": null,
+      "created": 1794658527,
+      "updated": 1794658597,
+      "state_seq": 12,
+      "progress": 0,
+      "error": null,
+      "last_operation": {
+        "command_id": "1b3c0429988c48dabc2e3d4a2b759d1d",
+        "op": "cancel",
+        "status": "reconciled",
+        "op_seq": 2
+      },
+      "config": {
+        "duration_s": 5,
+        "period_ms": 1000
+      },
+      "result": {
+        "samples": 0,
+        "source": "c6"
+      }
+    }
+  },
+  "not_run": [
+    "physical node power cycle",
+    "physical UGV USB unplug/replug",
+    "Broker stop/restart",
+    "UGV service restart",
+    "raw packet duplicate/ACL probes"
+  ],
+  "constraints": "No firmware build/flash, service restart, direct MQTT controller or loopback RPC",
+  "trace": [
+    {
+      "command": "task create micro-001 20 1000",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "448232508ddf45639e4c1356324c6ad8",
+        "ok": true,
+        "stage": "UGV_RECEIVED",
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "CREATED",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658527,
+          "state_seq": 0,
+          "progress": 0,
+          "error": null,
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task create micro-001 5 1000",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "029d4fba43ca4d96b1a12d428ab493d5",
+        "ok": true,
+        "stage": "UGV_RECEIVED",
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "CREATED",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658527,
+          "state_seq": 0,
+          "progress": 0,
+          "error": null,
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task start 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "8093f4dfda84413c85d494fcb145811c",
+        "ok": true,
+        "stage": "UGV_RECEIVED",
+        "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "QUEUED",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658529,
+          "state_seq": 1,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "waiting",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task start 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "b2191fcce8c6430499d37bd1be0ab0f8",
+        "ok": true,
+        "stage": "UGV_RECEIVED",
+        "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "QUEUED",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658531,
+          "state_seq": 1,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "waiting",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "c89862b6b33e43b0a625eefc8c5d2010",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658532,
+          "state_seq": 6,
+          "progress": 7,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195392,
+            "rssi_max": -13,
+            "rssi_min": -14,
+            "samples": 2,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "400a8e078c81421497d5d8ac5ba666e4",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "QUEUED",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658531,
+          "state_seq": 1,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "waiting",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "df9d839b05294d2d926708ef07711e2b",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658535,
+          "state_seq": 10,
+          "progress": 27,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195392,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 6,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "6daf910d3fa442f884468edf4d450a63",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658537,
+          "state_seq": 11,
+          "progress": 32,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195392,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 7,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "66af4c23100e4fe9bb373f802244f151",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658539,
+          "state_seq": 13,
+          "progress": 42,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195392,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 9,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "246ad0c48a8e4f828be8a11627b272a7",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658542,
+          "state_seq": 16,
+          "progress": 57,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195392,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 12,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "f5284ffb56fb4299bbe3fe94f745e966",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658543,
+          "state_seq": 17,
+          "progress": 62,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195392,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 13,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "7730209b116b46359d9a6e11469faca3",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658544,
+          "state_seq": 19,
+          "progress": 73,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195132,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 15,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "19068e6fb2f147c49ca1e2dd85b404fb",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658545,
+          "state_seq": 20,
+          "progress": 78,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195132,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 16,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "e50f0a701dec43f38690d3b6e661145b",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658547,
+          "state_seq": 21,
+          "progress": 83,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195132,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 17,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "baf504ffc4244d2a87dbd87756610a69",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658547,
+          "state_seq": 21,
+          "progress": 83,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 195132,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 17,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "5af248c47cc54801983c73ab4ebb80bc",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RUNNING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658550,
+          "state_seq": 24,
+          "progress": 98,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 194476,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 20,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "dc66a863ddf94c4bbe4ea8beda7f5187",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "SUCCEEDED",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658551,
+          "state_seq": 25,
+          "progress": 100,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 194476,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 20,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "919e7bb3632043d2a946913473bf8dc7",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "DISPATCHING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658551,
+          "state_seq": 2,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "f19d7d7425d14316b276ed89b902f0d8",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "DISPATCHING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658551,
+          "state_seq": 2,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "53cb23454e6c4090ad55286095bde4b0",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "DISPATCHING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658551,
+          "state_seq": 2,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "5093774d2630421a8ff345d870d330e0",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "DISPATCHING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658551,
+          "state_seq": 2,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "20e031dc4a2b432ead0a420efa998276",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "DISPATCHING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658551,
+          "state_seq": 2,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "977dfeebe08048799d90ffabb34a6f84",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "DISPATCHING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658551,
+          "state_seq": 2,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "ba988d90dcfe4eb5b99062129e9c2c75",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RECONCILING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658561,
+          "state_seq": 3,
+          "progress": 0,
+          "error": "node_offline",
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "733cafeeb4034eac9a35b2e53527980c",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RECONCILING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658561,
+          "state_seq": 3,
+          "progress": 0,
+          "error": "node_offline",
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "181df3400bcb4656a726c85cd6546874",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RECONCILING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658561,
+          "state_seq": 3,
+          "progress": 0,
+          "error": "node_offline",
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "20ccade7d95e457d8813bd254ad6f419",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RECONCILING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658561,
+          "state_seq": 3,
+          "progress": 0,
+          "error": "node_offline",
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "c4cc26c0f19d435a9e2b3a711404ee29",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RECONCILING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658561,
+          "state_seq": 3,
+          "progress": 0,
+          "error": "node_offline",
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "40fc0ddb2e044a32ba0410eaae655134",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RECONCILING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658561,
+          "state_seq": 3,
+          "progress": 0,
+          "error": "node_offline",
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "cc46d6cac9904365995308badd95ad53",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "RECONCILING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658561,
+          "state_seq": 3,
+          "progress": 0,
+          "error": "node_offline",
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "sent",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "dc48bb25c4244cce811ef11caa1db98f",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658571,
+          "state_seq": 5,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "d44fcd37cdd449b89b14a3fbd531145f",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658571,
+          "state_seq": 5,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "ef84283fa7424b88a7a943a2c8144b61",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658571,
+          "state_seq": 5,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "8768506b241b4499bd9e568f96bf7237",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658576,
+          "state_seq": 6,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "38ab517fdd7646c8ae989c1caef872b7",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658576,
+          "state_seq": 6,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "9d788dab21cf4a2c8dd6e166b2cbda75",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658576,
+          "state_seq": 6,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "57947ec53b95485fa02fdd15909e6499",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658576,
+          "state_seq": 6,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "5751981c9bc8472aa8ba2825a0ac3cd8",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658576,
+          "state_seq": 6,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "0f0a00cb5c44453bb2b0c0eeebdb46ba",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658582,
+          "state_seq": 7,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "d62649a00ec94ff18dc4860f63b1d6c3",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658582,
+          "state_seq": 7,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "39abd0fb9552467fa3970c7b6ac7500c",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658582,
+          "state_seq": 7,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "a676b1e4b5be42d68b93d55a96093273",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658582,
+          "state_seq": 7,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "221cb5ccdb124f0481e6ffb8bd61faff",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658582,
+          "state_seq": 7,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 8053f964b8c14b2786b46ed161f786ea",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "42dfa5d1877343d998c889f71a25717c",
+        "ok": true,
+        "task": {
+          "task_id": "8053f964b8c14b2786b46ed161f786ea",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "SUCCEEDED",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658551,
+          "state_seq": 25,
+          "progress": 100,
+          "error": null,
+          "last_operation": {
+            "command_id": "caf88e16ebc0478bbcec9ca66079ae08",
+            "op": "start",
+            "status": "acked",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 20,
+            "period_ms": 1000
+          },
+          "result": {
+            "heap_min": 194476,
+            "rssi_max": -13,
+            "rssi_min": -16,
+            "samples": 20,
+            "source": "c6"
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "e293d8ef868a4eb481916cf6a1bd95e8",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658587,
+          "state_seq": 8,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "9302d0c0e6f34311b9fd260f605136b9",
+            "op": "start",
+            "status": "reconciled",
+            "op_seq": 1
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task cancel 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "14d29f68089b44caaa228f2ccf0f3973",
+        "ok": true,
+        "stage": "UGV_RECEIVED",
+        "command_id": "1b3c0429988c48dabc2e3d4a2b759d1d",
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "CANCEL_PENDING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658592,
+          "state_seq": 9,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "1b3c0429988c48dabc2e3d4a2b759d1d",
+            "op": "cancel",
+            "status": "waiting",
+            "op_seq": 2
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "5f2719f922d045fb9c9e8bbc627348cb",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "CANCEL_PENDING",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658592,
+          "state_seq": 10,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "1b3c0429988c48dabc2e3d4a2b759d1d",
+            "op": "cancel",
+            "status": "sent",
+            "op_seq": 2
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "05b0db3f87dc436d8962833c87e5e123",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658592,
+          "state_seq": 11,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "1b3c0429988c48dabc2e3d4a2b759d1d",
+            "op": "cancel",
+            "status": "reconciled",
+            "op_seq": 2
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "2f49257ca28f4454a30b7d7457b3d4da",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658592,
+          "state_seq": 11,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "1b3c0429988c48dabc2e3d4a2b759d1d",
+            "op": "cancel",
+            "status": "reconciled",
+            "op_seq": 2
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "c6729314ac1e43b3852b80f1d54d75ec",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "UNKNOWN",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658592,
+          "state_seq": 11,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "1b3c0429988c48dabc2e3d4a2b759d1d",
+            "op": "cancel",
+            "status": "reconciled",
+            "op_seq": 2
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          }
+        }
+      }
+    },
+    {
+      "command": "task get 88a3dfefa4c4455784d666d55660a531",
+      "response": {
+        "v": 1,
+        "type": "task.reply",
+        "node_id": "ugv-service",
+        "msg_id": "35c3499e21234507b5ea564e0e290c3f",
+        "ok": true,
+        "task": {
+          "task_id": "88a3dfefa4c4455784d666d55660a531",
+          "target": "micro-001",
+          "kind": "diagnostics",
+          "state": "CANCELLED",
+          "revision": 1,
+          "priority": 0,
+          "execute_before": null,
+          "created": 1794658527,
+          "updated": 1794658597,
+          "state_seq": 12,
+          "progress": 0,
+          "error": null,
+          "last_operation": {
+            "command_id": "1b3c0429988c48dabc2e3d4a2b759d1d",
+            "op": "cancel",
+            "status": "reconciled",
+            "op_seq": 2
+          },
+          "config": {
+            "duration_s": 5,
+            "period_ms": 1000
+          },
+          "result": {
+            "samples": 0,
+            "source": "c6"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-14",
+  "firmware_version": "0.6.0",
+  "car_repository": "D:\\changan\\changan-car-terminal",
+  "host_tests": 76,
+  "car_tests": 3,
+  "firmware_build": "not_run_at_user_request",
+  "flash": "not_run",
+  "online_services_restart": "not_run",
+  "real_car_serial_test": "pending_user_root_upgrade",
+  "separation": {
+    "car": "CLI and request transports only",
+    "ugv": "headless registry, clock, command dispatch",
+    "legacy_console": "auto local service reuse or standalone compatibility"
+  },
+  "new_permissions": "pc_root request/response topics generated on disk; user Broker reload required",
+  "credentials_copied_to_car_repository": false,
+  "git": "local main initialized, no commits or remote push",
+  "additional_validation": "malformed authorized requests rejected without interrupting worker"
+}
