@@ -4,6 +4,7 @@ import shlex
 import time
 import uuid
 from .protocol import MAX_COMMAND
+from .transport.base import RequestTransport
 
 HELP = """list | ping NODE | status NODE | echo NODE TEXT
  task create NODE [DURATION_S=30] [PERIOD_MS=1000]
@@ -16,7 +17,7 @@ HELP = """list | ping NODE | status NODE | echo NODE TEXT
  help | quit"""
 
 class TaskClient:
-    def __init__(self, transport):
+    def __init__(self, transport: RequestTransport):
         self.transport = transport
 
     def call(self, message_type, **fields):

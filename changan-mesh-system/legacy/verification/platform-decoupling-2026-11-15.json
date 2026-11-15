@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-15",
+  "host_tests": 109,
+  "car_tests": 9,
+  "host_failures": 0,
+  "car_failures": 0,
+  "host_skipped": 0,
+  "real_broker_checks": [
+    "two TLS listeners require client certificates",
+    "configured host and TLS server-name verification",
+    "cross-node ACL",
+    "car task lifecycle",
+    "restart reconciles without replaying start"
+  ],
+  "hardware_access": false,
+  "firmware_build": false,
+  "firmware_flash": false,
+  "jetson_arm_validation": false,
+  "s31_driver_implemented": false,
+  "production_services_changed": false,
+  "logs": [
+    "build/decoupling-host-tests.log",
+    "build/decoupling-car-tests.log"
+  ]
+}

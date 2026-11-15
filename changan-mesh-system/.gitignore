@@ -11,3 +11,16 @@
 /.idea/
 /legacy/experiments/runs/
 /build-*.log
+/.env
+/.env.*
+*.key
+*.p12
+*.pfx
+*.bin
+*.elf
+*.map
+*.o
+*.obj
+*.zip
+# Upstream OTA test fixture, not a local firmware build output.
+!third_party/esp_modem/test/target_ota/bin/blink.bin

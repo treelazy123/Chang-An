@@ -32,9 +32,11 @@ def validate(data):
             raise ValueError('UGV must advertise its own identity')
     return data
 
-def load_inventory(root=None):
+def load_inventory(root=None, *, path=None):
+    explicit=path is not None
     root=Path(root) if root is not None else repository_root()
-    path=root/'config/nodes.json'
+    path=Path(path) if path is not None else root/'config/nodes.json'
+    if explicit and not path.is_file():raise FileNotFoundError(path)
     return validate(json.loads(path.read_text(encoding='utf-8')) if path.exists() else defaults())
 def clients(data):
     return tuple(e['node_id'] for e in validate(data)['nodes'] if e.get('enabled',True) and e['role']!='ugv')

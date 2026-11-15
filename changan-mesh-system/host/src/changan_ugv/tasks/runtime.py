@@ -1,33 +1,31 @@
 """Bounded asynchronous task dispatch, node reconciliation and UGV-local diagnostics."""
 import json
-from pathlib import Path
 import time
 import uuid
-from changan_ugv.tasks.store import Store, TERMINAL, dumps
-from changan_ugv.nodes.inventory import load_inventory
+from changan_ugv.tasks.store import Store
+from changan_ugv.tasks.ports import NodeChannel, ExecutorFactory
 
-from changan_ugv.agents.ugv import HostDiagnostics
 
 class Runtime:
-    def __init__(self, controller, root, ugv_id='ugv-001', database=None):
-        self.controller, self.root, self.ugv_id = controller, Path(root), ugv_id
-        self.store = Store(database or self.root/'runtime/tasks.sqlite3')
+    def __init__(self, channel: NodeChannel, *, database, executor_factory: ExecutorFactory, inventory_loader, ugv_id='ugv-001'):
+        self.channel, self.ugv_id = channel, ugv_id
+        self.inventory_loader = inventory_loader
+        self.closed = False
+        self.store = Store(database)
         self.queries = {}
         self.query_at = {}
         self.notify_cursor = self.store.db.execute('SELECT COALESCE(MAX(cursor),0) FROM task_events').fetchone()[0]
         try:
-            self.local = HostDiagnostics(self.root/'runtime/ugv-task-agent.json', ugv_id,
-                                         lambda body:self.receive(ugv_id,body), self.ready_count)
+            self.local = executor_factory(lambda body:self.receive(ugv_id,body), self.ready_count)
         except BaseException:
             self.store.close()
             raise
 
     def ready_count(self):
-        with self.controller.condition:
-            return sum(self.controller.registry.ready(n) for n in self.controller.registry.nodes)
+        return self.channel.ready_count()
 
     def targets(self, owner):
-        entries = load_inventory(self.root)['nodes']
+        entries = self.inventory_loader()['nodes']
         enabled = [e for e in entries if e.get('enabled', True) and e.get('ugv_id','ugv-001')==self.ugv_id]
         if owner != 'local-console' and not any(e['node_id']==owner and e['role']=='pc_root' for e in enabled):
             raise ValueError('terminal_not_authorized_for_ugv')
@@ -38,10 +36,9 @@ class Runtime:
             with self.store.lock:
                 task=self.store._row(packet.get('task_id'),owner)
             if task['target']!=self.ugv_id:
-                with self.controller.condition:
-                    entry=self.controller.registry.nodes.get(task['target'],{})
-                    if self.controller.registry.ready(task['target']) and 'diagnostics' not in entry.get('capabilities',{}).get('task_types',[]):
-                        raise ValueError('node_task_firmware_required')
+                entry=self.channel.snapshot(task['target'])
+                if entry.ready and 'diagnostics' not in entry.task_types:
+                    raise ValueError('node_task_firmware_required')
         return self.store.request(packet, owner, self.targets(owner))
 
     def endpoint(self, node):
@@ -49,29 +46,24 @@ class Runtime:
             return None
         if node == self.ugv_id:
             return self.local.boot
-        with self.controller.condition:
-            registry = self.controller.registry
-            entry = registry.nodes.get(node,{})
-            cap = entry.get('capabilities',{})
-            if registry.ready(node) and 'diagnostics' in cap.get('task_types',[]):
-                return entry['presence']['boot_id']
+        entry = self.channel.snapshot(node)
+        if entry.ready and 'diagnostics' in entry.task_types:
+            return entry.boot_id
         return None
 
     def publish(self, node, packet):
         if node == self.ugv_id:
             self.local.handle(packet)
             return True
-        return self.controller.client.publish(f'mesh/v1/nodes/{node}/task_commands', dumps(packet), qos=1, retain=False).rc == 0
+        return self.channel.send(node,packet).queued
 
     def receive(self, node, body):
         if not isinstance(body.get('msg_id'),str):return False
         if node not in self.targets('local-console'):
             return False
         if node != self.ugv_id:
-            with self.controller.condition:
-                entry = self.controller.registry.nodes.get(node,{})
-                if body.get('boot_id') != entry.get('presence',{}).get('boot_id'):
-                    return False
+            if body.get('boot_id') != self.channel.snapshot(node).boot_id:
+                return False
         query = self.queries.get(body.get('msg_id'))
         matched = bool(query and query[0]==node and query[1]==body.get('task_id') and query[2]==body.get('boot_id') and query[3]>=time.monotonic())
         accepted = self.store.receive(node,body,query=matched)
@@ -80,7 +72,7 @@ class Runtime:
         return accepted
 
     def tick(self):
-        connected = self.controller.connected.is_set()
+        connected = self.channel.is_connected()
         self.local.tick(connected)
         self.store.expire_waits()
         if not connected:
@@ -120,7 +112,10 @@ class Runtime:
             except ValueError:
                 continue
             body = dict(v=1,type='task.event',node_id='ugv-service',cursor=row['cursor'],**json.loads(row['body']))
-            self.controller.client.publish(f"mesh/v1/terminals/{row['owner']}/events",dumps(body),qos=1,retain=False)
+            self.channel.notify(row['owner'],body)
 
     def close(self):
-        self.store.close()
+        if self.closed:return
+        self.closed=True
+        try:self.local.close()
+        finally:self.store.close()

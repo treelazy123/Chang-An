@@ -1,5 +1,9 @@
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
+#include "esp_mac.h"
+#include "esp_netif.h"
+#include "esp_wifi.h"
 #include "esp_timer.h"
 #include "esp_system.h"
 #include "esp_mesh_lite.h"
@@ -111,6 +115,55 @@ cJSON *app_message_new(const char *type)
     }
     return message;
 }
+static void status_add_ip(cJSON *payload, const char *key, const esp_ip4_addr_t *ip)
+{
+    if (ip->addr) {
+        char text[16];
+        snprintf(text, sizeof(text), IPSTR, IP2STR(ip));
+        cJSON_AddStringToObject(payload, key, text);
+    }
+}
+static void status_add_network(cJSON *payload)
+{
+    esp_netif_ip_info_t info = {0};
+    esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    esp_netif_t *ap = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    if (sta && esp_netif_get_ip_info(sta, &info) == ESP_OK && info.ip.addr) {
+        status_add_ip(payload, "sta_ip", &info.ip);
+        status_add_ip(payload, "gateway", &info.gw);
+        status_add_ip(payload, "netmask", &info.netmask);
+    }
+    if (ap && esp_netif_get_ip_info(ap, &info) == ESP_OK) {
+        status_add_ip(payload, "ap_ip", &info.ip);
+    }
+    uint8_t mac[6];
+    char text[18];
+    if (esp_wifi_get_mac(WIFI_IF_STA, mac) == ESP_OK) {
+        snprintf(text, sizeof(text), MACSTR, MAC2STR(mac));
+        cJSON_AddStringToObject(payload, "sta_mac", text);
+    }
+    if (esp_wifi_get_mac(WIFI_IF_AP, mac) == ESP_OK) {
+        snprintf(text, sizeof(text), MACSTR, MAC2STR(mac));
+        cJSON_AddStringToObject(payload, "ap_mac", text);
+    }
+    wifi_ap_record_t parent = {0};
+    bool connected = esp_wifi_sta_get_ap_info(&parent) == ESP_OK;
+    cJSON_AddBoolToObject(payload, "parent_connected", connected);
+    if (connected) {
+        snprintf(text, sizeof(text), MACSTR, MAC2STR(parent.bssid));
+        cJSON_AddStringToObject(payload, "parent_bssid", text);
+        cJSON_AddNumberToObject(payload, "rssi", parent.rssi);
+    }
+    uint8_t channel;
+    wifi_second_chan_t secondary;
+    if (esp_wifi_get_channel(&channel, &secondary) == ESP_OK) {
+        cJSON_AddNumberToObject(payload, "channel", channel);
+    }
+    wifi_sta_list_t children = {0};
+    if (esp_wifi_ap_get_sta_list(&children) == ESP_OK) {
+        cJSON_AddNumberToObject(payload, "associated_children", children.num);
+    }
+}
 cJSON *app_status_payload(void)
 {
     cJSON *payload = cJSON_CreateObject();
@@ -121,6 +174,7 @@ cJSON *app_status_payload(void)
         cJSON_AddNumberToObject(payload, "heap", esp_get_free_heap_size());
         cJSON_AddNumberToObject(payload, "heap_min", esp_get_minimum_free_heap_size());
         cJSON_AddNumberToObject(payload, "uptime_ms", (double)(esp_timer_get_time() / 1000));
+        status_add_network(payload);
     }
     return payload;
 }

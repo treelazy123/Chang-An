@@ -6,14 +6,16 @@ import threading
 import time
 from changan_ugv.protocol.frames import encode
 from changan_ugv.nodes.inventory import load_inventory
+from changan_ugv.nodes.network import read_network_status
 from changan_ugv.tasks.store import ACTIONS
 class Requests:
-    def __init__(self,controller,root,clock=time.time):
+    def __init__(self,controller,root=None,clock=time.time, *, inventory_loader=None):
         self.controller=controller;self.root=root;self.clock=clock
         self.lock=threading.Lock();self.cache=OrderedDict()
+        self.inventory_loader=inventory_loader or (lambda:load_inventory(self.root))
     def allowed(self,source):
         return any(e['node_id']==source and e['role']=='pc_root' and e.get('enabled',True)
-                   for e in load_inventory(self.root)['nodes'])
+                   for e in self.inventory_loader()['nodes'])
     def error(self,request,text):
         return {'v':1,'type':'error','node_id':'ugv-service','msg_id':request.get('msg_id'),
                 'target':request.get('target'),'error':text}
@@ -58,8 +60,11 @@ class Requests:
                     with self.controller.condition:rows=self.controller.registry.snapshot()
                     tasks=getattr(self.controller,'tasks',None)
                     if tasks is not None:
+                        ugv_status=dict(role='ugv',execution_host='local')
+                        network=read_network_status(tasks.ugv_id,self.root)
+                        if network is not None:ugv_status['network_status']=network
                         rows.append(dict(node_id=tasks.ugv_id,ready=self.controller.connected.is_set(),operations=[],
-                                         task_types=['diagnostics'],status=dict(role='ugv',execution_host='local')))
+                                         task_types=['diagnostics'],status=ugv_status))
                     # One node per frame, final marker: fits the C6 1024-byte frame bound for growing fleets.
                     result=[dict(v=1,type='nodes',node_id='ugv-service',msg_id=identity,nodes=[row],more=True) for row in rows]
                     result.append(dict(v=1,type='nodes',node_id='ugv-service',msg_id=identity,nodes=[],more=False))

@@ -14,7 +14,7 @@ import time
 import unittest
 ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT/'tools'))
 from provision_mqtt import provision
-from task_runtime import HostDiagnostics
+from changan_ugv.agents.ugv import HostDiagnostics
 from ugv_service import ServiceController
 from node_inventory import load_inventory
 from node_identity import enroll
@@ -77,8 +77,12 @@ class RealBrokerM1(unittest.TestCase):
             with socket.socket() as listener:listener.bind(('127.0.0.1',0));port=listener.getsockname()[1]
             def quote(path):return '"'+path.as_posix()+'"'
             conf=root/'isolated.conf'
-            config=(root/'runtime/mosquitto.conf').read_text(encoding='utf-8')
-            conf.write_text(config.replace('listener 8883 127.0.0.1',f'listener {port} 127.0.0.1')+'\nlog_dest stderr\n',encoding='utf-8')
+            from changan_ugv.deployment import render_broker_config
+            with socket.socket() as listener:listener.bind(('127.0.0.1',0));second_port=listener.getsockname()[1]
+            config=render_broker_config(ca_file=root/'secrets/ca.pem',server_cert=root/'secrets/ugv-broker.lab/client.pem',
+                server_key=root/'secrets/ugv-broker.lab/client.key',acl_file=root/'runtime/acl.conf',
+                listeners=[('127.0.0.1',port),('127.0.0.1',second_port)])
+            conf.write_text(config+'\nlog_dest stderr\n',encoding='utf-8')
             log=(root/'broker.log').open('w')
             process=subprocess.Popen([BROKER,'-c',str(conf)],stdout=log,stderr=log,
                                      creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
@@ -90,6 +94,18 @@ class RealBrokerM1(unittest.TestCase):
                     except OSError:
                         if process.poll() is not None:raise RuntimeError('Isolated Broker exited '+str(process.returncode)+': '+(root/'broker.log').read_text(errors='replace'))
                         time.sleep(.05)
+                # Both listener blocks must enforce mutual TLS, not just the last.
+                import ssl
+                for endpoint_port in (port,second_port):
+                    missing=ssl.create_default_context(cafile=str(root/'secrets/ca.pem'))
+                    missing.maximum_version=ssl.TLSVersion.TLSv1_2
+                    with socket.create_connection(('127.0.0.1',endpoint_port),timeout=2) as raw:
+                        with self.assertRaises(ssl.SSLError):missing.wrap_socket(raw,server_hostname='ugv-broker.lab')
+                    valid=ssl.create_default_context(cafile=str(root/'secrets/ca.pem'))
+                    valid.load_cert_chain(str(root/'secrets/controller-001/client.pem'),str(root/'secrets/controller-001/client.key'))
+                    with socket.create_connection(('127.0.0.1',endpoint_port),timeout=2) as raw:
+                        with valid.wrap_socket(raw,server_hostname='ugv-broker.lab') as authenticated:
+                            self.assertIsNotNone(authenticated.getpeercert())
                 service=ServiceController(root/'secrets',port,load_inventory(root),root/'config/nodes.json',root=root)
                 nodes=[Node(root,node,port) for node in ['micro-001','micro-002']]
                 deadline=time.monotonic()+5
@@ -129,7 +145,21 @@ class RealBrokerM1(unittest.TestCase):
                 states={e['state'] for e in history}
                 self.assertTrue({'CREATED','RUNNING','PAUSED','CANCELLED'}<=states)
                 service.close();service=None
-                service=ServiceController(root/'secrets',port,load_inventory(root),root/'config/nodes.json',root=root)
+                # Restart through explicit deployment paths/config, without deriving a repository from secrets.
+                from changan_ugv.config import BrokerConfig,BrokerEndpoint,ServicePaths
+                from changan_ugv.nodes.controller import BrokerTLSContext
+                import ssl
+                context=BrokerTLSContext(server_name='wrong-service.invalid')
+                context.load_verify_locations(str(root/'secrets/ca.pem'))
+                context.load_cert_chain(str(root/'secrets/controller-001/client.pem'),str(root/'secrets/controller-001/client.key'))
+                with socket.create_connection(('127.0.0.1',port),timeout=2) as raw:
+                    with self.assertRaises(ssl.SSLCertVerificationError):context.wrap_socket(raw,server_hostname='ugv-broker.lab')
+                paths=ServicePaths.from_root(root)
+                broker=BrokerConfig.from_secrets(root/'secrets',port)
+                broker=BrokerConfig(BrokerEndpoint('localhost',port,'ugv-broker.lab'),broker.ca_file,broker.client_cert,broker.client_key)
+                service=ServiceController(paths=paths,broker=broker,lock_file=paths.lock_file,
+                    inventory=load_inventory(root),inventory_path=paths.inventory_file)
+
                 wait_state(third,{'RUNNING','SUCCEEDED'})
                 starts=[p for p in nodes[1].command_packets if p['task_id']==third and p['op']=='start']
                 self.assertEqual(1,len(starts),'Restart must reconcile, not replay start')

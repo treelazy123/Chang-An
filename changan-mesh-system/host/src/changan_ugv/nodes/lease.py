@@ -2,9 +2,11 @@
 import os
 from pathlib import Path
 class Lease:
-    def __init__(self,secret):
+    def __init__(self,secret=None, *, lock_file=None):
         self.file=None
-        path=Path(secret)/'.controller.lock';stream=path.open('a+b')
+        path=Path(lock_file) if lock_file is not None else Path(secret)/'.controller.lock'
+        path.parent.mkdir(parents=True,exist_ok=True)
+        stream=path.open('a+b')
         try:
             stream.seek(0,2)
             if not stream.tell():stream.write(b'0');stream.flush()

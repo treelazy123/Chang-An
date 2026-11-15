@@ -9,9 +9,11 @@ import unittest
 from types import SimpleNamespace
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tools'))
 from task_store import Store
-from task_runtime import Runtime, HostDiagnostics
+from task_runtime import Runtime
+from changan_ugv.agents.ugv import HostDiagnostics
+from changan_ugv.transport.node_channel import MQTTNodeChannel
 from mqtt_controller import Registry
-from node_inventory import defaults, write_inventory, write_acl
+from node_inventory import defaults, write_inventory, write_acl, load_inventory
 from ugv_requests import Requests
 from mesh_protocol import encode
 
@@ -209,7 +211,9 @@ class TaskIntegration(unittest.TestCase):
             connected=threading.Event();connected.set()
             c=SimpleNamespace(connected=connected,condition=threading.Condition(),registry=Registry(nodes=['micro-001']))
             c.client=SimpleNamespace(publish=lambda *args,**kwargs:SimpleNamespace(rc=0))
-            runtime=Runtime(c,root);c.tasks=runtime
+            runtime=Runtime(MQTTNodeChannel(c),database=root/'runtime/tasks.sqlite3',
+                            executor_factory=lambda emit,snapshot:HostDiagnostics(root/'runtime/ugv-task-agent.json','ugv-001',emit,snapshot),
+                            inventory_loader=lambda:load_inventory(root));c.tasks=runtime
             try:
                 api=Requests(c,root,clock=lambda:1000)
                 base=dict(v=1,type='task.create',node_id='pc-root-001',msg_id='create',deadline_unix=1020,

@@ -24,6 +24,7 @@
 #define CLOSE 7
 #define PING 8
 #define PONG 9
+#define NETWORK 10
 static const char *TAG="mqtt_tunnel";
 typedef struct {
     int fd;
@@ -37,6 +38,8 @@ typedef struct {
 static channel_t channels[CONFIG_APP_MQTT_MAX_CHANNELS];
 static uint32_t epoch, next_token;
 static bool ready, failed;
+static bool network_enabled;
+static int64_t last_network;
 static int64_t last_host, last_hello;
 static uint8_t decoder[HEADER+CHUNK];
 static size_t decoded;
@@ -69,7 +72,7 @@ static bool frame(uint8_t type,int i,uint32_t token,uint16_t seq,const void *dat
 static void reset_session(void) {
     for(int i=0;i<CONFIG_APP_MQTT_MAX_CHANNELS;i++) { close_channel(i); }
     epoch=esp_random();if(!epoch) { epoch=1; }
-    decoded=0;ready=false;failed=false;last_hello=0;last_host=now_ms();
+    decoded=0;ready=false;failed=false;network_enabled=false;last_network=0;last_hello=0;last_host=now_ms();
     ESP_LOGW(TAG,"USB session reset epoch=%lu",(unsigned long)epoch);
 }
 static void receive_frame(void) {
@@ -78,7 +81,7 @@ static void receive_frame(void) {
     if(type==RESET) { failed=true;return; }
     if(session!=epoch) { return; }
     last_host=now_ms();
-    if(type==READY && i==255 && !token && !size) { ready=true;return; }
+    if(type==READY && i==255 && !token && !size) { ready=true;network_enabled=(seq==1);return; }
     if(type==PONG && i==255 && !size) { return; }
     if(!ready || i>=CONFIG_APP_MQTT_MAX_CHANNELS || channels[i].fd<0 || token!=channels[i].token) { return; }
     channel_t *c=&channels[i];
@@ -105,6 +108,20 @@ static void feed(uint8_t b) {
     decoded=0;
 }
 static bool would_block(void) { return errno==EAGAIN || errno==EWOULDBLOCK || errno==EINTR; }
+static void report_network(void) {
+    cJSON *message=app_message_new("network");
+    cJSON *status=app_status_payload();
+    if(message && status) {
+        /* Keep the optional diagnostic control frame within the 512-byte MUX budget. */
+        const char *omit[]={"heap","heap_min","uptime_ms","topology"};
+        for(unsigned k=0;k<sizeof(omit)/sizeof(omit[0]);k++) { cJSON_DeleteItemFromObjectCaseSensitive(status,omit[k]); }
+        cJSON_AddItemToObject(message,"payload",status);status=NULL;
+        char *json=cJSON_PrintUnformatted(message);
+        if(json && strlen(json)<=CHUNK) { frame(NETWORK,255,0,0,json,strlen(json)); }
+        cJSON_free(json);
+    }
+    cJSON_Delete(status);cJSON_Delete(message);
+}
 static void tunnel_task(void *arg) {
     (void)arg;for(int i=0;i<CONFIG_APP_MQTT_MAX_CHANNELS;i++) { channels[i].fd=-1; }
     int listener=socket(AF_INET,SOCK_STREAM,IPPROTO_IP),one=1;
@@ -120,6 +137,9 @@ static void tunnel_task(void *arg) {
         if(now_ms()-last_hello>1000) { frame(ready?PING:RESET,255,0,0,NULL,0);last_hello=now_ms(); }
         uint8_t input[CHUNK];int n=usb_serial_jtag_read_bytes(input,sizeof(input),0);
         for(int k=0;k<n;k++) { feed(input[k]);if(failed) { break; } }
+        if(ready && network_enabled && !failed && now_ms()-last_network>5000) {
+            report_network();last_network=now_ms();
+        }
         int fd=accept(listener,NULL,NULL);
         if(fd>=0) {
             int slot=-1;for(int i=0;i<CONFIG_APP_MQTT_MAX_CHANNELS;i++) { if(channels[i].fd<0) { slot=i;break; } }

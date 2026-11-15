@@ -3,3 +3,15 @@
 __pycache__/
 /secrets/
 *.key
+/runtime/
+/.env
+/.env.*
+*.p12
+*.pfx
+*.pyc
+*.bin
+*.elf
+*.map
+*.o
+*.obj
+*.zip

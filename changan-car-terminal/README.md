@@ -1,49 +1,90 @@
-> 0.2.0：增加通用任务 API 与 task/watch CLI，保留 list/ping/status/echo。任务管理需要 UGV 0.7.0 及更新后的 root 固件和 Broker ACL。详见 [M1 升级与接口](D:/esp/mesh_lite_node/docs/m1-task-management.md)。
+# 长安车机终端
 
-# 长安汽车车机终端
+独立车机程序，提供桌面调试界面、CLI、串口与 MQTT 传输。只实现版本化业务协议，不导入主仓库运行时代码，不管理 CA、设备登记或管理员会话。
 
-独立仓库，只包含车机侧 list / ping / status / echo 交互与请求传输。不依赖 ESP-IDF，不导入 mesh_lite_node 的 Python 文件，不管理CA/设备登记，不发布校时时钟。无人车后台位于固件工程的 tools/ugv_service.py。
+电脑车机 C6—Jetson S31—UAV C6 的部署交接从 [Jetson / S31 交接任务](../changan-mesh-system/docs/handoff/README.md) 开始。
 
-## 当前 C6 串口使用
+## 桌面调试界面
 
-```powershell
+~~~powershell
 cd D:\changan\changan-car-terminal
 uv sync --locked
+uv run --locked python -m car_terminal.gui --port COM7
+~~~
+
+窗口打开后手动点击“连接”，再刷新节点。COM7 是此前 root C6 的端口，实际以设备枚举为准；COM4 是此前 UGV 桥接口，不作为车机串口。同一 root 端口不同时打开 GUI、CLI 或串口监视器。
+
+| 页面 | 功能 |
+| --- | --- |
+| 节点调试 | 节点列表、目标选择、Ping、状态、Echo |
+| 诊断任务 | 创建、查询、开始、暂停、恢复、取消及游标事件补查 |
+| 网络结构 | Mesh 父子树、层级、STA/AP IP、网关、RSSI、信道、关联客户端数和遥测年龄 |
+| 调试结果 | 响应 JSON、错误、时间、请求耗时；导出最近 2000 条结果为 UTF-8 JSONL |
+
+任务控制携带已查询版本；冲突后重新查询，不自动覆盖或重发。创建超时会提供可查询的任务 ID，先查询再决定是否重新创建。请求受理不等于执行完成，最终结果以任务状态和事件为准。关闭窗口只关闭本车机连接，不取消后台任务。
+
+## 网络结构
+
+点击“刷新网络结构”，与刷新节点使用同一个只读 list 请求。表格底部可横向滚动；选中节点查看 MAC、父 BSSID、子网掩码，并同步调试目标。
+
+父子关系按父 BSSID 匹配唯一的节点 AP MAC，不根据角色、层级或 IP 猜测。外部 AP、未上报、未关联、旧启动、重复 MAC 和关系环分别显示；灰色为未就绪快照，断开后的旧数据不表示仍在线。
+
+完整网络字段需要节点固件上报；旧固件已有层级可显示，缺失字段标为“未上报”。UGV C6 通过协商式 USB 报告提供无线信息，主机后台把它加入 list 响应；主机任务服务和 C6 无线状态分别判断。没有报告时只显示主机服务，不虚构无线地址。
+
+## CLI 与任务
+
+~~~powershell
 uv run --locked python -m car_terminal --port COM7
-```
+~~~
 
-COM7 是 root/汽车 C6；UGV COM4 的 serial_tcp_bridge 是另一条独立USB链路，不要把车机CLI连到COM4。
+~~~text
+list
+ping micro-002
+status uav-001
+echo micro-002 hello
+task create micro-002 30 1000
+task list
+task get TASK_ID
+task start TASK_ID
+task pause TASK_ID
+task resume TASK_ID
+task cancel TASK_ID
+task events 0 TASK_ID
+watch TASK_ID
+quit
+~~~
 
-```text
-car> list
-car> ping micro-002
-car> status uav-001
-car> echo micro-001 hello
-car> quit
-```
+TASK_ID 替换为返回的编号。create 不自动开始，watch 用 Ctrl+C 返回提示符，后台任务继续。CLI/API 支持 CREATED 状态的配置更新；完整参数、版本规则和故障语义见 [任务操作](../changan-mesh-system/docs/tasks.md)。
 
-单次命令：`uv run --locked python -m car_terminal --port COM7 --command "status uav-001"`。
+单次命令：
 
-链路：车机CLI → root C6原生USB应用帧 → root MQTT/TLS → UGV C6转发 → COM4隧道 → Broker → UGV后台 → 目标节点；结果沿反向路径返回。root使用自身证书身份绑定请求，CLI不能通过消息字段冒用其他车机。车机电脑无需存放CA私钥或controller-001管理员证书。
+~~~powershell
+uv run --locked python -m car_terminal --port COM7 --command "status uav-001"
+~~~
 
-先在固件工程按 docs/car-terminal-separation.md 更新ACL、用户重刷root并启动UGV后台。当前已运行的旧root固件不会自动获得MQTT模式的车机USB接口。此仓库没有运行过真实COM7验收；主机测试使用假串口。
+## MQTT 直连
 
-## S31 网卡阶段的传输适配
+~~~powershell
+uv run --locked python -m car_terminal.gui --transport mqtt --host 实际Broker地址 --broker-port 8883 --node-id pc-root-001 --cert-dir 'D:\实际车机证书目录' --server-name ugv-broker.lab
+~~~
 
-```powershell
-uv run --locked python -m car_terminal --transport mqtt --host UGV可达地址 --node-id pc-root-001 --cert-dir 设备证书目录
-```
+CLI 使用同样的连接参数。证书目录只包含本车机所需的 ca.pem、client.pem、client.key；CA 私钥与管理员证书留在管理端。始终校验 TLS 服务名。不要让 C6、车机或网卡管理客户端同时复用同一证书身份与 MQTT Client ID。S31 实际网卡/IP 路径仍需硬件验收。
 
-证书目录只包含车机自身client.pem/client.key/ca.pem；CA私钥和UGV管理员证书留在管理端。MQTT适配验证固定Broker服务名 ugv-broker.lab，可用 --server-name 指定管理员配置的服务身份，不关闭证书验证。S31作为纯IP网卡时，MQTT客户端转移到车机主机；不要同时让C6客户端与主机使用同一证书身份登录，否则会互相替换。S31 USB网卡、IP路由及车机节点代理状态仍需正式硬件联调，本轮只提供传输适配。
+## 协议与测试
 
-## 协议与错误处理
+MLT1 为 magic、网络序长度、CRC16-CCITT-FALSE 与 UTF-8 JSON；帧 JSON 最大 1024 字节，请求最大 512 字节。列表分页汇总，ACK 必须匹配请求与目标；超时不自动重发。
 
-请求：v=1，type=list或command，msg_id唯一，deadline_unix为UTC截止时间；command携带target/op/payload。允许ping/status/echo。串口MLT1头+大端长度/CRC16-CCITT-FALSE+UTF8 JSON，帧内JSON最多1024字节，请求最多512字节。列表逐节点分页，more=false结束；命令只接受目标匹配的ACK。超时不自动重发。
+界面使用 Python 自带 Tkinter，不增加第三方 GUI 依赖。回归使用假传输，不连接真实 COM 或生产 Broker：
 
-关闭本CLI不会关闭UGV后台、Broker或校时。设备登记、权限、在线状态和命令审核由UGV后台执行；本CLI只显示结果，不将消息中的未知身份自行授权。
-
-```powershell
+~~~powershell
 uv run --locked python -m unittest discover -s tests -v
-```
+~~~
 
-尚未执行固件build/烧录或连接真实串口；本地Git仓库已初始化，无自动提交或推送。
+主仓库先启动 Broker、UGV 桥接与常驻后台，再连接车机。完整说明统一在：
+
+- [文档索引](../changan-mesh-system/docs/README.md)
+- [运行与排障](../changan-mesh-system/docs/operations.md)
+- [系统架构](../changan-mesh-system/docs/architecture.md)
+- [部署与交接](../changan-mesh-system/docs/deployment.md)
+- [协议 v1](../changan-mesh-system/protocols/v1/README.md)
+- [验收与部署状态](../changan-mesh-system/docs/status.md)

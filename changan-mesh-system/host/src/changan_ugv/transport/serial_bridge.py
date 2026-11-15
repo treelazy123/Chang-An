@@ -5,9 +5,12 @@ import logging
 import select
 import socket
 import time
+from pathlib import Path
+from changan_ugv.paths import repository_root
+from changan_ugv.nodes.network import NetworkStatusFile, decode_network
 from dataclasses import dataclass
 from changan_ugv.protocol.tunnel import (Frame, Decoder, RESET, READY, OPEN, OPEN_OK, DATA, ACK,
-                             CLOSE, PING, PONG, CHUNK, MAX_CHANNELS)
+                             CLOSE, PING, PONG, NETWORK, CHUNK, MAX_CHANNELS)
 LOG = logging.getLogger('serial_tcp_bridge')
 @dataclass
 class Channel:
@@ -20,12 +23,13 @@ class Channel:
     waiting: bool = False
     pending: bytes = b''
 class Engine:
-    def __init__(self, emit, target=('127.0.0.1', 8883), clock=time.monotonic):
+    def __init__(self, emit, target=('127.0.0.1', 8883), clock=time.monotonic, on_network=None):
         self.emit, self.target, self.clock = emit, target, clock
         self.channels = {}
         self.epoch = 0
         self.last_seen = clock()
         self.last_reset = -100.0
+        self.on_network = on_network or (lambda body, epoch: None)
     def send(self, kind, channel=255, token=0, seq=0, data=b''):
         self.emit(Frame(kind, channel, self.epoch, token, seq, data).encode())
     def drop(self, channel, notify=True):
@@ -38,6 +42,7 @@ class Engine:
         for ch in list(self.channels):
             self.drop(ch, False)
         self.epoch = epoch
+        self.on_network(None, epoch)
     def receive(self, f):
         if f.kind == RESET:
             if not f.epoch or f.channel != 255 or f.data:
@@ -46,11 +51,19 @@ class Engine:
                 self.reset(f.epoch)
                 LOG.info('USB epoch=%s', self.epoch)
             self.last_seen = self.clock()
-            self.send(READY)
+            self.send(READY, seq=1)
             return
         if not self.epoch or f.epoch != self.epoch:
             return
         self.last_seen = self.clock()
+        if f.kind == NETWORK and f.channel == 255 and not f.token and not f.seq:
+            try:
+                body = decode_network(f.data)
+            except (ValueError, UnicodeError):
+                LOG.warning('Invalid USB network diagnostic report ignored')
+                return
+            self.on_network(body, self.epoch)
+            return
         if f.kind == PING and f.channel == 255 and not f.data:
             self.send(PONG)
             return
@@ -137,6 +150,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', required=True, help='UGV C6 native USB COM port')
     parser.add_argument('--broker-port', type=int, default=8883)
+    parser.add_argument('--ugv-id', default='ugv-001', help='Expected UGV USB device identity')
+    parser.add_argument('--network-status', type=Path, default=repository_root()/'runtime/ugv-network.json')
     args = parser.parse_args()
     import serial
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
@@ -154,7 +169,9 @@ def main():
                         if not count:
                             raise OSError('Serial write made no progress')
                         view = view[count:]
-                engine = Engine(emit, ('127.0.0.1', args.broker_port))
+                network_status = NetworkStatusFile(args.network_status, args.ugv_id)
+                network_status(None, 0)
+                engine = Engine(emit, ('127.0.0.1', args.broker_port), on_network=network_status)
                 decoder = Decoder()
                 try:
                     while True:

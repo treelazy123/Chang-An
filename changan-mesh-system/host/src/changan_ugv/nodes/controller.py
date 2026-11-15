@@ -9,13 +9,20 @@ import threading
 import time
 import uuid
 from changan_ugv.protocol.frames import _unique_object
+from changan_ugv.config import BrokerConfig
 from changan_ugv.nodes.inventory import load_inventory, clients
 NODES = clients(load_inventory())
 OPERATIONS = ('ping', 'status', 'echo')
 class BrokerTLSContext(ssl.SSLContext):
     """Connect to loopback while verifying the fixed broker service identity."""
+    def __new__(cls, protocol=ssl.PROTOCOL_TLS_CLIENT, *, server_name='ugv-broker.lab'):
+        context=super().__new__(cls,protocol)
+        context.server_name=server_name
+        return context
+    def __init__(self, protocol=ssl.PROTOCOL_TLS_CLIENT, *, server_name='ugv-broker.lab'):
+        pass
     def wrap_socket(self, *args, server_hostname=None, **kwargs):
-        return super().wrap_socket(*args, server_hostname='ugv-broker.lab', **kwargs)
+        return super().wrap_socket(*args, server_hostname=self.server_name, **kwargs)
 class Registry:
     def __init__(self, clock=time.monotonic, nodes=None):
         self.clock=clock
@@ -60,13 +67,18 @@ class Registry:
                     telemetry.get('boot_id')==boot and self.clock()-entry.get('last_seen',-1000)<20)
     def snapshot(self):
         return [{'node_id':n,'ready':self.ready(n),
+                 'online':e.get('presence',{}).get('online'),
+                 'status_age_s':round(max(0,self.clock()-e['last_seen']),1) if 'last_seen' in e else None,
+                 'status_current_boot':bool(e.get('presence',{}).get('boot_id') and
+                     e.get('presence',{}).get('boot_id')==e.get('telemetry',{}).get('boot_id')),
                  'operations':e.get('capabilities',{}).get('operations',[]),
                  'status':e.get('telemetry',{}).get('payload'),
                  'task_types':e.get('capabilities',{}).get('task_types',[])} for n,e in self.nodes.items()]
 class Controller:
-    def __init__(self,secret,port=8883,inventory=None,inventory_path=None):
+    def __init__(self,secret=None,port=8883,inventory=None,inventory_path=None, *, broker=None,lock_file=None):
         from changan_ugv.nodes.lease import Lease
-        self.instance_lease=Lease(secret)
+        broker=broker or BrokerConfig.from_secrets(secret,port)
+        self.instance_lease=Lease(secret or broker.ca_file.parent,lock_file=lock_file)
         try:
             import paho.mqtt.client as mqtt
             self.registry=Registry(nodes=clients(inventory) if inventory is not None else None)
@@ -78,17 +90,17 @@ class Controller:
             self.pending={}
             self.connected=threading.Event()
             self.stopped=threading.Event()
-            context=BrokerTLSContext(ssl.PROTOCOL_TLS_CLIENT)
+            context=BrokerTLSContext(ssl.PROTOCOL_TLS_CLIENT,server_name=broker.endpoint.server_name)
             context.minimum_version=ssl.TLSVersion.TLSv1_2
-            context.load_verify_locations(str(secret/'ca.pem'))
-            context.load_cert_chain(str(secret/'controller-001/client.pem'),str(secret/'controller-001/client.key'))
+            context.load_verify_locations(str(broker.ca_file))
+            context.load_cert_chain(str(broker.client_cert),str(broker.client_key))
             self.client=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id='controller-001',clean_session=True)
             self.client.tls_set_context(context)
             self.client.on_connect=self.on_connect
             self.client.on_subscribe=self.on_subscribe
             self.client.on_disconnect=self.on_disconnect
             self.client.on_message=self.on_message
-            self.client.connect('127.0.0.1',port,15)
+            self.client.connect(broker.endpoint.host,broker.endpoint.port,15)
             self.client.loop_start()
             if not self.connected.wait(10):
                 self.close()

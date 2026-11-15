@@ -1,0 +1,18 @@
+# Repository-layout example. Paths resolve beside this TOML, never from the shell cwd.
+[broker]
+host = "127.0.0.1"
+port = 8883
+server_name = "ugv-broker.lab"
+ca_file = "../secrets/ca.pem"
+client_cert = "../secrets/controller-001/client.pem"
+client_key = "../secrets/controller-001/client.key"
+
+[paths]
+inventory_file = "nodes.json"
+task_database = "../runtime/tasks.sqlite3"
+agent_journal = "../runtime/ugv-task-agent.json"
+lock_file = "../secrets/.controller.lock"
+
+[service]
+ugv_id = "ugv-001"
+rpc_port = 8787

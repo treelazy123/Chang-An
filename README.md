@@ -9,4 +9,6 @@
 
 两个项目分别管理 Python 环境和依赖，请进入对应子目录，按照各自 README 执行。
 
-本仓库不包含设备私钥、`secrets/`、`runtime/`、虚拟环境及本地构建输出。设备证书和本地配置需按各项目文档单独准备。
+Jetson / S31 同学从 [交接说明](changan-mesh-system/docs/handoff/README.md) 开始，按步骤完成 S31 组网与 USB 网卡改造、两块 C6 烧录、Jetson 部署和端到端验收。UAV C6 当前仅为独立通信测试板。
+
+下载的 Python 环境、运行缓存、本地 build 构建输出和 ZIP 不提交。已有第三方组件及其必要库/测试样例保留，用于复现现有工程；不包含本机新编译的固件。

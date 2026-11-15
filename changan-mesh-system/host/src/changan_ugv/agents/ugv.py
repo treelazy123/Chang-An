@@ -112,3 +112,7 @@ class HostDiagnostics:
             self.report()
             self.report_at = now+1
 
+
+    def close(self):
+        """State is journaled at transitions; shutdown never resumes or restarts a task."""
+        pass

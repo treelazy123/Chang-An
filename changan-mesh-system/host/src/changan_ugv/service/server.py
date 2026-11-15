@@ -11,26 +11,34 @@ from changan_ugv.protocol.frames import _unique_object, encode
 from changan_ugv.nodes.inventory import load_inventory
 from changan_ugv.tasks.store import ACTIONS
 from changan_ugv.tasks.runtime import Runtime
+from changan_ugv.config import ServicePaths, service_arguments, resolve_arguments
+from changan_ugv.agents.ugv import HostDiagnostics
+from changan_ugv.transport.node_channel import MQTTNodeChannel
 from changan_ugv.service.requests import Requests
 from changan_ugv.transport.rpc import Server
 
 class ServiceController(Controller):
-    def __init__(self,*args,root,ugv_id='ugv-001',database=None,**kwargs):
+    def __init__(self,*args,root=None,paths=None,ugv_id='ugv-001',database=None,executor_factory=None,channel_factory=MQTTNodeChannel,**kwargs):
+        paths=paths or ServicePaths.from_root(root)
+        inventory_loader=lambda:load_inventory(path=paths.inventory_file)
         self.inbox=queue.Queue(16)
         self.task_inbox=queue.Queue(16)
         self.task_feedback=queue.Queue(128)
         self.tasks=None
-        self.requests=Requests(self,root)
+        self.requests=Requests(self,inventory_loader=inventory_loader)
         super().__init__(*args,**kwargs)
         try:
-            self.tasks=Runtime(self,root,ugv_id,database)
-            self.requests=Requests(self,root)
+            factory=executor_factory or (lambda emit,snapshot:HostDiagnostics(paths.agent_journal,ugv_id,emit,snapshot))
+            self.tasks=Runtime(channel_factory(self),database=database or paths.task_database,
+                               executor_factory=factory,inventory_loader=inventory_loader,ugv_id=ugv_id)
+            self.requests=Requests(self,inventory_loader=inventory_loader)
             self.workers=[threading.Thread(target=self.request_loop,args=(inbox,),daemon=True)
                           for inbox in (self.inbox,self.task_inbox)]
             self.workers.append(threading.Thread(target=self.task_loop,daemon=True))
             for worker in self.workers:worker.start()
         except BaseException:
             super().close()
+            if self.tasks:self.tasks.close()
             raise
 
     def on_connect(self,client,userdata,flags,reason,properties):
@@ -96,21 +104,27 @@ class ServiceController(Controller):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--broker-port',type=int,default=8883)
-    p.add_argument('--rpc-port',type=int,default=8787)
-    p.add_argument('--secrets',type=Path,default=repository_root()/'secrets')
-    p.add_argument('--ugv-id',default='ugv-001')
-    p.add_argument('--task-db',type=Path,help='Default: runtime/tasks.sqlite3')
-    args=p.parse_args();root=args.secrets.resolve().parent
-    inventory=load_inventory(root)
-    if not any(e['node_id']==args.ugv_id and e['role']=='ugv' and e.get('enabled',True) for e in inventory['nodes']):
-        p.error('--ugv-id must name an enabled UGV in the inventory')
-    server=Server(args.rpc_port,None)
+    service_arguments(p)
+    p.add_argument('--rpc-port',type=int)
+    p.add_argument('--ugv-id')
+    p.add_argument('--task-db',type=Path)
+    args=p.parse_args()
+    try:
+        cfg=resolve_arguments(args)
+        ugv_id=args.ugv_id or cfg.ugv_id
+        inventory=load_inventory(path=cfg.paths.inventory_file)
+        if not any(e['node_id']==ugv_id and e['role']=='ugv' and e.get('enabled',True) for e in inventory['nodes']):
+            raise ValueError('--ugv-id must name an enabled UGV in the inventory')
+    except (ValueError,OSError,KeyError,TypeError) as exc:p.error(str(exc))
+    rpc_port=args.rpc_port if args.rpc_port is not None else cfg.rpc_port
+    if not 1<=rpc_port<=65535:p.error('Invalid maintenance RPC port')
+    server=Server(rpc_port,None)
     service=None
     try:
-        service=ServiceController(args.secrets,args.broker_port,inventory,root/'config/nodes.json',root=root,ugv_id=args.ugv_id,database=args.task_db)
+        service=ServiceController(inventory=inventory,inventory_path=cfg.paths.inventory_file,broker=cfg.broker,
+                                  lock_file=cfg.paths.lock_file,paths=cfg.paths,ugv_id=ugv_id,database=args.task_db)
         server.requests=service.requests
-        logging.warning('UGV M1 service active; maintenance RPC 127.0.0.1:%s; task database retained on exit',args.rpc_port)
+        logging.warning('UGV M1 service active; maintenance RPC 127.0.0.1:%s; task database retained on exit',rpc_port)
         server.serve_forever(poll_interval=.2)
     finally:
         server.server_close()

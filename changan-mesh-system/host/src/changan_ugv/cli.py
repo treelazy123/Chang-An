@@ -1,5 +1,5 @@
 """Compatibility console: uses a running UGV service, or retains standalone MQTT management."""
-from changan_ugv.paths import repository_root
+from changan_ugv.config import service_arguments, resolve_arguments
 import argparse
 import json
 from pathlib import Path
@@ -10,30 +10,26 @@ from changan_ugv.nodes.controller import Controller,Registry,BrokerTLSContext,OP
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--secrets',type=Path,default=repository_root()/'secrets')
-    parser.add_argument('--broker-port',type=int,default=8883)
-    parser.add_argument('--inventory',type=Path,help='Explicit administrator-controlled nodes.json')
-    parser.add_argument('--service-port',type=int,default=8787)
+    service_arguments(parser)
+    parser.add_argument('--service-port',type=int)
     parser.add_argument('--standalone',action='store_true',help='Legacy combined manager; refuse if the service is already running')
     args=parser.parse_args()
     try:
-        inventory=load_inventory(args.secrets.resolve().parent)
-        if args.inventory:
-            from changan_ugv.nodes.inventory import validate
-            inventory=validate(json.loads(args.inventory.read_text(encoding='utf-8')))
-        inventory_path=args.inventory or args.secrets.resolve().parent/'config/nodes.json'
+        cfg=resolve_arguments(args)
+        inventory=load_inventory(path=cfg.paths.inventory_file)
+        inventory_path=cfg.paths.inventory_file
         from changan_ugv.transport.rpc import LocalController
-        controller=LocalController.discover(args.service_port)
+        controller=LocalController.discover(args.service_port if args.service_port is not None else cfg.rpc_port)
         if controller is not None and args.standalone:
             parser.error('UGV service is running. Use this console through it; do not duplicate controller-001.')
         if controller is None:
-            controller=Controller(args.secrets,args.broker_port,inventory,inventory_path)
+            controller=Controller(inventory=inventory,inventory_path=inventory_path,broker=cfg.broker,lock_file=cfg.paths.lock_file)
     except ConnectionRefusedError:
-        parser.exit(2, f'Cannot connect to MQTT Broker at 127.0.0.1:{args.broker_port}. '
+        parser.exit(2, f'Cannot connect to MQTT Broker at {cfg.broker.endpoint.host}:{cfg.broker.endpoint.port}. '
                     'Start Mosquitto with runtime/mosquitto.conf and use the same broker port.\n')
     except ssl.SSLError as exc:
         parser.exit(2, f'Broker TLS authentication failed: {exc}. Check the CA, service name and client certificate.\n')
-    except (OSError,TimeoutError) as exc:
+    except (OSError,TimeoutError,ValueError,KeyError,TypeError) as exc:
         parser.exit(2,'UGV service or Broker unavailable: '+str(exc)+'\n')
     print('UGV console connected. Commands: list | ping NODE | status NODE | echo NODE TEXT | quit')
     try:

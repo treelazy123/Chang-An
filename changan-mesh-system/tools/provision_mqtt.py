@@ -55,17 +55,10 @@ def provision(root):
     runtime.mkdir(parents=True, exist_ok=True)
     write_inventory(root,inventory)
     write_acl(root,inventory)
-    def quoted(path):
-        # Mosquitto config path arguments use the rest of the line, without shell quoting.
-        return path.resolve().as_posix()
-    config = '\n'.join(['listener 8883 127.0.0.1','allow_anonymous false','require_certificate true',
-                         'use_identity_as_username true','use_username_as_clientid true',
-                         'tls_version tlsv1.2','cafile '+quoted(secret/'ca.pem'),
-                         'certfile '+quoted(secret/'ugv-broker.lab/client.pem'),
-                         'keyfile '+quoted(secret/'ugv-broker.lab/client.key'),
-                         'acl_file '+quoted(runtime/'acl.conf'),'max_packet_size 2048',
-                         'persistence false','log_type error','log_type warning','log_type notice'])
-    (runtime/'mosquitto.conf').write_text(config+'\n',encoding='utf-8')
+    from changan_ugv.deployment import render_broker_config
+    config=render_broker_config(ca_file=secret/'ca.pem',server_cert=secret/'ugv-broker.lab/client.pem',
+                               server_key=secret/'ugv-broker.lab/client.key',acl_file=runtime/'acl.conf')
+    (runtime/'mosquitto.conf').write_text(config,encoding='utf-8')
     refresh_clock(root)
     print('Created lab identities and runtime/mosquitto.conf. Private keys are in ignored secrets/.')
 def refresh_clock(root):

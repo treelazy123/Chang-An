@@ -1,82 +1,12 @@
-# M1 基础任务管理：接口、升级与验收
+# M1 任务操作
 
-版本：固件/UGV 主机工具 0.7.0，独立车机 0.2.0。
+当前只有通用 diagnostics 执行类型。C6 采集实际 Wi-Fi RSSI、空闲堆及样本数；UGV 电脑/Jetson 执行主机诊断，结果标明 source=ugv_host，两者不混作同一组测量。
 
-## 范围
+支持创建、查询、列表、开始前配置更新、开始、暂停、恢复、取消、进度与事件补查、持久化及失联/重启对账。保留基础 list/ping/status/echo。task.events 是任务状态日志，不是异常告警服务；不提供飞控、媒体、UWB、区域/航线或运动调度接口，不支持运行中配置热更新。
 
-本轮实现基础任务创建、查询、列表、开始、暂停、恢复、取消、开始前配置更新、进度通知、事件游标补查和持久化恢复。保留 list/ping/status/echo 和 mqtt_terminal.py。
+启动车机与后台见 [运行说明](operations.md)，身份/固件准备见 [固件说明](firmware.md)，权限与部署切换见 [部署说明](deployment.md)。代码职责见 [系统架构](architecture.md)，线协议以 [v1 合同](../protocols/v1/README.md) 为准，实物结论见 [验收状态](status.md)。
 
-只有 diagnostics 执行类型：C6 采集实际 Wi-Fi RSSI、空闲堆及样本数量；UGV 电脑采集主机服务侧样本和就绪节点数，结果注明 source=ugv_host。两者不混作同一组测量。
-
-不提供勘察、巡防、选址、异常告警、媒体控制或 UWB 场景接口。task.events 是任务状态日志，不是异常告警事件服务。区域/航线等大配置上传、运行中配置热更新、自动运动调度不属于本轮。
-
-当前代码组织以 [仓库结构](repository.md) 为准；下文 tools 启动入口保持兼容。
-
-## 角色和代码边界
-
-| 目录/模块 | 职责 |
-| --- | --- |
-| firmware/apps/root/car_gateway.c | root 专属车机请求转发、响应及任务通知转串口 |
-| firmware/apps/ugv/app.c | UGV 专属 USB 隧道启动 |
-| firmware/components/mqtt_serial/mqtt_serial.c | root/UAV/Micro 共用的 MQTT/TLS、身份和基础消息收发 |
-| firmware/components/task_agent/task_agent.c | C6 共用任务状态机、真实采样和 NVS 关键阶段记录 |
-| host/src/changan_ugv/tasks/store.py | SQLite 任务、操作、幂等请求和任务事件 |
-| host/src/changan_ugv/tasks/runtime.py | 异步派发、资源占用、重启/失联对账、通知 |
-| host/src/changan_ugv/agents/ugv.py | UGV 电脑/Jetson 本地执行器；UGV C6 不承担这些主机任务 |
-| tools/ugv_service.py | 后台启动、独立任务请求/反馈队列；旧诊断请求单独处理 |
-| 独立车机 car_terminal/tasks.py | 通用任务客户端与 CLI 解析，不依赖固件源码 |
-
-仍然保留一个固件工程，按 --role 与 --node-id 独立配置、编译和烧录，共用通信组件。没有复制四套 Mesh/TLS 源码。
-
-## 升级顺序
-
-本轮未代跑固件 build 或烧录；未重启正在运行的 Broker、桥接或后台程序。
-
-1. 保存现有配置，退出旧 UGV 后台/独立管理终端，避免争用 controller-001。旧 mqtt_terminal.py 仍可在新后台启动后作为维护界面使用。
-2. 在 D:/changan/changan-mesh-system 同步 uv 环境并更新新增主题 ACL：
-
-```powershell
-uv sync --locked
-uv run --locked python tools/provision_mqtt.py --sync-acl
-```
-
-该命令只重建 ACL，不重新签发证书。随后由用户重启或明确重载 Mosquitto，确保它读取了新规则。现有已运行 Broker 不会因为源码修改而自动获得新权限。
-
-3. 用户自行编译/烧录 root、UAV 和每块 Micro 的新固件。示例沿用既有 IDF 环境：
-
-```powershell
-python tools/lab.py --transport mqtt_serial --role pc_root --node-id pc-root-001 --port COM7 flash
-python tools/lab.py --transport mqtt_serial --role uav --node-id uav-001 --port COM5 flash
-python tools/lab.py --transport mqtt_serial --role micro_uav --node-id micro-001 --port COMx flash
-python tools/lab.py --transport mqtt_serial --role micro_uav --node-id micro-002 --port COMy flash
-```
-
-COMx/COMy 必须换成对应实物端口。UGV USB 隧道协议未改变，可沿用已有 UGV 固件；若要验证拆分后的 UGV 源码，由用户执行：
-
-```powershell
-python tools/lab.py --transport mqtt_serial --role ugv --node-id ugv-001 --port COM4 flash
-```
-
-4. 按原方式启动 Broker、UGV 桥接及新后台：
-
-```powershell
-# 三个独立窗口，项目目录 D:/changan/changan-mesh-system
-& 'D:\Program Files (x86)\Mosquitto\mosquitto.exe' -c D:\esp\mesh_lite_node\host\runtime\mosquitto.conf -v
-uv run --locked python tools/serial_tcp_bridge.py --port COM4 --broker-port 8883
-uv run --locked python tools/ugv_service.py --broker-port 8883
-```
-
-后台默认数据库为 runtime/tasks.sqlite3，UGV 本地代理记录为 runtime/ugv-task-agent.json，均为被忽略的运行数据，不随退出删除。不要用删除数据库作为日常重启方法。
-
-5. 在独立车机目录启动：
-
-```powershell
-cd D:\changan\changan-car-terminal
-uv sync --locked
-uv run --locked python -m car_terminal --port COM7
-```
-
-root C6 仍负责认证身份绑定；C6 原生 USB 仍为串口接口。
+GUI 的任务页提供常用控制，CLI/API 可更新 CREATED 配置。GUI 控制使用已查询版本；CLI 未显式指定版本时先查询，再提交一次控制。两者都不自动覆盖版本冲突或重发超时操作。
 
 ## 车机基础命令
 
@@ -143,7 +73,7 @@ config 仅允许 duration_s（1～3600）和 period_ms（200～10000），默认
 - 没有运行记录的任务取消会保存取消标记，阻止迟到的同任务开始命令复活。
 - live 通知不自动重放全部历史，重连客户端使用游标补查；任务终态不会被后来的旧状态覆盖。
 
-## 用户上板验收
+## 用户验收清单
 
 1. 新固件节点在 list 中出现 diagnostics 能力；UGV 本地主机也可创建诊断任务。
 2. 给 micro-001、micro-002 分别创建不同采样时长的任务，开始后各自进度/结果不串。
@@ -152,6 +82,6 @@ config 仅允许 duration_s（1～3600）和 period_ms（200～10000），默认
 5. 对同一请求重复发送，数据库只产生一个任务；超时后按 task_id 查询。
 6. 拔节点或 UGV USB、重启 Broker/后台/节点，观察 offline/RECONCILING/UNKNOWN/PAUSED 的真实恢复语义，不出现自动重复开始或虚假完成。
 7. 使用 task.events 游标补查，核对所有阶段；验证新主题按设备和车机隔离。
-8. 用户编译后检查 app 分区、运行堆和 NVS；本轮测试不能替代新固件编译及板上验收。
+8. 用户编译后检查 app 分区、运行堆和 NVS；主机测试不能替代新固件编译及板上验收。
 
 主机测试包括临时 SQLite 故障/幂等/并发测试、独立车机串口帧测试，以及随机本地端口的实际 Mosquitto mTLS/ACL/生命周期/服务重启测试。集成测试中的节点是明确的主机测试执行器，不代表 C6 固件已上板验证。测试不连接现有 Broker 或 COM 端口。

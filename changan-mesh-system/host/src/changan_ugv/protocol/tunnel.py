@@ -3,6 +3,7 @@ import binascii
 from dataclasses import dataclass
 import struct
 RESET, READY, OPEN, OPEN_OK, DATA, ACK, CLOSE, PING, PONG = range(1, 10)
+NETWORK = 10  # Optional channel-255 report, negotiated by READY seq=1.
 CHUNK = 512
 MAX_CHANNELS = 8
 HEADER = struct.Struct('!4sBBIIHHH')
@@ -15,7 +16,7 @@ class Frame:
     seq: int = 0
     data: bytes = b''
     def encode(self):
-        if not 1 <= self.kind <= 9 or len(self.data) > CHUNK:
+        if not 1 <= self.kind <= NETWORK or len(self.data) > CHUNK:
             raise ValueError('Invalid tunnel frame')
         head = HEADER.pack(b'MUX1', self.kind, self.channel, self.epoch, self.token,
                            self.seq, len(self.data), 0)
@@ -33,7 +34,7 @@ class Decoder:
             if len(self.buffer) < HEADER.size:
                 continue
             _, kind, ch, epoch, token, seq, size, crc = HEADER.unpack(self.buffer[:20])
-            if size > CHUNK or not 1 <= kind <= 9:
+            if size > CHUNK or not 1 <= kind <= NETWORK:
                 self.buffer.clear()
                 raise ValueError('Invalid tunnel header; reset all streams')
             if len(self.buffer) < 20 + size:
