@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "nodes": [
+    {
+      "node_id": "pc-root-001",
+      "role": "pc_root",
+      "ugv_id": "ugv-001",
+      "enabled": true
+    },
+    {
+      "node_id": "ugv-001",
+      "role": "ugv",
+      "ugv_id": "ugv-001",
+      "enabled": true
+    },
+    {
+      "node_id": "uav-001",
+      "role": "uav",
+      "ugv_id": "ugv-001",
+      "enabled": true
+    },
+    {
+      "node_id": "micro-001",
+      "role": "micro_uav",
+      "ugv_id": "ugv-001",
+      "enabled": true
+    },
+    {
+      "node_id": "micro-002",
+      "role": "micro_uav",
+      "ugv_id": "ugv-001",
+      "enabled": true
+    }
+  ]
+}

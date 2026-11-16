@@ -40,7 +40,7 @@ uv run --locked python tools/provision_mqtt.py --sync-acl
 ## Jetson 部署
 
 1. 使用 Python 3.11 或 3.12 与 uv，执行 `uv sync --locked` 重建环境，不复制 Windows `.venv`。
-2. 安装 Mosquitto，准备主机所需证书和受控节点清单。开发使用隔离测试 CA，CA 私钥由签发方保管。
+2. 安装 Mosquitto，按交接说明从仓库 changan-runtime 安装主机所需证书和受控节点清单。项目所有者已要求提交现有 CA/设备私钥；Jetson 实际运行只安装所需凭据，不新建 CA 替换设备信任链。
 3. 按 Jetson 示例配置文件填写实际路径，让服务账户能读证书/清单并写数据库、journal、锁与运行目录。
 4. 如保留任务历史，先停止旧后台，再一致交接数据库与 journal；主机执行器路径要与新配置一致。
 5. 启动 `uv run --locked python tools/ugv_service.py --config /etc/changan/ugv.toml`。

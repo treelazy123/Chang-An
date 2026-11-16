@@ -7,4 +7,4 @@
 - Current scope is generic M1 diagnostics task management. No scenario, flight, camera, UWB or media APIs without a new request.
 - User runs firmware builds and flashing. Do not build/flash unless explicitly instructed later. Host regressions and `lab.py --dry-run` are allowed.
 - Use `uv sync --locked`, `uv run --locked python tools/run_tests.py`. Isolated integration tests may start a temporary Broker; never restart production services or occupy COM ports for structural checks.
-- Preserve all enrolled identities and private keys. `secrets/`, `runtime/`, `build/`, `.venv/` must remain untracked.
+- Preserve enrolled identities and private keys; never regenerate or overwrite them during deployment. The project owner explicitly approved committing existing `secrets/` credentials and `changan-runtime/` deployment files on 2026-11-16. Keep credential build caches, controller locks, live `runtime/`, `build/`, and `.venv/` untracked.

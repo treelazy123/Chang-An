@@ -18,7 +18,8 @@
 | `docs/` | 当前架构、运行、固件、任务、部署与验收说明 |
 | `legacy/verification/` | 保留原内容的验证 JSON 记录 |
 | `legacy/` | 原始实验与硬件材料，兼容模式仅供历史核对 |
-| `runtime/`、`secrets/`、`build/` | 忽略提交的状态、密钥和生成文件 |
+| `secrets/`、`changan-runtime/` | 项目所有者要求随仓库交接的现有身份、真实密钥及 Jetson 部署文件 |
+| `runtime/`、`build/`、`.venv/` | 不提交的现场状态、构建产物和依赖环境 |
 
 在仓库根目录执行：
 

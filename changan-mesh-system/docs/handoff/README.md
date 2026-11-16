@@ -164,7 +164,7 @@ python "$env:IDF_PATH\tools\idf.py" --version
 
 脚本和项目路径按本机实际安装位置替换。最后一条应输出 `ESP-IDF v6.1` 或对应的 6.1.x 版本；加载失败时先处理环境问题。环境只对当前窗口生效，新开 PowerShell 后需重新执行启动命令，下面的端口枚举和烧录都在同一窗口继续操作。
 
-再按 [固件说明](../firmware.md) 准备这两块板各自的身份文件；设备私钥由维护方单独提供，本地编译生成的固件不提交仓库。
+再按 [固件说明](../firmware.md) 准备这两块板各自的身份文件；设备身份及私钥已随仓库 secrets/ 提供；本地编译生成的固件不提交仓库。
 
 先枚举端口并核对两块实物：
 
@@ -196,7 +196,7 @@ MQTT 是这些程序收发消息的约定；TLS 是连接时的加密和身份�
 
 本轮主要是“安装 Linux 程序 + 搬配置和任务数据 + 替换 USB 链路”，不把 MQTT 业务重写一遍。`host/src/changan_ugv/nodes/controller.py`、`service/`、`tasks/` 和车机代码继续复用。
 
-### 2 先向代码维护方拿这些文件
+### 2 从仓库取得部署文件
 
 从 [GitHub 仓库](https://github.com/treelazy123/Chang-An) 获取两个项目。电脑 PowerShell 中执行以下命令（已有工作目录时先确认并保留本地修改，不重复克隆覆盖）：
 
@@ -205,7 +205,7 @@ cd D:\
 git clone https://github.com/treelazy123/Chang-An.git changan
 ```
 
-得到 `D:\changan\changan-car-terminal` 和 `D:\changan\changan-mesh-system`。另外通过双方约定的私密方式拿一个 `changan-runtime` 文件夹，内容应为：
+得到 `D:\changan\changan-car-terminal` 和 `D:\changan\changan-mesh-system`。Jetson 部署文件已位于 `changan-mesh-system/changan-runtime/`，与现有 secrets/ 一并按项目所有者要求提交。目录内容如下（任务数据库与 journal 按需在切换时补充）：
 
 ```text
 changan-runtime/
@@ -222,7 +222,7 @@ changan-runtime/
   ugv-task-agent.json             与任务数据配套的执行记录（如存在）
 ```
 
-维护方从当前主仓库提供：`secrets/ca.pem`、`secrets/ugv-broker.lab/client.*`、`secrets/controller-001/client.*`、`config/nodes.json`、`runtime/acl.conf`。不要提供 CA 私钥 `ca.key`；两块 C6 的自身私钥只用于对应板编译，Jetson 不需要它们。
+这些文件已从现有 secrets/、config/nodes.json 和 runtime/acl.conf 整理。完整 secrets/ 保留 CA 与设备身份；Jetson 实际运行只安装指定的 Broker/后台凭据及 CA 公钥证书，不安装 CA 私钥或两块 C6 的自身私钥。
 
 维护方可在电脑主仓库执行 `uv run --locked python tools/provision_mqtt.py --sync-acl`，按当前清单重新生成 `runtime/acl.conf`；该命令不会换证书，也不会重启服务。
 
@@ -252,7 +252,7 @@ print(target)
 '@ | python -
 ```
 
-将导出的文件放入私密交付目录。保持旧后台停止直到切换完成；存在任务数据库但缺失原本应有的 journal 时，先报告维护方，不能伪造记录。新设备没有历史数据时，由维护方确认使用全新状态再启动；不删除旧电脑数据。
+将导出的数据库与 journal 放入部署所用的 changan-runtime 目录。保持旧后台停止直到切换完成；存在任务数据库但缺失原本应有的 journal 时，先报告维护方，不能伪造记录。新设备没有历史数据时，由维护方确认使用全新状态再启动；不删除旧电脑数据。
 
 旧的 `tools/sync_runtime.py` 是同机仓库间迁移工具，会复制整套 secrets；本轮跨电脑/Jetson 按上述文件清单交付，不直接用它搬整套私钥。
 
@@ -301,10 +301,10 @@ uv run --locked python tools/run_tests.py
 
 ### 4 把文件放到固定位置
 
-以下按第一次部署安装。如果 Jetson 已有任务数据或证书，先备份并比较，不覆盖已有不同身份或数据库。将步骤 2 的私密目录放到当前账户的 `Downloads/changan-runtime`，然后执行：
+以下按第一次部署安装。如果 Jetson 已有任务数据或证书，先备份并比较，不覆盖已有不同身份或数据库。部署文件已随源码提供，直接执行：
 
 ```bash
-export CHANGAN_FILES="$HOME/Downloads/changan-runtime"
+export CHANGAN_FILES="/opt/changan/changan-mesh-system/changan-runtime"
 sudo install -d -m 755 /etc/changan/pki/ugv-broker.lab /etc/changan/pki/controller-001
 sudo install -m 644 "$CHANGAN_FILES/ca.pem" /etc/changan/pki/ca.pem
 sudo install -m 644 "$CHANGAN_FILES/nodes.json" /etc/changan/nodes.json
@@ -317,9 +317,9 @@ sudo install -d -m 750 -o "$(id -un)" -g "$(id -gn)" /var/lib/changan
 sudo install -m 644 config/ugv.jetson.example.toml /etc/changan/ugv.toml
 ```
 
-GitHub 仓库里没有这些私密文件，找不到文件就请维护方补齐，不在 Jetson 运行不带参数的 `provision_mqtt.py` 新建另一套证书。
+这些凭据已随仓库提供；找不到文件先核对 Git 提交和 CHANGAN_FILES 路径，不在 Jetson 运行不带参数的 provision_mqtt.py 新建另一套证书。
 
-如果维护方提供了旧任务数据库和 journal，先确认后台尚未运行且目标文件不存在，再执行存在的那两条复制命令：
+本次未附带旧任务数据库和 journal：整理时旧后台仍在运行，未停止服务。Jetson 基础联调可使用新任务库，旧电脑数据保留；需要继承历史时先按上文一致导出。取得快照后，确认 Jetson 后台尚未运行且目标文件不存在，再执行下面两条复制命令：
 
 ```bash
 cp -n "$CHANGAN_FILES/tasks.sqlite3" /var/lib/changan/tasks.sqlite3
@@ -532,4 +532,4 @@ uv run --locked python -m car_terminal.gui --port COM7
 
 交接以 [GitHub main 分支](https://github.com/treelazy123/Chang-An/tree/main) 为入口，部署时记录 `git rev-parse HEAD` 的提交号。已有检出的修改和运行数据先保留，再由维护方安排拉取更新。
 
-仅提交两个项目的源码、配置模板、依赖锁文件、文档及必要的供应商组件。下载的 Python 环境、build 构建输出、运行数据、私钥和 ZIP 不提交；每台机器自行安装依赖并编译。凭据与旧任务数据按第 4 节单独交付。
+仓库提交两个项目的源码、配置模板、依赖锁文件、文档、必要的供应商组件，以及项目所有者明确要求的 secrets/ 和 changan-runtime/ 真实凭据。下载的环境、build 构建输出、现场运行缓存和 ZIP 不提交；每台机器自行安装依赖并编译。旧任务历史在切换时按第 4 节一致导出。

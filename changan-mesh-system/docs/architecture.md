@@ -85,6 +85,6 @@ Broker 配置生成器只读取现有证书并生成配置，不签发、不改�
 
 ## 数据与兼容边界
 
-公开登记在 `config/nodes.json`；证书/私钥在 `secrets/`；数据库、journal、Broker 配置和 UGV 网络快照在 `runtime/`；构建产物在 `build/`；依赖环境在 `.venv/`。后四类目录保持不跟踪，不随文档整理或服务重启删除。
+公开登记在 `config/nodes.json`；证书/私钥在 `secrets/`；Jetson 部署副本在 `changan-runtime/`；数据库、journal、Broker 配置和 UGV 网络快照在 `runtime/`；构建产物在 `build/`；依赖环境在 `.venv/`。项目所有者已明确要求提交现有 secrets 和 changan-runtime；现场 runtime、build、.venv、身份构建缓存和控制器锁保持不跟踪，不随文档整理或服务重启删除。
 
 本地供应商源码和许可证保留于 `third_party/`。legacy TCP 源码与原始实验材料保留用于兼容和证据核对，不作为当前 MQTT 的启动依据。

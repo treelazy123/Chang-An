@@ -1,6 +1,5 @@
 /build/
 /.venv/
-/secrets/
 /runtime/
 **/__pycache__/
 *.pyc
@@ -24,3 +23,10 @@
 *.zip
 # Upstream OTA test fixture, not a local firmware build output.
 !third_party/esp_modem/test/target_ota/bin/blink.bin
+
+# Explicitly approved credential handoff; keep local locks/build caches ignored.
+!/secrets/ca.key
+!/secrets/*/client.key
+!/changan-runtime/*/client.key
+/secrets/.controller.lock
+/secrets/**/build/
