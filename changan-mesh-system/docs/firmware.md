@@ -69,6 +69,8 @@ MQTT 固件按设备隔离在 `build/mqtt_serial/nodes/<node_id>/<role>-<topolog
 
 ## 用户编译与烧录
 
+新增巡检/复核测试需要分别更新UAV与每台Micro固件；按角色公告服务，任务参数和结果均标注esp32_test。task_agent将旧m1_task/journal记录迁移至journal_v2，保留旧键及设备身份。用户构建和上板检查步骤见 [流程验证说明](esp32-workflows.md)。
+
 先按上节加载 IDF 环境，确保当前目录是主仓库根目录。刷写前退出占用目标板原生 USB 的桥接、车机 GUI/CLI 或串口监视器。用以下命令枚举端口（不打开设备）：
 
 ```powershell

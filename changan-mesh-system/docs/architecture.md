@@ -36,10 +36,10 @@ root 把车机请求来源绑定为自身证书身份；后台校验来源、清
 | `components/network_mesh_lite/`、`components/node_role/` | Mesh 启动、角色/拓扑与无线状态 |
 | `components/app_protocol/` | MLT1、消息校验和共享状态 payload |
 | `components/mqtt_serial/`、`components/car_gateway/` | 公共 MQTT/TLS 接口和角色实现的装配 |
-| `components/task_agent/` | C6 diagnostics、状态机、NVS 关键记录 |
+| `components/task_agent/` | C6诊断、Micro巡检/UAV复核的ESP32测试状态机、NVS记录 |
 | `components/transport_tcp/` | 保留的 legacy TCP 兼容实现 |
 
-`pc_root` 仍是 CLI/Kconfig 角色名，目录采用 `apps/root/`，不改变已有身份与 topic。UAV/Micro 当前复用诊断能力；不提供飞控、媒体、UWB 或其他场景接口。
+`pc_root`仍是CLI/Kconfig角色名，目录采用`apps/root/`，不改变身份与topic。每台Micro公告patrol，每台UAV公告anomaly_review，均显式标注esp32_test，按实际node_id形成独立服务实例。真实飞行和无人机主控尚未接入，见 [流程验证说明](esp32-workflows.md)。
 
 ## UGV 主机职责
 

@@ -127,7 +127,7 @@ class TaskLifecycle(unittest.TestCase):
         self.control('start',revision=2)
         with self.assertRaisesRegex(ValueError,'update_requires_created'):
             self.call('task.update',task_id='first',expected_revision=2,config={})
-        for kind in ['survey','patrol','verify']:
+        for kind in ['survey','flight','verify']:
             with self.assertRaisesRegex(ValueError,'unsupported_task_kind'):
                 self.call('task.create',task_id=kind,target='micro-001',kind=kind)
 

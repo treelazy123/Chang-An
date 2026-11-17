@@ -100,4 +100,3 @@ uv run --locked python tools/mqtt_terminal.py --broker-port 8883
 ```powershell
 uv run --locked python -m serial.tools.list_ports -v
 ```
-

@@ -16,6 +16,56 @@ class FakeTransport:
         return dict(v=1,type='task.reply',msg_id=p['msg_id'],ok=True,task=dict(task_id=p.get('task_id'),revision=3),items=[],cursor=0,more=False)
 
 class TaskAPITests(unittest.TestCase):
+    def test_workflow_cli_and_incident_discovery_are_explicit_test_mode(self):
+        transport=FakeTransport()
+        task_line(transport,'task patrol-test tiny-017 A01 P01,P02 2 1')
+        packet=transport.seen[-1]
+        self.assertEqual(('patrol','tiny-017','esp32_test'),(packet['kind'],packet['target'],packet['config']['execution_mode']))
+        self.assertNotIn('period_ms',packet['config'])
+        task_line(transport,'task review-test scout-017 event-1 cleared 3')
+        self.assertEqual('cleared',transport.seen[-1]['config']['test_verdict'])
+        task_line(transport,'task incidents')
+        self.assertEqual(('task.events','incidents'),(transport.seen[-1]['type'],transport.seen[-1]['scope']))
+
+    def test_delete_cli_reads_revision_or_uses_explicit_revision(self):
+        transport=FakeTransport()
+        task_line(transport,'task delete history')
+        self.assertEqual(['task.get','task.control'],[p['type'] for p in transport.seen])
+        self.assertEqual(('delete',3),(transport.seen[-1]['op'],transport.seen[-1]['expected_revision']))
+        task_line(transport,'task delete other 4')
+        self.assertEqual(3,len(transport.seen))
+        self.assertEqual(4,transport.seen[-1]['expected_revision'])
+
+    def test_delete_timeout_never_retries(self):
+        class Broken:
+            count=0
+            def request(self,p):self.count+=1;raise TimeoutError('no reply')
+        transport=Broken()
+        with self.assertRaises(TimeoutError):TaskClient(transport).delete('history',1)
+        self.assertEqual(1,transport.count)
+
+    def test_new_service_cli_and_request_sizes(self):
+        transport=FakeTransport()
+        task_line(transport,'task network ugv-001 micro-001 20 500')
+        self.assertEqual('network_diagnostics',transport.seen[-1]['kind'])
+        task_line(transport,'task monitor ugv-001 watched 20 500 3')
+        self.assertEqual(3,transport.seen[-1]['config']['stale_after_s'])
+        for packet in transport.seen:
+            self.assertLessEqual(len(json.dumps(dict(packet,node_id='x'*32),separators=(',',':')).encode()),512)
+
+    def test_discovery_uses_existing_list_transport_and_rejects_legacy_reply(self):
+        class Services(FakeTransport):
+            def request(self,p):
+                self.seen.append(p)
+                return dict(type='nodes',nodes=[dict(service_id='ugv-001/network_diagnostics')])
+        transport=Services()
+        self.assertEqual('ugv-001/network_diagnostics',request_line(transport,'services')[0]['service_id'])
+        self.assertEqual(('list','services'),(transport.seen[0]['type'],transport.seen[0]['scope']))
+        class Old(Services):
+            def request(self,p):return dict(type='nodes',nodes=[dict(node_id='micro-001')])
+        with self.assertRaisesRegex(ValueError,'upgrade'):
+            TaskClient(Old()).services()
+
     def test_create_keeps_task_identity_and_fits_gateway_limit(self):
         transport=FakeTransport();api=TaskClient(transport)
         api.create('micro-002',30,500,task_id='stable-task')

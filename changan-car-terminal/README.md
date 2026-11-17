@@ -33,6 +33,12 @@ uv run --locked python -m car_terminal.gui --port COM7
 
 ## CLI 与任务
 
+新增“区域巡检（ESP32测试）”“异常复核（ESP32测试）”两种服务任务，以及“测试异常事件”页。能力服务页逐节点列出每台UAV的复核服务、每台Micro的巡检服务，显示执行模式、公告状态和当前任务；旧固件显示需更新。需要更新后台、车机及对应UAV/Micro固件，步骤见 [ESP32流程验证说明](../changan-mesh-system/docs/esp32-workflows.md)。
+
+删除已结束历史任务：在“服务任务”页选择并查询任务后，点击“删除所选历史任务”，或使用 `task delete TASK_ID [REVISION]`。运行中、暂停或未确认任务需先取消并确认终态；被未结束的监视任务引用时需先结束监视。删除清理该任务及后台关联历史，不影响其他任务。接口复用现有网关通道，无需更新节点固件。
+
+新版“服务任务”页增加网络诊断与任务运行监视，并在“能力服务”页查看两项主机服务。网络诊断选择执行主机与被检查节点，显示成功/失败和主机到节点的往返耗时；任务运行监视选择已有任务 ID，显示状态、进度及反馈超时。两项服务可并行运行，需要更新 UGV 后台，无需修改节点固件。操作步骤及测量边界见 [主机服务说明](../changan-mesh-system/docs/host-services.md)。
+
 ~~~powershell
 uv run --locked python -m car_terminal --port COM7
 ~~~

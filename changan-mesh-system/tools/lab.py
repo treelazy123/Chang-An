@@ -30,6 +30,7 @@ def execute_idf(command, build_dir, env, runner=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--role', required=True, choices=('pc_root', 'ugv', 'uav', 'micro_uav'))
+    parser.add_argument('--tls-test-untrusted-client',action='store_true',help='UAV-only negative TLS test; separate credentials and build directory')
     parser.add_argument('--node-id',help='Unique device identity; isolates build and certificate per board')
     parser.add_argument('--ugv-id',help='UGV service identity (defaults to inventory association)')
     parser.add_argument('--transport', default='legacy', choices=('legacy', 'mqtt_serial'))
@@ -39,6 +40,8 @@ def main():
     parser.add_argument('action', nargs='?', default='build',
                         choices=('build', 'menuconfig', 'flash', 'monitor', 'reconfigure'))
     args = parser.parse_args()
+    if args.tls_test_untrusted_client and (args.transport!='mqtt_serial' or args.role!='uav' or not args.node_id):
+        parser.error('--tls-test-untrusted-client requires --transport mqtt_serial --role uav --node-id ID')
     if args.transport=='legacy' and (args.node_id or args.ugv_id):
         parser.error('Per-device --node-id/--ugv-id requires --transport mqtt_serial; legacy uses its original role profiles.')
     if args.action in ('flash','monitor') and not args.port:
@@ -68,6 +71,9 @@ def main():
         build_dir = project_root / 'build' / args.transport / (args.role + '-' + args.topology)
     if args.node_id:
         build_dir = project_root / 'build' / args.transport / 'nodes' / node_id / (args.role+'-'+args.topology)
+    negative_identity = project_root / 'runtime/tls-negative' / node_id
+    if args.tls_test_untrusted_client:
+        build_dir = project_root / 'build/mqtt_serial/tls-negative' / node_id / (args.role+'-'+args.topology)
     sdkconfig_path = build_dir / 'sdkconfig'
     defaults = [firmware_root / 'sdkconfig.defaults',
                 firmware_root / 'configs/profiles' / (args.role + '.defaults'),
@@ -108,9 +114,26 @@ def main():
         if not path.is_file() and not (args.dry_run and (path==instance_defaults or path.name=='clock.defaults')):
             parser.error('Missing config file: ' + str(path))
 
+    if args.tls_test_untrusted_client and not args.dry_run:
+        from identity_env import crypto_available
+        host_python = Path(sys.executable) if crypto_available() else project_root / '.venv' / ('Scripts/python.exe' if os.name=='nt' else 'bin/python')
+        if not host_python.is_file():
+            parser.error('Prepare the uv host environment with uv sync --locked first')
+        worker_env = dict(os.environ)
+        for name in ('PYTHONHOME','PYTHONPATH'):
+            worker_env.pop(name,None)
+        worker_env.update(PYTHONUTF8='1',PYTHONNOUSERSITE='1')
+        result = subprocess.run([str(host_python),'-X','utf8',str(project_root/'tools/tls_negative_identity.py'),
+                                 '--root',str(project_root),'--node-id',node_id],cwd=project_root,env=worker_env,
+                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8',timeout=60)
+        if result.returncode:
+            parser.error('Negative-test identity preparation failed: '+result.stderr.strip())
+        print('NEGATIVE TLS TEST: untrusted client CA; enrolled credentials remain unchanged.',flush=True)
+
     idf_args = ['-C', str(firmware_root), '-B', str(build_dir),
                 '-D', 'IDF_TARGET=esp32c6', '-D', 'SDKCONFIG=' + str(sdkconfig_path),
                 '-D', 'SDKCONFIG_DEFAULTS=' + ';'.join(str(p) for p in defaults)]
+    idf_args.extend(['-D','MESH_TLS_TEST_IDENTITY_DIR=' + (negative_identity.as_posix() if args.tls_test_untrusted_client else '')])
     if args.port:
         idf_args.extend(['-p', args.port])
     idf_args.append(args.action)

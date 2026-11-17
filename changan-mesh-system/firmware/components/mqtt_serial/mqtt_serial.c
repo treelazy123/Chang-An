@@ -138,14 +138,29 @@ static void reply_command(const command_t *packet) {
     }
     cJSON_free(json);cJSON_Delete(reply);cJSON_Delete(cmd);
 }
-static bool task_emit(const cJSON *body) { return publish("task_events",body,1,false)>=0; }
-static void announce_ready(void) {
+static bool capabilities_dirty=true;
+static char capability_state[24],capability_task[33];
+static bool task_emit(const cJSON *body) { capabilities_dirty=true;return publish("task_events",body,1,false)>=0; }
+static void announce_capabilities(bool force) {
+    if(force) { capabilities_dirty=true; }
     cJSON *cap=app_message_new("capabilities");
     if(cap) {
         cJSON_AddStringToObject(cap,"boot_id",boot);cJSON *ops=cJSON_AddArrayToObject(cap,"operations");
         cJSON_AddItemToArray(ops,cJSON_CreateString("ping"));cJSON_AddItemToArray(ops,cJSON_CreateString("status"));
-        cJSON_AddItemToArray(ops,cJSON_CreateString("echo"));task_agent_capabilities(cap);publish("capabilities",cap,1,true);cJSON_Delete(cap);
+        cJSON_AddItemToArray(ops,cJSON_CreateString("echo"));task_agent_capabilities(cap);
+        const char *status=app_json_string(cap,"task_status"),*task=app_json_string(cap,"task_id");
+        if(!task) { task=""; }
+        if(status && (force || strcmp(status,capability_state) || strcmp(task,capability_task))) {
+            if(publish("capabilities",cap,1,true)>=0) {
+                snprintf(capability_state,sizeof(capability_state),"%s",status);snprintf(capability_task,sizeof(capability_task),"%s",task);
+                capabilities_dirty=false;
+            }
+        } else { capabilities_dirty=false; }
+        cJSON_Delete(cap);
     }
+}
+static void announce_ready(void) {
+    announce_capabilities(true);
     cJSON *presence=app_message_new("presence");if(presence) {
         cJSON_AddBoolToObject(presence,"online",true);cJSON_AddStringToObject(presence,"boot_id",boot);
         publish("presence",presence,1,true);cJSON_Delete(presence);
@@ -197,6 +212,7 @@ static void mqtt_task(void *arg) {
             car_gateway_poll(client,active);
             task_agent_tick(active);
             if(!announced && active) { announce_ready();announced=true; }
+            if(announced && active && capabilities_dirty) { announce_capabilities(false); }
             if(!announced && esp_timer_get_time()/1000-started>45000) { break; }
             if(active) {
                 command_t packet;

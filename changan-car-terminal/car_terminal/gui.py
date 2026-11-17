@@ -15,6 +15,36 @@ from .protocol import NODE_ID
 from .tasks import TaskClient
 from .network import NetworkPanel
 
+TASK_KINDS = {'网络诊断': 'network_diagnostics', '任务运行监视': 'task_monitor',
+              '区域巡检（ESP32测试）':'patrol','异常复核（ESP32测试）':'anomaly_review','基础诊断（兼容）': 'diagnostics'}
+SERVICE_NAMES = {'network_diagnostics':'网络诊断','task_monitor':'任务运行监视','patrol':'区域巡检流程验证','anomaly_review':'巡检异常复核流程验证'}
+STAGES={'point_check':'测试点位验证','receive_event':'接收测试事件','validate_input':'校验测试输入','test_result':'生成测试结果','test_done':'测试流程完成'}
+TASK_STATES={'IDLE':'空闲','CREATED':'已创建','QUEUED':'排队中','DISPATCHING':'下发中','ACCEPTED':'已受理','RUNNING':'执行中','PAUSED':'已暂停','UNKNOWN':'待确认','RECONCILING':'对账中'}
+HEALTH = {'waiting':'等待执行', 'reporting':'反馈正常', 'feedback_stale':'反馈超时',
+          'node_not_ready':'节点未就绪', 'finished':'任务已结束', 'not_authorized':'授权已失效', 'not_found':'任务不存在'}
+
+def service_result_text(row):
+    result = row.get('result') or {}
+    stage=STAGES.get(result.get('stage'),result.get('stage') or '等待反馈')
+    if row.get('kind') in ('patrol','anomaly_review') or result.get('mode') == 'esp32_test' and 'health' not in result:
+        if row.get('kind') == 'patrol' or 'done' in result:
+            return (f"ESP32 测试流程 · 阶段：{stage}  测试点位：{result.get('point','—')}  "
+                    f"已验证：{result.get('done',0)}/{result.get('total','—')}  测试事件：{result.get('event_id') or '无'}")
+        verdict={'confirmed':'确认异常（测试）','cleared':'解除误报（测试）','inconclusive':'待进一步核验（测试）','pending':'等待测试结果'}
+        return f"ESP32 测试复核 · 阶段：{stage}  事件：{result.get('event_id','—')}  结论：{verdict.get(result.get('verdict'),'等待反馈')}"
+    value = lambda key: '—' if result.get(key) is None else result[key]
+    if row.get('kind') == 'network_diagnostics' or 'avg_ms' in result:
+        return (f"检查节点：{result.get('node_id', '—')}  已完成采样：{result.get('samples', 0)}  "
+                f"成功：{result.get('ok', 0)}  失败：{result.get('failed', 0)}\n"
+                f"主机↔节点往返耗时（ms）  最近：{value('last_ms')}  平均：{value('avg_ms')}  最大：{value('max_ms')}  "
+                f"最近错误：{result.get('error') or '无'}")
+    if row.get('kind') == 'task_monitor' or 'health' in result:
+        return (f"被监视任务：{result.get('task_id', '—')}  执行节点：{result.get('target', '—')}\n"
+                f"状态：{result.get('state', '—')}  进度：{result.get('progress', '—')}%  "
+                f"距有效反馈：{value('age_s')} 秒  监视结果：{HEALTH.get(result.get('health'), '等待采样')}  "
+                f"任务错误：{result.get('error') or '无'}  执行模式：{result.get('mode','—')}  阶段：{stage}")
+    return '选择任务后查询，或勾选持续补查事件，查看服务运行结果。'
+
 
 def open_transport(settings):
     if settings['transport'] == 'serial':
@@ -31,6 +61,8 @@ def open_transport(settings):
 def run_operation(client, action, values):
     """One serialized operation; mutations are never retried automatically."""
     api = TaskClient(client)
+    if action == 'services':
+        return api.services()
     if action == 'nodes':
         return request_line(client, 'list')
     if action in ('ping', 'status', 'echo'):
@@ -44,15 +76,52 @@ def run_operation(client, action, values):
         if result.get('ok') is False:
             raise ValueError(json.dumps(result, ensure_ascii=False))
         return result
-    if action == 'create':
-        node = values['target'].strip()
+    if action in ('create','update'):
+        kind = TASK_KINDS.get(values.get('task_kind'), 'diagnostics')
+        node = values['target'].strip() if kind == 'diagnostics' else values['executor'].strip()
         if not NODE_ID.fullmatch(node):
             raise ValueError('请选择或填写有效节点 ID')
+        if kind in ('patrol','anomaly_review'):
+            if kind == 'patrol':
+                points=[p.strip() for p in values['points'].split(',')]
+                config=dict(execution_mode='esp32_test',area_id=values['area_id'].strip(),point_ids=points,
+                            point_duration_s=int(values['point_seconds']),anomaly_point=int(values['anomaly_point']))
+                if (not 1<=len(points)<=3 or len(set(points))!=len(points) or
+                    any(not NODE_ID.fullmatch(p) or len(p)>12 for p in [config['area_id'],*points]) or
+                    not 1<=config['point_duration_s']<=60 or not 0<=config['anomaly_point']<=len(points)):
+                    raise ValueError('测试区域/点位 ID 最多12字符；点位1–3个且不重复，每点1–60秒，异常点序号0–点位数')
+            else:
+                config=dict(execution_mode='esp32_test',event_id=values['event_id'].strip(),test_verdict=values['test_verdict'],duration_s=int(values['duration']))
+                if not NODE_ID.fullmatch(config['event_id']) or config['test_verdict'] not in ('confirmed','cleared','inconclusive') or not 1<=config['duration_s']<=60:
+                    raise ValueError('请填写测试事件 ID、预设结论及1–60秒测试时长')
+            if action=='update':
+                if values.get('revision') is None:raise ValueError('请先查询任务版本')
+                return api.update_config(values['task_id'],int(values['revision']),config)
+            return api.create_config(node,kind,config)
         duration, period = int(values['duration']), int(values['period'])
         if not 1 <= duration <= 3600 or not 200 <= period <= 10000:
             raise ValueError('持续时间应为 1–3600 秒，采样间隔为 200–10000 毫秒')
+        if action=='update':
+            if values.get('revision') is None:raise ValueError('请先查询任务版本')
+            config=dict(duration_s=duration,period_ms=period)
+            if kind=='network_diagnostics':config['probe_node']=values['target'].strip()
+            if kind=='task_monitor':config.update(watch_task_id=values['watch_task_id'].strip(),stale_after_s=int(values['stale_after']))
+            return api.update_config(values['task_id'],int(values['revision']),config)
+        if action=='update':
+            if values.get('revision') is None:raise ValueError('请先查询任务版本')
+            return api.update(values['task_id'],int(values['revision']),duration,period)
+        if kind == 'network_diagnostics':
+            subject = values['target'].strip()
+            if not NODE_ID.fullmatch(subject):raise ValueError('请选择被检查节点')
+            return api.network(node, subject, duration, period)
+        if kind == 'task_monitor':
+            subject = values['watch_task_id'].strip()
+            if not NODE_ID.fullmatch(subject):raise ValueError('请填写被监视任务 ID')
+            stale = int(values['stale_after'])
+            if not 1 <= stale <= 3600:raise ValueError('反馈超时阈值应为 1–3600 秒')
+            return api.monitor(node, subject, duration, period, stale)
         return api.create(node, duration, period)
-    if action in ('get', 'start', 'pause', 'resume', 'cancel'):
+    if action in ('get', 'start', 'pause', 'resume', 'cancel', 'delete'):
         task_id = values['task_id'].strip()
         if not task_id:
             raise ValueError('请先选择任务或填写任务 ID')
@@ -61,14 +130,18 @@ def run_operation(client, action, values):
         revision = values.get('revision')
         if revision is None:
             raise ValueError('请先查询任务，取得当前版本再控制')
+        if action == 'delete':
+            if values.get('task_state') not in ('SUCCEEDED','FAILED','CANCELLED','REJECTED','EXPIRED'):
+                raise ValueError('只能删除已结束的历史任务；请先查询任务状态')
+            return api.delete(task_id, int(revision))
         return api.control(task_id, action, int(revision))
-    if action in ('tasks', 'events'):
+    if action in ('tasks', 'events','incidents'):
         cursor = values.get('cursor', 0) if action == 'events' else 0
         items = []
         # Bounded batches keep disconnect and user operations responsive.
         limit = 50 if action == 'events' else 512
         for _ in range(limit):
-            result = api.events(cursor) if action == 'events' else api.list(cursor)
+            result = api.events(cursor) if action == 'events' else (api.incidents(cursor) if action=='incidents' else api.list(cursor))
             items.extend(result['items'])
             next_cursor = result['cursor']
             if result.get('more') and next_cursor <= cursor:
@@ -77,7 +150,7 @@ def run_operation(client, action, values):
             if not result.get('more'):
                 break
         else:
-            if action == 'tasks':
+            if action in ('tasks','incidents'):
                 raise ValueError('任务超过 512 条，请使用 CLI 分页查询')
         return dict(result, items=items, cursor=cursor)
     raise ValueError('不支持的调试操作')
@@ -129,9 +202,9 @@ class SessionWorker:
 
 
 LABELS = dict(connect='连接', disconnect='断开', nodes='刷新节点', ping='Ping',
-              status='节点状态', echo='Echo', create='创建诊断任务', tasks='刷新任务',
+              status='节点状态', echo='Echo', create='创建服务任务', tasks='刷新任务', services='刷新服务',
               get='查询任务', start='开始任务', pause='暂停任务', resume='恢复任务',
-              cancel='取消任务', events='补查事件')
+              cancel='取消任务', events='补查事件', delete='删除历史任务',incidents='刷新测试事件',update='更新任务配置')
 
 
 class DebugWindow:
@@ -143,13 +216,17 @@ class DebugWindow:
         self.closed = False
         self.cursor = 0
         self.task_rows = {}
+        self.deleted_tasks = set()
+        self.service_rows = {}
         self.records = deque(maxlen=2000)
         self.operation_buttons = []
         self.settings_widgets = []
         self.values = {}
         initial = dict(transport='serial', port='COM7', host='127.0.0.1', broker_port='8883',
                        node_id='pc-root-001', cert_dir='', server_name='ugv-broker.lab',
-                       target='', echo='hello', duration='30', period='1000', task_id='')
+                       target='', echo='hello', duration='30', period='1000', task_id='',
+                       executor='ugv-001', task_kind='网络诊断', watch_task_id='', stale_after='10',
+                       area_id='A01',points='P01,P02,P03',point_seconds='3',anomaly_point='2',event_id='',test_verdict='inconclusive')
         initial.update(defaults or {})
         for key, value in initial.items():
             self.values[key] = tk.StringVar(root, value=str(value))
@@ -157,6 +234,7 @@ class DebugWindow:
         self.state = tk.StringVar(root, value='未连接 · 选择传输方式后点击连接')
         self.summary = tk.StringVar(root, value='等待操作')
         self.revision = tk.StringVar(root, value='版本：—')
+        self.metrics = tk.StringVar(root, value='选择任务以查看运行结果')
         root.title('长安车机 · M1 调试终端')
         root.geometry('1160x820')
         root.minsize(980, 720)
@@ -182,10 +260,34 @@ class DebugWindow:
         tasks = ttk.Frame(tabs, padding=10)
         network = ttk.Frame(tabs, padding=10)
         tabs.add(nodes, text='  节点调试  ')
-        tabs.add(tasks, text='  诊断任务  ')
+        tabs.add(tasks, text='  服务任务  ')
         tabs.add(network, text='  网络结构  ')
         self._nodes(nodes)
-        self._tasks(tasks)
+        self.task_page=tasks
+        task_canvas=tk.Canvas(tasks,highlightthickness=0)
+        task_scroll=ttk.Scrollbar(tasks,orient='vertical',command=task_canvas.yview)
+        task_canvas.configure(yscrollcommand=task_scroll.set)
+        task_scroll.pack(side='right',fill='y');task_canvas.pack(side='left',fill='both',expand=True)
+        task_content=ttk.Frame(task_canvas)
+        task_window=task_canvas.create_window((0,0),window=task_content,anchor='nw')
+        task_content.bind('<Configure>',lambda _:task_canvas.configure(scrollregion=task_canvas.bbox('all')))
+        task_canvas.bind('<Configure>',lambda e:task_canvas.itemconfigure(task_window,width=e.width))
+        self._tasks(task_content)
+        services = ttk.Frame(tabs, padding=10)
+        tabs.add(services, text='  能力服务  ')
+        self._button(services, '刷新服务', 'services')
+        self.services = self._tree(services, [('service_id','服务 ID',260),('node_id','执行节点',130), ('agent_type','智能体类型',110),
+            ('service_name','基础能力',190),('execution_mode','执行模式',130), ('availability','可用状态',170), ('task_status','当前任务状态',140)])
+        self.services.bind('<<TreeviewSelect>>', self._select_service)
+        self.services.bind('<Double-1>',lambda _:tabs.select(tasks))
+        ttk.Label(services, text='选择服务带入执行节点和任务类型；双击切换到服务任务。列表由后台查询汇总。').pack(anchor='w')
+        incidents=ttk.Frame(tabs,padding=10)
+        tabs.add(incidents,text='  测试异常事件  ')
+        self._button(incidents,'刷新测试事件','incidents')
+        self.incidents=self._tree(incidents,[('event_id','测试事件 ID',260),('source_task_id','来源巡检任务',260),('node_id','来源节点',130),('area_id','测试区域',100),('point_id','测试点位',100)])
+        self.incidents.bind('<<TreeviewSelect>>',self._select_incident)
+        self.incidents.bind('<Double-1>',lambda _:tabs.select(tasks))
+        ttk.Label(incidents,text='选择事件后可创建 UAV 异常复核测试任务；事件与结论均为 ESP32 流程验证数据。').pack(anchor='w')
         self.network = NetworkPanel(network, lambda: self.dispatch('nodes'),
                                     lambda node: self.values['target'].set(node))
         self.operation_buttons.append(self.network.refresh_button)
@@ -244,9 +346,11 @@ class DebugWindow:
             tree.heading(key, text=title)
             tree.column(key, width=width, minwidth=60)
         scroll = ttk.Scrollbar(frame, orient='vertical', command=tree.yview)
-        tree.configure(yscrollcommand=scroll.set)
-        tree.pack(side='left', fill='both', expand=True)
-        scroll.pack(side='right', fill='y')
+        horizontal=ttk.Scrollbar(frame,orient='horizontal',command=tree.xview)
+        tree.configure(yscrollcommand=scroll.set,xscrollcommand=horizontal.set)
+        tree.grid(row=0,column=0,sticky='nsew');scroll.grid(row=0,column=1,sticky='ns')
+        horizontal.grid(row=1,column=0,sticky='ew')
+        frame.rowconfigure(0,weight=1);frame.columnconfigure(0,weight=1)
         return tree
 
     def _nodes(self, parent):
@@ -271,19 +375,35 @@ class DebugWindow:
 
     def _tasks(self, parent):
         create = ttk.Frame(parent)
+        self.task_common=create
         create.pack(fill='x')
-        self._field(create, '持续时间 / 秒', 'duration', 0, 0, 8)
-        self._field(create, '采样间隔 / ms', 'period', 0, 2, 8)
+        self._field(create, '服务类型', 'task_kind', 0, 0, 18, tuple(TASK_KINDS))
+        self._field(create, '执行节点', 'executor', 0, 2, 16)
+        self._field(create, '检查/基础诊断节点', 'target', 1, 0, 18)
+        self._field(create, '被监视任务 ID', 'watch_task_id', 1, 2, 34)
+        self._field(create, '反馈超时 / 秒', 'stale_after', 0, 4, 8)
+        self._field(create, '持续时间 / 秒', 'duration', 2, 0, 8)
+        self._field(create, '采样间隔 / ms', 'period', 2, 2, 8)
         buttons = ttk.Frame(create)
-        buttons.grid(row=0, column=4)
-        self._button(buttons, '为目标节点创建', 'create')
+        buttons.grid(row=3, column=0, columnspan=6, sticky='w')
+        self._button(buttons, '创建任务', 'create')
         self._button(buttons, '刷新任务', 'tasks')
         ttk.Checkbutton(buttons, text='持续补查事件', variable=self.watch).pack(side='left')
-        ttk.Label(parent, textvariable=self.values['target']).pack(anchor='w')
-        self.tasks = self._tree(parent, [('task_id', '任务 ID', 270), ('target', '目标', 145),
+        self.tasks = self._tree(parent, [('task_id', '任务 ID', 240), ('target', '执行节点', 120), ('kind','类型',160),
                                          ('state', '状态', 135), ('progress', '进度 %', 80),
                                          ('revision', '版本', 60), ('error', '错误', 160)])
         self.tasks.bind('<<TreeviewSelect>>', self._select_task)
+        self.patrol_form=ttk.LabelFrame(parent,text='ESP32 区域巡检测试配置',padding=4)
+        self._field(self.patrol_form,'测试区域','area_id',0,0,12)
+        self._field(self.patrol_form,'点位（逗号分隔）','points',0,2,24)
+        self._field(self.patrol_form,'每点/秒','point_seconds',1,0,8)
+        self._field(self.patrol_form,'测试异常点序号（0为无）','anomaly_point',1,2,6)
+        self.review_form=ttk.LabelFrame(parent,text='ESP32 异常复核测试配置',padding=4)
+        self._field(self.review_form,'测试事件 ID','event_id',0,0,34)
+        self._field(self.review_form,'预设测试结论','test_verdict',0,2,16,('confirmed','cleared','inconclusive'))
+        self.values['task_kind'].trace_add('write',lambda *_:self._kind_options())
+        self._kind_options()
+        ttk.Label(parent, textvariable=self.metrics, wraplength=1040, justify='left').pack(anchor='w')
         action = ttk.Frame(parent)
         action.pack(fill='x')
         ttk.Label(action, text='任务 ID').pack(side='left', padx=(0, 6))
@@ -291,6 +411,11 @@ class DebugWindow:
         ttk.Label(action, textvariable=self.revision).pack(side='left', padx=(0, 10))
         for text, op in [('查询', 'get'), ('开始', 'start'), ('暂停', 'pause'), ('恢复', 'resume'), ('取消', 'cancel')]:
             self._button(action, text, op)
+        history = ttk.Frame(parent)
+        history.pack(fill='x')
+        self._button(history, '删除所选历史任务', 'delete')
+        self._button(history,'更新所选配置','update')
+        ttk.Label(history, text='仅删除已结束任务及其历史；运行中、暂停和未确认任务需先取消。').pack(side='left')
         ttk.Label(parent, text='控制携带已查询的任务版本；冲突或超时显示错误，不自动重发。').pack(anchor='w')
         self.values['task_id'].trace_add('write', lambda *_: self._show_revision())
 
@@ -338,10 +463,63 @@ class DebugWindow:
         if selected:
             task_id = self.tasks.item(selected[0], 'values')[0]
             self.values['task_id'].set(task_id)
+            self._load_task_config(self.task_rows.get(task_id,{}))
+
+    def _load_task_config(self, row):
+        for title,kind in TASK_KINDS.items():
+            if row.get('kind')==kind:self.values['task_kind'].set(title)
+        if row.get('target'):self.values['executor'].set(row['target'])
+        config=row.get('config')
+        if not isinstance(config,dict):return
+        kind=row.get('kind')
+        for title,value in TASK_KINDS.items():
+            if value==kind:self.values['task_kind'].set(title)
+        self.values['executor'].set(row['target'])
+        mapping={'area_id':'area_id','point_duration_s':'point_seconds','anomaly_point':'anomaly_point',
+                 'event_id':'event_id','test_verdict':'test_verdict','duration_s':'duration','period_ms':'period',
+                 'watch_task_id':'watch_task_id','stale_after_s':'stale_after','probe_node':'target'}
+        for key,value in mapping.items():
+            if key in config:self.values[value].set(str(config[key]))
+        if 'point_ids' in config:self.values['points'].set(','.join(config['point_ids']))
+        if kind=='diagnostics':self.values['target'].set(row['target'])
+
+    def _kind_options(self):
+        kind=TASK_KINDS.get(self.values['task_kind'].get())
+        for form in (self.patrol_form,self.review_form):form.pack_forget()
+        form=self.patrol_form if kind=='patrol' else (self.review_form if kind=='anomaly_review' else None)
+        if form:form.pack(fill='x',before=self.tasks.master)
+        for widget in self.task_common.winfo_children():
+            info=widget.grid_info()
+            # grid_remove retains the position, grid_info does not; use remembered positions.
+            if info:widget._task_grid=(int(info['row']),int(info['column']))
+            row,col=getattr(widget,'_task_grid',(-1,-1))
+            hidden=(row==1 and kind in ('patrol','anomaly_review')) or (row==2 and (kind=='patrol' or kind=='anomaly_review' and col in (2,3)))
+            if hidden:widget.grid_remove()
+            else:widget.grid()
 
     def _show_revision(self):
         row = self.task_rows.get(self.values['task_id'].get(), {})
         self.revision.set('版本：' + str(row.get('revision', '—')))
+        self.metrics.set(service_result_text(row))
+
+    def _select_service(self, _=None):
+        selected = self.services.selection()
+        if selected:
+            service_id = self.services.item(selected[0], 'values')[0]
+            row=self.service_rows.get(service_id,{})
+            node=row.get('node_id',service_id.rsplit('/',1)[0])
+            kind=row.get('service_type',service_id.rsplit('/',1)[1])
+            self.values['executor'].set(node)
+            for title, value in TASK_KINDS.items():
+                if value == kind:self.values['task_kind'].set(title)
+
+    def _select_incident(self, _=None):
+        selected=self.incidents.selection()
+        if selected:
+            self.values['event_id'].set(self.incidents.item(selected[0],'values')[0])
+            self.values['task_kind'].set('异常复核（ESP32测试）')
+            candidates=[r for r in self.service_rows.values() if r.get('service_type')=='anomaly_review' and r.get('availability')=='available']
+            if candidates:self.values['executor'].set(candidates[0]['node_id'])
 
     def dispatch(self, action):
         if self.busy or (action != 'connect' and not self.connected):
@@ -349,6 +527,7 @@ class DebugWindow:
         values = {key: value.get() for key, value in self.values.items()}
         values['cursor'] = self.cursor
         values['revision'] = self.task_rows.get(values['task_id'], {}).get('revision')
+        values['task_state'] = self.task_rows.get(values['task_id'], {}).get('state')
         self.busy = True
         self.summary.set(LABELS[action] + '…')
         self._states()
@@ -365,9 +544,13 @@ class DebugWindow:
                     self.connected = True
                     self.cursor = 0
                     self.task_rows.clear()
+                    self.deleted_tasks.clear()
                     self.nodes.delete(*self.nodes.get_children())
                     self.network.clear()
                     self.tasks.delete(*self.tasks.get_children())
+                    self.services.delete(*self.services.get_children())
+                    self.service_rows.clear()
+                    self.incidents.delete(*self.incidents.get_children())
                     self.values['task_id'].set('')
                     self.target_box.configure(values=())
                     self.state.set('链路已打开 · 点击刷新节点验证后台响应')
@@ -395,7 +578,24 @@ class DebugWindow:
         self.root.after(80, self._drain)
 
     def _apply(self, action, result):
-        if action == 'nodes':
+        if isinstance(result, dict) and result.get('deleted') is True:
+            self._remove_task(result['task_id'])
+        elif action == 'services':
+            self.services.delete(*self.services.get_children())
+            self.service_rows={row['service_id']:row for row in result}
+            for row in result:
+                title = {'ugv':'无人车','uav':'无人机','micro_uav':'微型无人机'}.get(row['agent_type'],row['agent_type'])
+                mode={'host':'主机执行','esp32_test':'ESP32 测试','not_reported':'未公告'}.get(row.get('execution_mode'),'—')
+                availability={'available':'可用','busy':'忙碌','unavailable':'不可用'}.get(row['availability'],row['availability'])
+                reason={'firmware_required':'需更新固件/等待公告','node_not_ready':'节点未就绪'}.get(row.get('reason'))
+                if reason:availability+=' · '+reason
+                self.services.insert('', 'end', values=(row['service_id'],row.get('node_id',row['service_id'].split('/')[0]),title,
+                    SERVICE_NAMES.get(row['service_type'],row['service_type']),mode,availability,TASK_STATES.get(row['task_status'],row['task_status'])))
+        elif action=='incidents':
+            self.incidents.delete(*self.incidents.get_children())
+            for row in result['items']:
+                self.incidents.insert('', 'end',values=tuple(row.get(key,'—') for key in ('event_id','source_task_id','node_id','area_id','point_id')))
+        elif action == 'nodes':
             self.network.update(result)
             self.nodes.delete(*self.nodes.get_children())
             ids = []
@@ -435,20 +635,35 @@ class DebugWindow:
         elif isinstance(result, dict) and isinstance(result.get('task'), dict):
             self._upsert_task(result['task'])
             self.values['task_id'].set(result['task']['task_id'])
+            if action=='get':self._load_task_config(result['task'])
 
     def _upsert_task(self, task):
         task_id = task['task_id']
+        if task.get('state') == 'DELETED':
+            self._remove_task(task_id)
+            return
+        if task_id in self.deleted_tasks:
+            return
         previous = self.task_rows.get(task_id, {})
         if task.get('state_seq', 0) < previous.get('state_seq', 0):
             return
         row = dict(previous, **task)
         self.task_rows[task_id] = row
-        values = tuple(row.get(key, '—') for key in ('task_id', 'target', 'state', 'progress', 'revision', 'error'))
+        values = tuple(row.get(key, '—') for key in ('task_id', 'target', 'kind', 'state', 'progress', 'revision', 'error'))
         if self.tasks.exists(task_id):
             self.tasks.item(task_id, values=values)
         else:
             self.tasks.insert('', 'end', iid=task_id, values=values)
+        if self.values['task_id'].get() == task_id:self.metrics.set(service_result_text(row))
         self._show_revision()
+
+    def _remove_task(self, task_id):
+        self.deleted_tasks.add(task_id)
+        self.task_rows.pop(task_id, None)
+        if self.tasks.exists(task_id):
+            self.tasks.delete(task_id)
+        if self.values['task_id'].get() == task_id:
+            self.values['task_id'].set('')
 
     def record(self, action, ok, result, elapsed):
         stamp = datetime.now().astimezone().isoformat(timespec='seconds')

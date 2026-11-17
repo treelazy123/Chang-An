@@ -2,6 +2,7 @@
 import argparse
 import json
 import logging
+import re
 from pathlib import Path
 import shlex
 import ssl
@@ -11,6 +12,7 @@ import uuid
 from changan_ugv.protocol.frames import _unique_object
 from changan_ugv.config import BrokerConfig
 from changan_ugv.nodes.inventory import load_inventory, clients
+from changan_ugv.tasks.workflows import WORKFLOW_ROLES, MODE
 NODES = clients(load_inventory())
 OPERATIONS = ('ping', 'status', 'echo')
 class BrokerTLSContext(ssl.SSLContext):
@@ -39,11 +41,21 @@ class Registry:
         if kind=='presence' and body.get('type')=='presence' and type(body.get('online')) is bool:
             entry['presence']=body
         elif kind=='capabilities' and body.get('type')=='capabilities':
+            if 'task_status' in body and body['task_status'] not in ('IDLE','ACCEPTED','RUNNING','PAUSED','UNKNOWN','SUCCEEDED','FAILED','CANCELLED','REJECTED'):
+                return False
+            if 'task_id' in body and (not isinstance(body['task_id'],str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,32}',body['task_id'])):
+                return False
             ops=body.get('operations')
             if not isinstance(ops,list) or not ops or any(op not in OPERATIONS for op in ops):
                 return False
             tasks=body.get('task_types',[])
-            if not isinstance(tasks,list) or any(t!='diagnostics' for t in tasks):return False
+            if not isinstance(tasks,list) or any(t not in ('diagnostics',*WORKFLOW_ROLES) for t in tasks):return False
+            for task in tasks:
+                if task in WORKFLOW_ROLES and (body.get('task_role')!=WORKFLOW_ROLES[task] or body.get('execution_mode')!=MODE):
+                    return False
+            if any(t in WORKFLOW_ROLES for t in tasks):
+                task_ops=body.get('task_operations')
+                if not isinstance(task_ops,list) or any(not isinstance(op,str) for op in task_ops) or set(task_ops)!={'start','pause','resume','cancel','query'}:return False
             entry['capabilities']=body
         elif kind=='telemetry' and body.get('type')=='telemetry' and not retained:
             entry['telemetry']=body

@@ -7,6 +7,10 @@ class NodeSnapshot:
     ready: bool = False
     boot_id: str | None = None
     task_types: tuple[str,...] = ()
+    execution_mode: str | None = None
+    task_operations: tuple[str,...] = ()
+    task_id: str | None = None
+    task_state: str | None = None
 
 @dataclass(frozen=True)
 class SendReceipt:

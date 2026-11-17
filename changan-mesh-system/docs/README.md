@@ -1,6 +1,6 @@
 # 文档索引
 
-维护日期：2026-11-15。当前平台为 ESP32-C6 / ESP-IDF 6.1.x，业务范围为 M1 通用 `diagnostics` 任务管理。
+维护日期：2026-11-17。当前平台为ESP32-C6 / ESP-IDF 6.1.x，提供诊断、主机监视及明确标注的ESP32业务流程验证。
 
 | 文档 | 内容 |
 | --- | --- |
@@ -8,6 +8,8 @@
 | [运行与排障](operations.md) | Broker、USB 桥接、后台、车机 GUI/CLI、网络结构与常见故障 |
 | [固件与设备身份](firmware.md) | SDK、角色、增量登记、独立构建、用户烧录、兼容层 |
 | [任务操作](tasks.md) | diagnostics、CLI、任务接口、版本、排队、暂停与故障恢复 |
+| [ESP32巡检与异常复核](esp32-workflows.md) | 按角色公告、流程测试、测试异常事件、NVS升级及实机验收步骤 |
+| [主机诊断与运行监视](host-services.md) | 主动Ping、RTT、反馈超时与服务目录 |
 | [部署与交接](deployment.md) | 配置文件、状态迁移、ACL、Jetson 与 S31 交付边界 |
 | [Jetson / S31 同学交接任务](handoff/README.md) | 电脑车机 C6—Jetson S31—UAV C6、部署步骤、服务发现兼容点和 H0–H7 验收 |
 | [验收与部署状态](status.md) | 已有验证、原始记录和待部署/验收边界 |

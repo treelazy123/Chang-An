@@ -8,7 +8,9 @@ class MQTTNodeChannel:
     def snapshot(self,node_id):
         with self.controller.condition:
             registry=self.controller.registry;entry=registry.nodes.get(node_id,{})
-            return NodeSnapshot(registry.ready(node_id),entry.get('presence',{}).get('boot_id'),tuple(entry.get('capabilities',{}).get('task_types',[])))
+            cap=entry.get('capabilities',{})
+            return NodeSnapshot(registry.ready(node_id),entry.get('presence',{}).get('boot_id'),tuple(cap.get('task_types',[])),
+                                cap.get('execution_mode'),tuple(cap.get('task_operations',[])),cap.get('task_id'),cap.get('task_status'))
     def ready_count(self):
         with self.controller.condition:
             return sum(self.controller.registry.ready(node) for node in self.controller.registry.nodes)

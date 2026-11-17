@@ -56,6 +56,8 @@ class Requests:
             try:
                 if not self.controller.connected.is_set():raise ConnectionError('broker_offline')
                 if request['type']=='list':
+                    scope=request.get('scope','nodes')
+                    if scope not in ('nodes','services'):raise ValueError('invalid_list_scope')
                     self.controller.refresh_inventory()
                     with self.controller.condition:rows=self.controller.registry.snapshot()
                     tasks=getattr(self.controller,'tasks',None)
@@ -64,7 +66,9 @@ class Requests:
                         network=read_network_status(tasks.ugv_id,self.root)
                         if network is not None:ugv_status['network_status']=network
                         rows.append(dict(node_id=tasks.ugv_id,ready=self.controller.connected.is_set(),operations=[],
-                                         task_types=['diagnostics'],status=ugv_status))
+                                         task_types=['diagnostics',*getattr(getattr(tasks,'local',None),'concurrent_kinds',())],status=ugv_status))
+                    if scope == 'services':
+                        rows=tasks.service_snapshot(source or 'local-console') if tasks is not None else []
                     # One node per frame, final marker: fits the C6 1024-byte frame bound for growing fleets.
                     result=[dict(v=1,type='nodes',node_id='ugv-service',msg_id=identity,nodes=[row],more=True) for row in rows]
                     result.append(dict(v=1,type='nodes',node_id='ugv-service',msg_id=identity,nodes=[],more=False))

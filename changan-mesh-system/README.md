@@ -1,6 +1,6 @@
 # Changan Mesh System
 
-一个 ESP-IDF 6.1 固件工程，按 root / UGV / UAV / Micro UAV 分离角色；UGV 主机程序独立成 Python 包。当前业务范围是 M1 基础任务管理，执行类型只有真实资源/链路采样 `diagnostics`。
+一个ESP-IDF 6.1固件工程，按root / UGV / UAV / Micro UAV分离角色；UGV主机程序独立成Python包。支持基础诊断、主机网络诊断与任务监视，以及 [ESP32巡检与异常复核流程验证](docs/esp32-workflows.md)。流程测试不涉及无人机主控或真实飞行。
 
 车机终端保留在相邻的独立仓库 `../changan-car-terminal`。两个仓库通过版本化协议交互，不互相导入业务源码。
 

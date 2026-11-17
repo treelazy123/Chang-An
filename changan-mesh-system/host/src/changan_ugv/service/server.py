@@ -12,7 +12,7 @@ from changan_ugv.nodes.inventory import load_inventory
 from changan_ugv.tasks.store import ACTIONS
 from changan_ugv.tasks.runtime import Runtime
 from changan_ugv.config import ServicePaths, service_arguments, resolve_arguments
-from changan_ugv.agents.ugv import HostDiagnostics
+from changan_ugv.agents.services import HostServices
 from changan_ugv.transport.node_channel import MQTTNodeChannel
 from changan_ugv.service.requests import Requests
 from changan_ugv.transport.rpc import Server
@@ -28,7 +28,8 @@ class ServiceController(Controller):
         self.requests=Requests(self,inventory_loader=inventory_loader)
         super().__init__(*args,**kwargs)
         try:
-            factory=executor_factory or (lambda emit,snapshot:HostDiagnostics(paths.agent_journal,ugv_id,emit,snapshot))
+            factory=executor_factory or (lambda emit,snapshot:HostServices(
+                paths.agent_journal,ugv_id,emit,snapshot,probe=self.command,network_snapshot=self.network_snapshot))
             self.tasks=Runtime(channel_factory(self),database=database or paths.task_database,
                                executor_factory=factory,inventory_loader=inventory_loader,ugv_id=ugv_id)
             self.requests=Requests(self,inventory_loader=inventory_loader)
@@ -45,6 +46,12 @@ class ServiceController(Controller):
         super().on_connect(client,userdata,flags,reason,properties)
         if not reason.is_failure:
             client.subscribe([('mesh/v1/terminals/+/requests',1),('mesh/v1/nodes/+/task_events',1)])
+
+    def network_snapshot(self, node):
+        with self.condition:
+            if node not in self.registry.nodes:
+                return None
+            return dict(ready=self.registry.ready(node))
 
     def respond(self,source,response):
         encode(response)

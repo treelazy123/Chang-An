@@ -1,8 +1,8 @@
 # M1 任务操作
 
-当前只有通用 diagnostics 执行类型。C6 采集实际 Wi-Fi RSSI、空闲堆及样本数；UGV 电脑/Jetson 执行主机诊断，结果标明 source=ugv_host，两者不混作同一组测量。
+支持 diagnostics、UGV主机 network_diagnostics/task_monitor，以及Micro的patrol、UAV的anomaly_review。后两项仅为显式esp32_test模式的业务流程验证，见 [ESP32巡检与复核说明](esp32-workflows.md)。主机服务的计时和步骤见 [主机服务说明](host-services.md)。C6 diagnostics采集真实Wi-Fi RSSI、空闲堆及样本数；旧UGV diagnostics标明source=ugv_host。
 
-支持创建、查询、列表、开始前配置更新、开始、暂停、恢复、取消、进度与事件补查、持久化及失联/重启对账。保留基础 list/ping/status/echo。task.events 是任务状态日志，不是异常告警服务；不提供飞控、媒体、UWB、区域/航线或运动调度接口，不支持运行中配置热更新。
+支持创建、查询、列表、开始前配置更新、开始、暂停、恢复、取消、进度与事件补查、持久化及失联/重启对账。保留基础list/ping/status/echo。task.events默认查询任务状态日志，scope=incidents查询巡检测试异常事件；不控制飞行、主控、相机、UWB或真实运动，不支持运行中配置热更新。
 
 启动车机与后台见 [运行说明](operations.md)，身份/固件准备见 [固件说明](firmware.md)，权限与部署切换见 [部署说明](deployment.md)。代码职责见 [系统架构](architecture.md)，线协议以 [v1 合同](../protocols/v1/README.md) 为准，实物结论见 [验收状态](status.md)。
 
@@ -23,6 +23,7 @@ task start TASK_ID
 task pause TASK_ID
 task resume TASK_ID
 task cancel TASK_ID
+task delete TASK_ID
 
 task events 0 TASK_ID
 watch TASK_ID
@@ -31,6 +32,14 @@ watch TASK_ID
 create 返回 task_id，任务初始为 CREATED，不自动开始。示例命令中的 TASK_ID 要替换成返回值。update 示例将 revision=1 的未开始任务修改为 60 秒、500 毫秒采样周期，成功后 revision=2。
 
 start/pause/resume/cancel 可选显式 REVISION；省略时车机先查当前版本，再提交一次控制请求。版本冲突会明确拒绝，不自动覆盖或重试。update 仅允许 CREATED 状态，开始后要使用新的任务配置，不能假装已热更新。
+
+`task delete TASK_ID [REVISION]` 删除单条已结束的历史任务；API 为 `TaskClient.delete(task_id, revision=None)`。GUI 在“服务任务”页选择并查询历史任务后，点击“删除所选历史任务”。仅 SUCCEEDED/FAILED/CANCELLED/REJECTED/EXPIRED 允许删除，CREATED/QUEUED/RUNNING/PAUSED/UNKNOWN 等任务应先取消并确认终态。仍被未结束的 task_monitor 引用时返回 task_in_use_by_monitor，应先结束该监视任务。
+
+删除通过既有 `task.control`、`op=delete`、`expected_revision` 实现，不需要更新 root/C6 固件；需要更新后台与车机。返回 `task.reply`，携带 `stage=DELETED, deleted=true, task_id, state_seq`。只能删除本人任务，本地维护入口保留管理员范围；旧节点从清单移除后仍可清理本人终态历史。未知任务返回 task_not_found。
+
+删除在一个事务中清除 tasks 主记录、对应 operations 和原 task_events；插入一条最小 DELETED 游标事件，其他车机补查时移除列表项。保留任务ID删除标记及请求内容指纹，原创建/控制缓存响应被替换为删除结果，避免旧请求返回已删除任务；同一删除请求可幂等重放，已删除ID不可重用（task_id_deleted），新任务使用新ID。保留列表游标单调递增，删除最高序号后新任务仍可被分页发现。
+
+这不是清空存储：不会删除其他任务、已结束监视任务的历史摘要、车机已经导出的日志或设备NVS最近任务摘要；无需在线擦除设备NVS。终态执行器迟到的反馈不会恢复已删除任务。
 
 task list [CURSOR] 每次返回一条任务及 cursor/more；task events [CURSOR] [TASK_ID] 每次返回一条任务状态记录。more=true 时携带返回游标继续查询。watch 自动补查，按 Ctrl+C 返回提示符，后台任务继续运行；游标可用于断线后续查。
 
@@ -44,14 +53,14 @@ task list [CURSOR] 每次返回一条任务及 cursor/more；task events [CURSOR
 
 | type | 业务字段 |
 | --- | --- |
-| task.create | task_id、target、kind=diagnostics、config，可选 priority 和 execute_before |
+| task.create | task_id、target、kind=diagnostics/network_diagnostics/task_monitor/patrol/anomaly_review、config，可选priority、execute_before |
 | task.get | task_id |
 | task.list | cursor，默认 0 |
-| task.control | task_id、op=start/pause/resume/cancel、expected_revision |
+| task.control | task_id、op=start/pause/resume/cancel/delete、expected_revision |
 | task.update | task_id、expected_revision、config，可选 priority、execute_before |
-| task.events | cursor，可选 task_id |
+| task.events | cursor，可选task_id；scope默认tasks，可选incidents（独立游标） |
 
-config 仅允许 duration_s（1～3600）和 period_ms（200～10000），默认 30 秒/1000 毫秒。priority 为 0～9，高者先排队；execute_before 是允许开始的 UTC 秒截止时间，不是执行完成期限。运行状态包括 CREATED、QUEUED、DISPATCHING、ACCEPTED、RUNNING、暂停/恢复/取消请求中、PAUSED、RECONCILING、UNKNOWN 及终态。
+diagnostics 的 config 仅允许 duration_s（1～3600）和 period_ms（200～10000），默认 30 秒/1000 毫秒。其他类型的专有字段见主机服务说明。priority 为 0～9，高者先排队；execute_before 是允许开始的 UTC 秒截止时间，不是执行完成期限。运行状态包括 CREATED、QUEUED、DISPATCHING、ACCEPTED、RUNNING、暂停/恢复/取消请求中、PAUSED、RECONCILING、UNKNOWN 及终态。
 
 公开接口统一返回 task.reply，错误仍返回 error。提交入库返回 stage=UGV_RECEIVED；这不是执行完成。task.get 返回 last_operation，指明最近一次控制操作及其派发/核对状态，执行结果以 task.state/result 为准。
 
@@ -63,7 +72,7 @@ config 仅允许 duration_s（1～3600）和 period_ms（200～10000），默认
 
 ## 故障语义
 
-- 每个物理节点最多一个活动任务；同节点后续任务等待，两个 Micro 可以并行执行。
+- 每个物理节点最多一个活动任务；同节点后续任务等待，两个 Micro 可以并行执行。UGV 主机的 network_diagnostics、task_monitor 各有独立执行槽，可与旧 diagnostics 并行；同类型后续任务等待。
 - 相同来源/msg_id/内容的提交返回原响应；内容冲突拒绝，服务重启后规则保留。
 - 开始前已过 execute_before 的排队任务变为 EXPIRED。
 - 暂停/取消以执行器实际反馈为准；旧操作的进度不能确认新操作。

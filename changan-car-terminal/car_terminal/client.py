@@ -3,7 +3,7 @@ import time
 from .protocol import command
 from .transport import SerialClient,MQTTClient
 def request_line(client,line):
-    if line.strip()=='help' or line.strip().startswith('task '):
+    if line.strip() in ('help','services') or line.strip().startswith('task '):
         from .tasks import task_line
         return task_line(client,line)
     packet=command(line);packet['deadline_unix']=int(time.time())+20

@@ -103,4 +103,3 @@ class RootLink:
         self.serial.close()
         if self._reader.is_alive():
             self._reader.join(timeout=1)
-

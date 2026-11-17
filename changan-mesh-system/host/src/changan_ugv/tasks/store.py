@@ -7,6 +7,7 @@ import sqlite3
 import threading
 import time
 import uuid
+from changan_ugv.tasks.workflows import WORKFLOW_KINDS, MODE, config_valid as workflow_config
 
 ID = re.compile(r'^[A-Za-z0-9_-]{1,32}$')
 TERMINAL = {'SUCCEEDED', 'FAILED', 'CANCELLED', 'REJECTED', 'EXPIRED'}
@@ -22,13 +23,25 @@ def identifier(value):
         raise ValueError('invalid_task_or_node_id')
     return value
 
-def config_valid(value):
-    if not isinstance(value, dict) or set(value) - {'duration_s', 'period_ms'}:
+HOST_KINDS = ('network_diagnostics', 'task_monitor')
+
+def config_valid(value, kind='diagnostics'):
+    if kind in WORKFLOW_KINDS:
+        return workflow_config(value, kind)
+    extra = {'network_diagnostics': {'probe_node'}, 'task_monitor': {'watch_task_id', 'stale_after_s'}}.get(kind, set())
+    if not isinstance(value, dict) or set(value) - ({'duration_s', 'period_ms'} | extra):
         raise ValueError('invalid_config')
-    value = dict(duration_s=value.get('duration_s', 30), period_ms=value.get('period_ms', 1000))
+    value = dict(value, duration_s=value.get('duration_s', 30), period_ms=value.get('period_ms', 1000))
     if (type(value['duration_s']) is not int or not 1 <= value['duration_s'] <= 3600 or
         type(value['period_ms']) is not int or not 200 <= value['period_ms'] <= 10000):
         raise ValueError('invalid_config')
+    if kind == 'network_diagnostics':
+        identifier(value.get('probe_node'))
+    if kind == 'task_monitor':
+        identifier(value.get('watch_task_id'))
+        value.setdefault('stale_after_s', 10)
+        if type(value['stale_after_s']) is not int or not 1 <= value['stale_after_s'] <= 3600:
+            raise ValueError('invalid_stale_after_s')
     return value
 
 class Store:
@@ -58,7 +71,19 @@ class Store:
                 cursor INTEGER PRIMARY KEY AUTOINCREMENT, owner TEXT NOT NULL,
                 task_id TEXT NOT NULL, body TEXT NOT NULL);
             CREATE INDEX IF NOT EXISTS events_owner ON task_events(owner,cursor);
+            CREATE TABLE IF NOT EXISTS deleted_tasks (
+                task_id TEXT PRIMARY KEY, owner TEXT NOT NULL, revision INTEGER NOT NULL,
+                state_seq INTEGER NOT NULL, deleted_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS task_sequence (
+                singleton INTEGER PRIMARY KEY CHECK(singleton=1), last_rowid INTEGER NOT NULL);
+            INSERT OR IGNORE INTO task_sequence SELECT 1, COALESCE(MAX(rowid),0) FROM tasks;
+            CREATE TABLE IF NOT EXISTS incidents (
+                cursor INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT UNIQUE NOT NULL,
+                owner TEXT NOT NULL, source_task_id TEXT NOT NULL, node_id TEXT NOT NULL,
+                area_id TEXT NOT NULL, point_id TEXT NOT NULL, created INTEGER NOT NULL);
         """)
+        if 'feedback_at' not in {r[1] for r in self.db.execute('PRAGMA table_info(tasks)')}:
+            self.db.execute('ALTER TABLE tasks ADD COLUMN feedback_at REAL')
         # Never replay an uncertain physical operation on manager restart.
         with self.lock, self.db:
             for row in self.db.execute("SELECT * FROM tasks WHERE state NOT IN ('CREATED','QUEUED','SUCCEEDED','FAILED','CANCELLED','REJECTED','EXPIRED')").fetchall():
@@ -82,6 +107,8 @@ class Store:
         operation=self.db.execute('SELECT command_id,op,status,op_seq FROM operations WHERE task_id=? ORDER BY rowid DESC LIMIT 1',(row['task_id'],)).fetchone()
         if operation:result['last_operation']=dict(operation)
         result['config'] = json.loads(row['config'])
+        if row.get('feedback_at') is not None:
+            result['feedback_at'] = row['feedback_at']
         if row['result']:
             result['result'] = json.loads(row['result'])
         return result
@@ -89,6 +116,8 @@ class Store:
     def _event(self, task_id):
         row = self._row(task_id)
         body = {k: row[k] for k in ('task_id', 'state', 'revision', 'state_seq', 'progress', 'updated', 'error')}
+        if row['result']:
+            body['result'] = json.loads(row['result'])
         self.db.execute('INSERT INTO task_events(owner,task_id,body) VALUES(?,?,?)',
                         (row['owner'], task_id, dumps(body)))
 
@@ -113,7 +142,7 @@ class Store:
         common={'v','type','node_id','msg_id','deadline_unix'}
         fields={
             'task.create':{'task_id','target','kind','config','priority','execute_before'},
-            'task.get':{'task_id'}, 'task.list':{'cursor'}, 'task.events':{'cursor','task_id'},
+            'task.get':{'task_id'}, 'task.list':{'cursor'}, 'task.events':{'cursor','task_id','scope'},
             'task.control':{'task_id','op','expected_revision'},
             'task.update':{'task_id','expected_revision','config','priority','execute_before'},
         }
@@ -143,6 +172,18 @@ class Store:
                 raise ValueError('invalid_cursor')
             # One result per response; no unbounded bursts through the C6 serial queue.
             scope, args = ('', []) if owner == 'local-console' else (' AND owner=?', [owner])
+            event_scope = p.get('scope','tasks')
+            if event_scope not in ('tasks','incidents'):
+                raise ValueError('invalid_event_scope')
+            if kind == 'task.events' and event_scope == 'incidents':
+                task = p.get('task_id')
+                if task is not None:
+                    identifier(task)
+                    scope += ' AND source_task_id=?'
+                    args.append(task)
+                rows = self.db.execute('SELECT * FROM incidents WHERE cursor>?' + scope + ' ORDER BY cursor LIMIT 2', [cursor,*args]).fetchall()
+                items = [{k:r[k] for k in ('event_id','source_task_id','node_id','area_id','point_id','created')} | dict(test=True,execution_mode=MODE) for r in rows[:1]]
+                return dict(items=items,cursor=rows[0]['cursor'] if rows else cursor,more=len(rows)>1)
             if kind == 'task.list':
                 rows = self.db.execute('SELECT rowid AS cursor,* FROM tasks WHERE rowid>?' + scope + ' ORDER BY rowid LIMIT 2', [cursor, *args]).fetchall()
                 items = [self.view(dict(row)) for row in rows[:1]]
@@ -158,12 +199,17 @@ class Store:
             return dict(items=items, cursor=rows[0]['cursor'] if rows else cursor, more=len(rows) > 1)
         if kind == 'task.create':
             task_id = identifier(p.get('task_id'))
+            if self.db.execute('SELECT 1 FROM deleted_tasks WHERE task_id=?', (task_id,)).fetchone():
+                raise ValueError('task_id_deleted')
             target = identifier(p.get('target'))
             if target not in targets:
                 raise ValueError('target_not_authorized')
-            if p.get('kind') != 'diagnostics':
+            task_kind = p.get('kind')
+            if task_kind not in ('diagnostics', *HOST_KINDS, *WORKFLOW_KINDS):
                 raise ValueError('unsupported_task_kind')
-            config = config_valid(p.get('config', {}))
+            config = config_valid(p.get('config', {}), task_kind)
+            self.validate_command_size(task_id,target,task_kind,config)
+            self.validate_subject(config, task_kind, owner, targets)
             priority = p.get('priority', 0)
             before = p.get('execute_before')
             if type(priority) is not int or not 0 <= priority <= 9:
@@ -173,10 +219,15 @@ class Store:
             if self.db.execute('SELECT 1 FROM tasks WHERE task_id=?', (task_id,)).fetchone():
                 raise ValueError('task_id_conflict')
             now = int(self.clock())
-            self.db.execute('INSERT INTO tasks(task_id,owner,target,kind,state,revision,config,priority,execute_before,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-                            (task_id, owner, target, 'diagnostics', 'CREATED', 1, dumps(config), priority, before, now, now))
+            # Deleted high-rowid tasks must not make task.list cursors miss new tasks.
+            cursor = self.db.execute('SELECT last_rowid+1 FROM task_sequence WHERE singleton=1').fetchone()[0]
+            self.db.execute('UPDATE task_sequence SET last_rowid=? WHERE singleton=1', (cursor,))
+            self.db.execute('INSERT INTO tasks(rowid,task_id,owner,target,kind,state,revision,config,priority,execute_before,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                            (cursor, task_id, owner, target, task_kind, 'CREATED', 1, dumps(config), priority, before, now, now))
             self._event(task_id)
             return dict(stage='UGV_RECEIVED', task=self.view(self._row(task_id)))
+        if kind == 'task.control' and p.get('op') == 'delete':
+            return self._delete(p, owner)
         row = self._row(p.get('task_id'), owner)
         if kind == 'task.get':
             return dict(task=self.view(row))
@@ -188,7 +239,10 @@ class Store:
             # M1 updates are intentionally limited to not-yet-started tasks.
             if row['state'] != 'CREATED':
                 raise ValueError('update_requires_created')
-            fields = {'config': dumps(config_valid(p.get('config', json.loads(row['config'])))), 'revision': row['revision'] + 1}
+            config = config_valid(p.get('config', json.loads(row['config'])), row['kind'])
+            self.validate_command_size(row['task_id'],row['target'],row['kind'],config)
+            self.validate_subject(config, row['kind'], owner, targets)
+            fields = {'config': dumps(config), 'revision': row['revision'] + 1}
             if 'priority' in p:
                 if type(p['priority']) is not int or not 0 <= p['priority'] <= 9:
                     raise ValueError('invalid_priority')
@@ -220,11 +274,72 @@ class Store:
         self._change(row['task_id'], state=state, error=None)
         return dict(stage='UGV_RECEIVED', command_id=command_id, task=self.view(self._row(row['task_id'])))
 
+    def _delete(self, packet, owner):
+        """Called inside request's transaction; physical execution is never controlled here."""
+        task_id = identifier(packet.get('task_id'))
+        removed = self.db.execute('SELECT * FROM deleted_tasks WHERE task_id=?', (task_id,)).fetchone()
+        row = dict(removed) if removed else self._row(task_id, owner)
+        if owner != 'local-console' and row['owner'] != owner:
+            raise ValueError('task_not_found')
+        if type(packet.get('expected_revision')) is not int or packet['expected_revision'] != row['revision']:
+            raise ValueError('revision_conflict')
+        if not removed:
+            if row['state'] not in TERMINAL:
+                raise ValueError('delete_requires_terminal')
+            monitors = self.db.execute("SELECT config FROM tasks WHERE kind='task_monitor' AND state NOT IN ('SUCCEEDED','FAILED','CANCELLED','REJECTED','EXPIRED')").fetchall()
+            if any(json.loads(m['config']).get('watch_task_id') == task_id for m in monitors):
+                raise ValueError('task_in_use_by_monitor')
+            reviews = self.db.execute("SELECT config FROM tasks WHERE kind='anomaly_review' AND state NOT IN ('SUCCEEDED','FAILED','CANCELLED','REJECTED','EXPIRED')").fetchall()
+            if any(json.loads(r['config']).get('event_id') == task_id for r in reviews):
+                raise ValueError('task_in_use_by_review')
+            row['state_seq'] += 1
+            self.db.execute('INSERT INTO deleted_tasks VALUES(?,?,?,?,?)',
+                            (task_id,row['owner'],row['revision'],row['state_seq'],int(self.clock())))
+            self.db.execute('DELETE FROM operations WHERE task_id=?', (task_id,))
+            self.db.execute('DELETE FROM task_events WHERE task_id=?', (task_id,))
+            self.db.execute('DELETE FROM tasks WHERE task_id=?', (task_id,))
+            # Keep cursor monotonic and notify other clients to remove their cached row.
+            self.db.execute('INSERT INTO task_events(owner,task_id,body) VALUES(?,?,?)',
+                            (row['owner'],task_id,dumps(dict(task_id=task_id,state='DELETED',state_seq=row['state_seq']))))
+            # Preserve request fingerprints but discard historical response payloads.
+            # Replayed creates/controls must never return a stale task snapshot.
+            for cached in self.db.execute('SELECT owner,msg_id,reply FROM requests').fetchall():
+                old = json.loads(cached['reply'])
+                if old.get('task',{}).get('task_id') == task_id:
+                    reply = dict(v=1,type='task.reply',node_id='ugv-service',msg_id=cached['msg_id'],ok=True,
+                                 stage='DELETED',deleted=True,task_id=task_id,state_seq=row['state_seq'])
+                    self.db.execute('UPDATE requests SET reply=? WHERE owner=? AND msg_id=?',
+                                    (dumps(reply),cached['owner'],cached['msg_id']))
+        return dict(stage='DELETED',deleted=True,task_id=task_id,state_seq=row['state_seq'])
+
     def waiting(self):
         with self.lock:
             return [dict(row) for row in self.db.execute("SELECT o.*,t.target,t.boot,t.config,t.state,t.kind,t.execute_before FROM operations o JOIN tasks t USING(task_id) WHERE o.status='waiting' ORDER BY t.priority DESC,t.created,o.rowid")]
 
-    def dispatch(self, operation, boot):
+    def validate_subject(self, config, kind, owner, targets):
+        if kind == 'network_diagnostics' and config['probe_node'] not in targets:
+            raise ValueError('probe_node_not_authorized')
+        if kind == 'task_monitor':
+            watched = self._row(config['watch_task_id'], owner)
+            if watched['target'] not in targets:
+                raise ValueError('target_not_authorized')
+            if watched['kind'] == 'task_monitor':
+                raise ValueError('cannot_monitor_monitor')
+        if kind == 'anomaly_review':
+            event = self.db.execute('SELECT * FROM incidents WHERE event_id=?',(config['event_id'],)).fetchone()
+            if event is None or (owner != 'local-console' and event['owner'] != owner):
+                raise ValueError('test_event_not_found')
+            if event['node_id'] not in targets:
+                raise ValueError('event_source_not_authorized')
+
+    def validate_command_size(self, task_id, target, kind, config):
+        if kind not in WORKFLOW_KINDS:return
+        packet=dict(v=1,type='task.command',target=target,task_id=task_id,msg_id='x'*32,op='start',
+                    op_seq=2147483647,revision=2147483647,boot_id='x'*16,deadline_unix=2147483647,kind=kind,config=config)
+        if len(dumps(packet).encode())>512:
+            raise ValueError('workflow_command_too_large')
+
+    def dispatch(self, operation, boot, concurrent_kinds=()):
         with self.lock, self.db:
             row = self._row(operation['task_id'])
             if row['state'] in TERMINAL:
@@ -234,7 +349,13 @@ class Store:
                 self._change(row['task_id'], state='EXPIRED', error='start_deadline_missed')
                 return None
             if operation['op'] == 'start':
-                occupied = self.db.execute("SELECT task_id FROM tasks WHERE target=? AND task_id<>? AND state NOT IN ('CREATED','QUEUED','SUCCEEDED','FAILED','CANCELLED','REJECTED','EXPIRED')", (row['target'], row['task_id'])).fetchone()
+                lane = ' AND kind=?' if row['kind'] in concurrent_kinds else ''
+                args = [row['target'], row['task_id']]
+                if lane:args.append(row['kind'])
+                elif concurrent_kinds:
+                    lane = ' AND kind NOT IN (' + ','.join('?' for _ in concurrent_kinds) + ')'
+                    args.extend(concurrent_kinds)
+                occupied = self.db.execute("SELECT task_id FROM tasks WHERE target=? AND task_id<>? AND state NOT IN ('CREATED','QUEUED','SUCCEEDED','FAILED','CANCELLED','REJECTED','EXPIRED')" + lane, args).fetchone()
                 if occupied:
                     return None
             packet = dict(v=1, type='task.command', target=row['target'], task_id=row['task_id'],
@@ -287,14 +408,30 @@ class Store:
             state = 'UNKNOWN' if body['state'] == 'NOT_FOUND' else body['state']
             result = body.get('result')
             if result is not None:
-                if not isinstance(result, dict) or len(dumps(result).encode()) > 240:
+                if not isinstance(result, dict) or len(dumps(result).encode()) > (320 if row['kind'] in HOST_KINDS else 240):
                     return False
+                if row['kind'] in WORKFLOW_KINDS:
+                    if result.get('mode') != MODE:
+                        return False
+                    config=json.loads(row['config'])
+                    if row['kind']=='patrol':
+                        done=result.get('done')
+                        if type(done) is not int or not 0 <= done <= len(config['point_ids']):return False
+                        event_id=result.get('event_id')
+                        if event_id is not None:
+                            index=config['anomaly_point']
+                            if event_id != row['task_id'] or not index or done < index:return False
+                            self.db.execute('INSERT OR IGNORE INTO incidents(event_id,owner,source_task_id,node_id,area_id,point_id,created) VALUES(?,?,?,?,?,?,?)',
+                                (event_id,row['owner'],row['task_id'],node,config['area_id'],config['point_ids'][index-1],int(self.clock())))
+                    else:
+                        if result.get('event_id') != config['event_id']:return False
+                        if body['state']=='SUCCEEDED' and result.get('verdict') != config['test_verdict']:return False
             pending = self.db.execute("SELECT command_id FROM operations WHERE task_id=? AND status IN ('waiting','sent') ORDER BY rowid DESC LIMIT 1", (row['task_id'],)).fetchone()
             # An older operation's progress must not acknowledge a newer pause/cancel.
             pending_other = pending and pending['command_id'] != body.get('msg_id') and not query
             next_state = row['state'] if pending_other and state not in TERMINAL else state
             self._change(row['task_id'], state=next_state, progress=body['progress'], node_seq=body['seq'],
-                         boot=body['boot_id'], error=body.get('error'), result=dumps(result) if result else row['result'])
+                         boot=body['boot_id'], feedback_at=self.clock(), error=body.get('error'), result=dumps(result) if result else row['result'])
             if query:
                 self.db.execute("UPDATE operations SET status='reconciled' WHERE task_id=? AND status IN ('sent','uncertain')", (row['task_id'],))
             else:

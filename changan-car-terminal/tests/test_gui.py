@@ -38,6 +38,41 @@ class FakeTransport:
 
 
 class OperationTests(unittest.TestCase):
+    def test_workflow_creation_and_update_use_selected_executor_and_test_config(self):
+        client=FakeTransport()
+        values=dict(task_kind='区域巡检（ESP32测试）',executor='tiny-017',area_id='A01',points='P01,P02',point_seconds='2',anomaly_point='1')
+        run_operation(client,'create',values)
+        self.assertEqual(('tiny-017','patrol'),(client.seen[-1]['target'],client.seen[-1]['kind']))
+        values.update(task_id='task',revision=3,points='P03')
+        run_operation(client,'update',values)
+        self.assertEqual('task.update',client.seen[-1]['type'])
+        self.assertEqual(['P03'],client.seen[-1]['config']['point_ids'])
+        values.update(task_kind='异常复核（ESP32测试）',executor='scout-017',event_id='event-1',test_verdict='cleared',duration='3')
+        run_operation(client,'create',values)
+        self.assertEqual(('anomaly_review','esp32_test'),(client.seen[-1]['kind'],client.seen[-1]['config']['execution_mode']))
+
+    def test_delete_requires_known_terminal_state_and_displayed_revision(self):
+        client=FakeTransport()
+        with self.assertRaisesRegex(ValueError,'已结束'):
+            run_operation(client,'delete',dict(task_id='history',revision=3,task_state='RUNNING'))
+        self.assertEqual([],client.seen)
+        run_operation(client,'delete',dict(task_id='history',revision=3,task_state='CANCELLED'))
+        self.assertEqual(('task.control','delete',3),(client.seen[0]['type'],client.seen[0]['op'],client.seen[0]['expected_revision']))
+
+    def test_service_tasks_separate_executor_from_subject(self):
+        client = FakeTransport()
+        values=dict(target='micro-002',executor='ugv-001',task_kind='网络诊断',duration='30',period='500')
+        run_operation(client,'create',values)
+        self.assertEqual('ugv-001',client.seen[-1]['target'])
+        self.assertEqual('micro-002',client.seen[-1]['config']['probe_node'])
+        values.update(task_kind='任务运行监视',watch_task_id='watched',stale_after='3')
+        run_operation(client,'create',values)
+        self.assertEqual('task_monitor',client.seen[-1]['kind'])
+        self.assertEqual('watched',client.seen[-1]['config']['watch_task_id'])
+        # The node debug buttons still address the selected remote node.
+        run_operation(client,'ping',values)
+        self.assertEqual('micro-002',client.seen[-1]['target'])
+
     def test_task_list_collects_all_pages(self):
         client = FakeTransport()
         result = run_operation(client, 'tasks', {})
@@ -122,6 +157,69 @@ class OperationTests(unittest.TestCase):
 
 
 class WindowTests(unittest.TestCase):
+    def test_role_services_and_incident_selection_do_not_assume_fixed_node_ids(self):
+        rows=[dict(service_id=node+'/'+suffix,node_id=node,agent_type=role,service_type=kind,
+                   execution_mode='esp32_test',availability='available',task_status='IDLE')
+              for node,suffix,kind,role in [('tiny-017','patrol','patrol','micro_uav'),('scout-017','anomaly-review','anomaly_review','uav')]]
+        self.window._apply('services',rows)
+        self.window.services.selection_set(self.window.services.get_children()[0]);self.window._select_service()
+        self.assertEqual(('tiny-017','区域巡检（ESP32测试）'),(self.window.values['executor'].get(),self.window.values['task_kind'].get()))
+        self.window._apply('incidents',dict(items=[dict(event_id='test-event',source_task_id='patrol-task',node_id='tiny-017',area_id='A01',point_id='P02')]))
+        self.window.incidents.selection_set(self.window.incidents.get_children()[0]);self.window._select_incident()
+        self.assertEqual(('test-event','scout-017','异常复核（ESP32测试）'),(self.window.values['event_id'].get(),self.window.values['executor'].get(),self.window.values['task_kind'].get()))
+        self.window._apply('get',dict(task=dict(task_id='loaded',target='tiny-017',kind='patrol',revision=2,config=dict(area_id='A02',point_ids=['P08'],point_duration_s=2,anomaly_point=1))))
+        self.assertEqual('P08',self.window.values['points'].get())
+
+    def test_workflow_forms_fit_minimum_window(self):
+        self.root.deiconify();self.root.geometry('980x720')
+        page=self.window.task_page;page.master.select(page)
+        for kind in ('区域巡检（ESP32测试）','异常复核（ESP32测试）','网络诊断'):
+            self.window.values['task_kind'].set(kind);self.root.update()
+            for form in (self.window.patrol_form,self.window.review_form):
+                if form.winfo_ismapped():
+                    for widget in form.winfo_children():
+                        self.assertLessEqual(widget.winfo_x()+widget.winfo_width(),form.winfo_width())
+            self.assertGreater(self.window.tasks.winfo_width(),500)
+
+    def test_deleted_history_is_removed_and_late_events_cannot_restore_it(self):
+        self.window._upsert_task(dict(task_id='history',state='CANCELLED',revision=1,state_seq=2))
+        self.window.values['task_id'].set('history')
+        self.window._apply('delete',dict(deleted=True,task_id='history',state_seq=3))
+        self.assertNotIn('history',self.window.task_rows)
+        self.assertFalse(self.window.tasks.exists('history'))
+        self.assertEqual('',self.window.values['task_id'].get())
+        self.window._upsert_task(dict(task_id='history',state='CANCELLED',state_seq=2))
+        self.assertFalse(self.window.tasks.exists('history'))
+        self.window._upsert_task(dict(task_id='other',state='SUCCEEDED',state_seq=2))
+        self.window._apply('events',dict(cursor=10,items=[dict(task_id='other',state='DELETED',state_seq=3)]))
+        self.assertFalse(self.window.tasks.exists('other'))
+        self.assertEqual(10,self.window.cursor)
+
+    def test_service_task_controls_fit_minimum_window(self):
+        self.root.deiconify()
+        self.root.geometry('980x720')
+        page=self.window.task_page
+        page.master.select(page)
+        self.root.update()
+        create=self.window.task_common
+        for widget in create.winfo_children():
+            self.assertLessEqual(widget.winfo_x()+widget.winfo_width(),create.winfo_width())
+        self.assertGreater(self.window.tasks.winfo_width(),500)
+
+    def test_service_selection_and_live_results(self):
+        self.window._apply('services',[dict(service_id='ugv-001/task_monitor',agent_type='ugv',
+            service_type='task_monitor',availability='available',task_status='IDLE')])
+        self.window.services.selection_set(self.window.services.get_children()[0])
+        self.window._select_service()
+        self.assertEqual('任务运行监视',self.window.values['task_kind'].get())
+        self.window.values['task_id'].set('monitor')
+        self.window._upsert_task(dict(task_id='monitor',kind='task_monitor',state_seq=1,
+            result=dict(task_id='remote',state='RUNNING',progress=35,age_s=11,health='feedback_stale')))
+        self.assertIn('反馈超时',self.window.metrics.get())
+        self.window._upsert_task(dict(task_id='monitor',state_seq=2,
+            result=dict(task_id='remote',state='FAILED',health='finished',error='node_error')))
+        self.assertIn('node_error',self.window.metrics.get())
+
     def setUp(self):
         self.client = FakeTransport()
         self.opens = []
