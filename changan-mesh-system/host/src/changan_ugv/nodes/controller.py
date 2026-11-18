@@ -9,12 +9,12 @@ import ssl
 import threading
 import time
 import uuid
-from changan_ugv.protocol.frames import _unique_object
+from changan_ugv.protocol.messages import _unique_object
 from changan_ugv.config import BrokerConfig
-from changan_ugv.nodes.inventory import load_inventory, clients
+from changan_ugv.nodes.inventory import load_inventory, clients, root_of
 from changan_ugv.tasks.workflows import WORKFLOW_ROLES, MODE
 NODES = clients(load_inventory())
-OPERATIONS = ('ping', 'status', 'echo')
+OPERATIONS = ('ping', 'status', 'echo', 'parent')
 class BrokerTLSContext(ssl.SSLContext):
     """Connect to loopback while verifying the fixed broker service identity."""
     def __new__(cls, protocol=ssl.PROTOCOL_TLS_CLIENT, *, server_name='ugv-broker.lab'):
@@ -87,13 +87,15 @@ class Registry:
                  'status':e.get('telemetry',{}).get('payload'),
                  'task_types':e.get('capabilities',{}).get('task_types',[])} for n,e in self.nodes.items()]
 class Controller:
-    def __init__(self,secret=None,port=8883,inventory=None,inventory_path=None, *, broker=None,lock_file=None):
+    def __init__(self,secret=None,port=8883,inventory=None,inventory_path=None, *, broker=None,lock_file=None,managed_root_id=None):
         from changan_ugv.nodes.lease import Lease
         broker=broker or BrokerConfig.from_secrets(secret,port)
+        self.broker_config=broker
         self.instance_lease=Lease(secret or broker.ca_file.parent,lock_file=lock_file)
         try:
             import paho.mqtt.client as mqtt
-            self.registry=Registry(nodes=clients(inventory) if inventory is not None else None)
+            self.managed_root_id=managed_root_id
+            self.registry=Registry(nodes=self.node_ids(inventory) if inventory is not None else None)
             self.inventory_path=Path(inventory_path) if inventory_path is not None else None
             self.inventory_text=None
             self.inventory_error=None
@@ -122,6 +124,12 @@ class Controller:
         except BaseException:
             self.instance_lease.close()
             raise
+    def node_ids(self,data):
+        allowed=clients(data)
+        root_id=getattr(self,'managed_root_id',None)
+        if root_id is None:return allowed
+        return tuple(n for n in allowed if any(e['node_id']==n and root_of(e)==root_id for e in data['nodes']))
+
     def refresh_inventory(self):
         path=getattr(self,'inventory_path',None)
         if path is None:return
@@ -129,7 +137,7 @@ class Controller:
             text=path.read_text(encoding='utf-8')
             if text==self.inventory_text:return
             from changan_ugv.nodes.inventory import validate
-            allowed=clients(validate(json.loads(text)))
+            allowed=self.node_ids(validate(json.loads(text)))
             with self.condition:
                 added=self.registry.reconcile(allowed)
                 self.inventory_text=text
@@ -187,6 +195,7 @@ class Controller:
         msg_id=msg_id or uuid.uuid4().hex
         packet={'v':1,'type':'command','target':node,'msg_id':msg_id,'op':op,'deadline_unix':deadline_unix or int(time.time())+20}
         if op=='echo': packet['payload']=text or ''
+        if op=='parent': packet['payload']=text
         payload=json.dumps(packet,ensure_ascii=False,separators=(',',':'))
         if len(payload.encode('utf-8'))>512:
             raise ValueError('Command exceeds 512 UTF-8 bytes')

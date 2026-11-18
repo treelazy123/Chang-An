@@ -1,4 +1,3 @@
-"""Interchangeable car request transports."""
+"""HTTP requests and WebSocket event streaming."""
 from .base import RequestTransport
-from .serial import SerialClient
-from .mqtt import MQTTClient
+from .http import HTTPClient

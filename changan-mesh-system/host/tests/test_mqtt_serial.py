@@ -14,7 +14,7 @@ sys.path.insert(0,str(ROOT/'tools'))
 from tunnel_protocol import Frame,Decoder,RESET,READY,OPEN,OPEN_OK,DATA,ACK,CLOSE,CHUNK
 from serial_tcp_bridge import Engine
 from provision_mqtt import provision
-from mqtt_terminal import Registry
+from changan_ugv.nodes.controller import Registry
 
 class Framing(unittest.TestCase):
     def test_fragmentation_binary_and_coalescing(self):
@@ -176,14 +176,14 @@ class RealTLS(unittest.TestCase):
             for t in workers: t.join(6)
         return peers,received,errors
     def test_three_distinct_mutual_tls_identities_and_binary_streams(self):
-        ids=['pc-root-001','uav-001','micro-001'];peers,received,errors=self.run_tls(ids)
+        ids=['ugv-001','uav-001','micro-001'];peers,received,errors=self.run_tls(ids)
         self.assertEqual([],errors)
         self.assertEqual(set(ids),{x[0] for x in received})
         for p in peers:
             self.assertIsNone(p['failure'])
             self.assertEqual((bytes(range(256))*16)[::-1],p['answer'])
     def test_four_distinct_tls_clients_share_one_bridge(self):
-        ids=['pc-root-001','uav-001','micro-001','micro-002'];peers,received,errors=self.run_tls(ids)
+        ids=['ugv-001','uav-001','micro-001','micro-002'];peers,received,errors=self.run_tls(ids)
         self.assertEqual([],errors)
         self.assertEqual(set(ids),{x[0] for x in received})
         for p in peers:
@@ -224,7 +224,7 @@ class RegistrySafety(unittest.TestCase):
 
 class ControllerTransactions(unittest.TestCase):
     def make_controller(self):
-        from mqtt_terminal import Controller
+        from changan_ugv.nodes.controller import Controller
         controller=Controller.__new__(Controller)
         controller.condition=threading.Condition();controller.pending={};controller.replies={}
         controller.connected=threading.Event();controller.connected.set();controller.registry=Registry()
@@ -253,31 +253,14 @@ class ControllerTransactions(unittest.TestCase):
         self.assertEqual(1,len(calls));self.assertFalse(c.pending)
         with self.assertRaises(ValueError): c.command('micro-001','ping')
 
-class TerminalStartup(unittest.TestCase):
-    def test_connection_refused_reports_endpoint_without_traceback(self):
-        import io
-        from unittest.mock import patch
-        import mqtt_terminal
-        error=io.StringIO()
-        with patch.object(sys,'argv',['mqtt_terminal.py','--broker-port','8883']), \
-             patch.object(mqtt_terminal,'Controller',side_effect=ConnectionRefusedError()), \
-             patch('ugv_rpc.LocalController.discover',return_value=None), \
-             patch.object(sys,'stderr',error):
-            with self.assertRaises(SystemExit) as result:
-                mqtt_terminal.main()
-        self.assertEqual(2,result.exception.code)
-        self.assertIn('127.0.0.1:8883',error.getvalue())
-        self.assertIn('mosquitto.conf',error.getvalue())
-        self.assertNotIn('Traceback',error.getvalue())
-
 class NewBuildMode(unittest.TestCase):
-    def test_four_mqtt_dry_runs_are_isolated_from_legacy(self):
+    def test_four_current_role_dry_runs_are_isolated(self):
         import subprocess
-        for role in ('pc_root','ugv','uav','micro_uav'):
+        for role in ('ugv_root','ugv','uav','micro_uav'):
             result=subprocess.run([sys.executable,str(ROOT/'tools/lab.py'),'--role',role,
                                    '--transport','mqtt_serial','--dry-run'],capture_output=True,text=True)
             self.assertEqual(0,result.returncode,result.stderr)
-            self.assertIn(str(ROOT/'build/mqtt_serial'/(role+'-chain')),result.stdout)
+            self.assertIn(str(ROOT/'build/mqtt_serial/nodes'/dict(ugv_root='ugv-root',ugv='ugv-001',uav='uav-001',micro_uav='micro-001')[role]/(role+'-chain')),result.stdout)
         invalid=subprocess.run([sys.executable,str(ROOT/'tools/lab.py'),'--role','uav','--transport','mqtt_serial',
                                 '--topology','star','--dry-run'],capture_output=True,text=True)
         self.assertNotEqual(0,invalid.returncode)

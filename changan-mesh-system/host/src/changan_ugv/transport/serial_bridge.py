@@ -150,7 +150,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', required=True, help='UGV C6 native USB COM port')
     parser.add_argument('--broker-port', type=int, default=8883)
-    parser.add_argument('--ugv-id', default='ugv-001', help='Expected UGV USB device identity')
+    parser.add_argument('--ugv-id', default='ugv-root', help='Expected root radio ID (must match firmware and backend)')
     parser.add_argument('--network-status', type=Path, default=repository_root()/'runtime/ugv-network.json')
     args = parser.parse_args()
     import serial

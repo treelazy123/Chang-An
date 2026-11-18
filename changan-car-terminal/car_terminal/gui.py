@@ -7,10 +7,11 @@ from pathlib import Path
 import queue
 import threading
 import time
+import uuid
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
-from .client import MQTTClient, SerialClient, request_line
+from .client import HTTPClient, request_line
 from .protocol import NODE_ID
 from .tasks import TaskClient
 from .network import NetworkPanel
@@ -47,20 +48,33 @@ def service_result_text(row):
 
 
 def open_transport(settings):
-    if settings['transport'] == 'serial':
-        if not settings['port'].strip():
-            raise ValueError('请填写 root 车机串口，例如 COM7')
-        return SerialClient(settings['port'].strip())
-    if not settings['host'].strip() or not settings['cert_dir'].strip():
-        raise ValueError('MQTT 需要 Broker 地址和车机证书目录')
-    return MQTTClient(settings['host'].strip(), int(settings['broker_port']),
-                      settings['node_id'].strip(), Path(settings['cert_dir']),
-                      settings['server_name'].strip())
+    return HTTPClient(settings.get('base_url','http://127.0.0.1:8080').strip())
 
 
 def run_operation(client, action, values):
     """One serialized operation; mutations are never retried automatically."""
     api = TaskClient(client)
+    if action in ('parent_get','parent_apply'):
+        node=values['parent_child'].strip()
+        if not NODE_ID.fullmatch(node):raise ValueError('请选择Micro节点')
+        packet=dict(v=1,type='node.parent.get' if action=='parent_get' else 'node.parent',
+                    msg_id=uuid.uuid4().hex,deadline_unix=int(time.time())+20,target=node)
+        if action=='parent_apply':
+            revision=values.get('parent_revision','')
+            if revision=='':raise ValueError('先查询该Micro的连接配置版本')
+            mode={'自动':'auto','优先指定':'prefer','固定指定':'fixed'}[values['parent_mode']]
+            packet.update(mode=mode,parent=values['parent_uav'].strip() if mode!='auto' else None,expected_revision=int(revision))
+        reply=client.request(packet)
+        if reply.get('type')=='error':raise ValueError(reply.get('error'))
+        return reply
+    if action in ('admit','revoke'):
+        revision=values.get('admission_revision','')
+        if revision=='':raise ValueError('请刷新节点并选择目标，确认授权版本')
+        reply=client.request(dict(v=1,type='node.admission',msg_id=uuid.uuid4().hex,
+            deadline_unix=int(time.time())+20,target=values['target'],expected_revision=int(revision),
+            trust_status='trusted' if action=='admit' else 'revoked'))
+        if reply.get('type')=='error':raise ValueError(reply.get('error'))
+        return reply
     if action == 'services':
         return api.services()
     if action == 'nodes':
@@ -186,7 +200,9 @@ class SessionWorker:
                         if client is not None:
                             raise ValueError('请先断开当前连接')
                         client = self.factory(values)
-                        result = None
+                        if isinstance(client,HTTPClient):
+                            client.on_event=lambda body:self.results.put(('push',True,body,0))
+                        result=dict(root_id=getattr(client,'root_id',None))
                     else:
                         if client is None:
                             raise ConnectionError('尚未连接')
@@ -202,6 +218,8 @@ class SessionWorker:
 
 
 LABELS = dict(connect='连接', disconnect='断开', nodes='刷新节点', ping='Ping',
+              admit='授权接入',revoke='撤销授权',
+              parent_get='查询连接配置',parent_apply='应用连接配置',
               status='节点状态', echo='Echo', create='创建服务任务', tasks='刷新任务', services='刷新服务',
               get='查询任务', start='开始任务', pause='暂停任务', resume='恢复任务',
               cancel='取消任务', events='补查事件', delete='删除历史任务',incidents='刷新测试事件',update='更新任务配置')
@@ -216,16 +234,18 @@ class DebugWindow:
         self.closed = False
         self.cursor = 0
         self.task_rows = {}
+        self.node_rows = {}
         self.deleted_tasks = set()
         self.service_rows = {}
         self.records = deque(maxlen=2000)
         self.operation_buttons = []
+        self.admission_buttons = []
         self.settings_widgets = []
         self.values = {}
-        initial = dict(transport='serial', port='COM7', host='127.0.0.1', broker_port='8883',
-                       node_id='pc-root-001', cert_dir='', server_name='ugv-broker.lab',
-                       target='', echo='hello', duration='30', period='1000', task_id='',
-                       executor='ugv-001', task_kind='网络诊断', watch_task_id='', stale_after='10',
+        self._target_initialized = False
+        initial = dict(parent_child='',parent_uav='',parent_mode='自动',parent_revision='',base_url='http://127.0.0.1:8080',
+                       target='', admission_revision='', echo='hello', duration='30', period='1000', task_id='',
+                       executor='ugv-root', task_kind='网络诊断', watch_task_id='', stale_after='10',
                        area_id='A01',points='P01,P02,P03',point_seconds='3',anomaly_point='2',event_id='',test_verdict='inconclusive')
         initial.update(defaults or {})
         for key, value in initial.items():
@@ -290,6 +310,17 @@ class DebugWindow:
         ttk.Label(incidents,text='选择事件后可创建 UAV 异常复核测试任务；事件与结论均为 ESP32 流程验证数据。').pack(anchor='w')
         self.network = NetworkPanel(network, lambda: self.dispatch('nodes'),
                                     lambda node: self.values['target'].set(node))
+        parent_box=ttk.LabelFrame(network,text='Micro 上游连接设置',padding=8)
+        self.parent_controls=parent_box
+        parent_box.pack(fill='x',before=self.network.tree.master)
+        self.parent_child_box=self._field(parent_box,'Micro节点','parent_child',0,0,16,(),editable=True)
+        self.parent_uav_box=self._field(parent_box,'父UAV','parent_uav',0,2,16,(),editable=True)
+        self._field(parent_box,'模式','parent_mode',1,0,12,('自动','优先指定','固定指定'))
+        buttons=ttk.Frame(parent_box);buttons.grid(row=1,column=2,columnspan=2,sticky='w')
+        self._button(buttons,'查询配置','parent_get');self._button(buttons,'应用配置','parent_apply')
+        self.parent_summary=tk.StringVar(root,value='先刷新节点，再查询Micro配置。固定模式不自动改连其他UAV。')
+        ttk.Label(parent_box,textvariable=self.parent_summary,wraplength=950).grid(row=2,column=0,columnspan=4,sticky='w')
+        self.values['parent_child'].trace_add('write',lambda *_:self.values['parent_revision'].set(''))
         self.operation_buttons.append(self.network.refresh_button)
         self._output(panes)
         self._states()
@@ -297,45 +328,30 @@ class DebugWindow:
         root.after(80, self._drain)
         root.after(1500, self._watch_tick)
 
-    def _field(self, frame, title, key, row, col, width=18, choices=None):
+    def _field(self, frame, title, key, row, col, width=18, choices=None, editable=False):
         ttk.Label(frame, text=title).grid(row=row, column=col, sticky='w', padx=(0, 6), pady=4)
-        if choices:
+        if choices is not None:
             widget = ttk.Combobox(frame, textvariable=self.values[key], values=choices,
-                                  state='readonly', width=width)
+                                  state='normal' if editable else 'readonly', width=width)
         else:
             widget = ttk.Entry(frame, textvariable=self.values[key], width=width)
         widget.grid(row=row, column=col + 1, sticky='ew', padx=(0, 14), pady=4)
         return widget
 
     def _connection(self, parent):
-        box = ttk.LabelFrame(parent, text='连接设置', padding=10)
+        box=ttk.LabelFrame(parent,text='连接后台',padding=10)
         box.pack(fill='x')
-        definitions = [('传输', 'transport', 0, 0, 10, ('serial', 'mqtt')),
-                       ('root 串口', 'port', 0, 2, 12, None),
-                       ('Broker 地址', 'host', 0, 4, 18, None),
-                       ('端口', 'broker_port', 0, 6, 7, None),
-                       ('车机身份', 'node_id', 1, 0, 16, None),
-                       ('TLS 服务名', 'server_name', 1, 2, 18, None),
-                       ('证书目录', 'cert_dir', 1, 4, 22, None)]
-        for definition in definitions:
-            self.settings_widgets.append(self._field(box, *definition))
-        self.browse_button = ttk.Button(box, text='选择…', command=self._browse)
-        self.browse_button.grid(row=1, column=6, columnspan=2, sticky='w')
-        self.settings_widgets.append(self.browse_button)
-        actions = ttk.Frame(box)
-        actions.grid(row=2, column=0, columnspan=8, sticky='ew', pady=(6, 0))
-        self.connect_button = ttk.Button(actions, text='连接', style='Accent.TButton',
-                                          command=lambda: self.dispatch('connect'))
-        self.connect_button.pack(side='left')
-        self.disconnect_button = ttk.Button(actions, text='断开', command=lambda: self.dispatch('disconnect'))
-        self.disconnect_button.pack(side='left', padx=8)
-        ttk.Label(actions, text='串口连接 root C6（通常 COM7）；MQTT 使用车机自身证书。').pack(side='left')
-        self.values['transport'].trace_add('write', lambda *_: self._states())
+        self.settings_widgets.append(self._field(box,'后台 HTTP 地址','base_url',0,0,42))
+        self.connect_button=ttk.Button(box,text='连接',command=lambda:self.dispatch('connect'))
+        self.connect_button.grid(row=0,column=2,padx=8)
+        self.disconnect_button=ttk.Button(box,text='断开',command=lambda:self.dispatch('disconnect'))
+        self.disconnect_button.grid(row=0,column=3)
 
     def _button(self, parent, text, action):
         button = ttk.Button(parent, text=text, command=lambda: self.dispatch(action))
         button.pack(side='left', padx=(0, 7), pady=4)
         self.operation_buttons.append(button)
+        if action in ("admit","revoke"):self.admission_buttons.append(button)
         return button
 
     def _tree(self, parent, columns):
@@ -365,12 +381,18 @@ class DebugWindow:
         self._button(bar, '读取状态', 'status')
         self.nodes = self._tree(parent, [('node_id', '节点 ID', 200), ('ready', '就绪', 95),
                                          ('role', '角色', 120), ('operations', '支持操作', 260)])
+        self.nodes.configure(columns=('node_id','ready','role','operations','trust','admission_revision'))
+        for key,label in (('trust','准入状态'),('admission_revision','授权版本')):
+            self.nodes.heading(key,text=label)
+            self.nodes.column(key,width=100,minwidth=80)
         self.nodes.bind('<<TreeviewSelect>>', self._select_node)
         echo = ttk.Frame(parent)
         echo.pack(fill='x')
         ttk.Label(echo, text='Echo 内容').pack(side='left', padx=(0, 8))
         ttk.Entry(echo, textvariable=self.values['echo']).pack(side='left', fill='x', expand=True, padx=(0, 10))
         self._button(echo, '发送 Echo', 'echo')
+        self._button(echo, '授权接入', 'admit')
+        self._button(echo, '撤销授权', 'revoke')
         ttk.Label(parent, text='节点状态来自手动刷新；详细响应显示在下方结果区。').pack(anchor='w')
 
     def _tasks(self, parent):
@@ -379,7 +401,7 @@ class DebugWindow:
         create.pack(fill='x')
         self._field(create, '服务类型', 'task_kind', 0, 0, 18, tuple(TASK_KINDS))
         self._field(create, '执行节点', 'executor', 0, 2, 16)
-        self._field(create, '检查/基础诊断节点', 'target', 1, 0, 18)
+        self.diagnostic_target_box = self._field(create, '检查/基础诊断节点', 'target', 1, 0, 18, (), editable=True)
         self._field(create, '被监视任务 ID', 'watch_task_id', 1, 2, 34)
         self._field(create, '反馈超时 / 秒', 'stale_after', 0, 4, 8)
         self._field(create, '持续时间 / 秒', 'duration', 2, 0, 8)
@@ -435,28 +457,17 @@ class DebugWindow:
 
     def _states(self):
         available = self.connected and not self.busy
-        for button in self.operation_buttons:
-            button.configure(state='normal' if available else 'disabled')
+        for button in self.operation_buttons:button.configure(state='normal' if available else 'disabled')
         self.connect_button.configure(state='normal' if not self.connected and not self.busy else 'disabled')
         self.disconnect_button.configure(state='normal' if available else 'disabled')
-        serial = self.values['transport'].get() == 'serial'
-        for index, widget in enumerate(self.settings_widgets):
-            enabled = not self.connected and not self.busy
-            if index == 1:
-                enabled = enabled and serial
-            elif index >= 2:
-                enabled = enabled and not serial
-            widget.configure(state=('readonly' if index == 0 else 'normal') if enabled else 'disabled')
-
-    def _browse(self):
-        path = filedialog.askdirectory(parent=self.root, title='选择包含 ca.pem / client.pem / client.key 的目录')
-        if path:
-            self.values['cert_dir'].set(path)
+        for widget in self.settings_widgets:widget.configure(state='normal' if not self.connected and not self.busy else 'disabled')
 
     def _select_node(self, _=None):
         selected = self.nodes.selection()
         if selected:
             self.values['target'].set(self.nodes.item(selected[0], 'values')[0])
+            row=self.node_rows.get(self.values['target'].get(),{})
+            self.values['admission_revision'].set(str(row.get('admission_revision','')))
 
     def _select_task(self, _=None):
         selected = self.tasks.selection()
@@ -539,11 +550,21 @@ class DebugWindow:
         try:
             while True:
                 action, ok, result, elapsed = self.worker.results.get_nowait()
+                if action=='push':
+                    if self.connected:
+                        if result.get('type')=='task.event':
+                            self._apply('events',dict(items=[result],cursor=result['cursor']))
+                        elif result.get('type')=='nodes.snapshot':
+                            self._apply('nodes',result['nodes'])
+                    continue
                 self.busy = False
                 if action == 'connect' and ok:
                     self.connected = True
+                    if isinstance(result,dict) and result.get('root_id'):
+                        self.values['executor'].set(result['root_id'])
                     self.cursor = 0
                     self.task_rows.clear()
+                    self.node_rows.clear()
                     self.deleted_tasks.clear()
                     self.nodes.delete(*self.nodes.get_children())
                     self.network.clear()
@@ -553,6 +574,8 @@ class DebugWindow:
                     self.incidents.delete(*self.incidents.get_children())
                     self.values['task_id'].set('')
                     self.target_box.configure(values=())
+                    self.diagnostic_target_box.configure(values=())
+                    self._target_initialized = False
                     self.state.set('链路已打开 · 点击刷新节点验证后台响应')
                 elif action == 'disconnect':
                     self.connected = False
@@ -578,6 +601,11 @@ class DebugWindow:
         self.root.after(80, self._drain)
 
     def _apply(self, action, result):
+        if action in ('admit','revoke'):
+            self.values['admission_revision'].set(str(result['admission_revision']))
+            self.state.set('后台准入状态已保存；Broker ACL 待受控加载')
+            self.worker.submit('nodes')
+            return
         if isinstance(result, dict) and result.get('deleted') is True:
             self._remove_task(result['task_id'])
         elif action == 'services':
@@ -595,19 +623,48 @@ class DebugWindow:
             self.incidents.delete(*self.incidents.get_children())
             for row in result['items']:
                 self.incidents.insert('', 'end',values=tuple(row.get(key,'—') for key in ('event_id','source_task_id','node_id','area_id','point_id')))
+        elif action in ('parent_get','parent_apply','parent_snapshot'):
+            if result.get('target')==self.values['parent_child'].get():
+                if action!='parent_snapshot':self.values['parent_revision'].set(str(result['revision']))
+                if action=='parent_get':
+                    self.values['parent_mode'].set({'auto':'自动','prefer':'优先指定','fixed':'固定指定'}[result['mode']])
+                    self.values['parent_uav'].set(result.get('parent') or '')
+                state={'unconfigured':'尚未配置','pending':'待下发','accepted':'已接收，等待重连确认','applied':'已生效',
+                       'fallback':'已回退自动选择','waiting':'等待指定父节点','uncertain':'下发结果待确认',
+                       'unconfirmed':'重连结果未确认','rejected':'节点拒绝'}.get(result['state'],result['state'])
+                bssid=result.get('actual_bssid')
+                actual=next((r['node_id'] for r in self.node_rows.values() if bssid and
+                    (r.get('status') or {}).get('ap_mac','').lower()==bssid.lower()),bssid or '未上报')
+                self.parent_summary.set(f"版本 {result['revision']} · 期望 {result.get('parent') or '自动'} · {state} · 实际父节点 {actual} · {result.get('error') or ''}")
         elif action == 'nodes':
+            self.node_rows={row['node_id']:row for row in result}
+            self.parent_child_box.configure(values=[r['node_id'] for r in result if r.get('role',(r.get('status') or {}).get('role'))=='micro_uav'])
+            self.parent_uav_box.configure(values=[r['node_id'] for r in result if r.get('role',(r.get('status') or {}).get('role'))=='uav' and r.get('trust_status','trusted')=='trusted'])
+            current=self.node_rows.get(self.values['parent_child'].get(),{}).get('parent_policy')
+            if current:self._apply('parent_snapshot',current)
             self.network.update(result)
-            self.nodes.delete(*self.nodes.get_children())
             ids = []
             for row in result:
-                ids.append(row['node_id'])
+                identity = row['node_id']
+                ids.append(identity)
                 status = row.get('status') or {}
-                self.nodes.insert('', 'end', values=(row['node_id'],
+                values = (identity,
                     {True: '是', False: '否'}.get(row.get('ready'), '未知'),
-                    row.get('role', status.get('role', '—')), ', '.join(row.get('operations', []))))
+                    row.get('role', status.get('role', '—')), ', '.join(row.get('operations', [])), {'trusted':'可信','pending':'待授权','revoked':'已撤销'}.get(row.get('trust_status'),'—'), row.get('admission_revision','—'))
+                if self.nodes.exists(identity):
+                    self.nodes.item(identity, values=values)
+                else:
+                    self.nodes.insert('', 'end', iid=identity, values=values)
+                self.nodes.move(identity, '', len(ids)-1)
+            removed = set(self.nodes.get_children())-set(ids)
+            if removed:self.nodes.delete(*removed)
             self.target_box.configure(values=ids)
-            if ids and self.values['target'].get() not in ids:
-                self.values['target'].set(ids[0])
+            self.diagnostic_target_box.configure(values=ids)
+            if ids and not self._target_initialized:
+                self._target_initialized = True
+                if not self.values['target'].get():self.values['target'].set(ids[0])
+            row=self.node_rows.get(self.values['target'].get(),{})
+            self.values['admission_revision'].set(str(row.get('admission_revision','')))
         elif action == 'status' and isinstance(result.get('payload'), dict):
             identity = result.get('node_id')
             rows = list(self.network.nodes.values())
@@ -718,13 +775,7 @@ class DebugWindow:
 
 def main():
     parser = argparse.ArgumentParser(description='车机 M1 桌面调试界面；打开后手动连接')
-    parser.add_argument('--transport', choices=('serial', 'mqtt'), default='serial')
-    parser.add_argument('--port', default='COM7')
-    parser.add_argument('--host', default='127.0.0.1')
-    parser.add_argument('--broker-port', type=int, default=8883)
-    parser.add_argument('--node-id', default='pc-root-001')
-    parser.add_argument('--cert-dir', default='')
-    parser.add_argument('--server-name', default='ugv-broker.lab')
+    parser.add_argument('--base-url',default='http://127.0.0.1:8080')
     root = tk.Tk()
     DebugWindow(root, vars(parser.parse_args()))
     root.mainloop()

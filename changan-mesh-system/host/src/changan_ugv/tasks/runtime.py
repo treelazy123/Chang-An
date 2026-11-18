@@ -5,17 +5,18 @@ import uuid
 from changan_ugv.tasks.store import Store, HOST_KINDS, TERMINAL
 from changan_ugv.tasks.ports import NodeChannel, ExecutorFactory
 from changan_ugv.tasks.workflows import WORKFLOW_ROLES, WORKFLOW_KINDS, SERVICE_SUFFIX, MODE
+from changan_ugv.nodes.inventory import root_of
 
 
 class Runtime:
-    def __init__(self, channel: NodeChannel, *, database, executor_factory: ExecutorFactory, inventory_loader, ugv_id='ugv-001'):
+    def __init__(self, channel: NodeChannel, *, database, executor_factory: ExecutorFactory, inventory_loader, ugv_id='ugv-root', operators=('http-local',)):
         self.channel, self.ugv_id = channel, ugv_id
         self.inventory_loader = inventory_loader
+        self.operators=frozenset(operators)
         self.closed = False
         self.store = Store(database)
         self.queries = {}
         self.query_at = {}
-        self.notify_cursor = self.store.db.execute('SELECT COALESCE(MAX(cursor),0) FROM task_events').fetchone()[0]
         try:
             self.local = executor_factory(lambda body:self.receive(ugv_id,body), self.ready_count)
             if hasattr(self.local, 'bind_runtime'):
@@ -29,8 +30,8 @@ class Runtime:
 
     def targets(self, owner):
         entries = self.inventory_loader()['nodes']
-        enabled = [e for e in entries if e.get('enabled', True) and e.get('ugv_id','ugv-001')==self.ugv_id]
-        if owner != 'local-console' and not any(e['node_id']==owner and e['role']=='pc_root' for e in enabled):
+        enabled = [e for e in entries if e.get('enabled', True) and e.get('trust_status','trusted')=='trusted' and root_of(e)==self.ugv_id]
+        if owner != 'local-console' and owner not in self.operators:
             raise ValueError('terminal_not_authorized_for_ugv')
         return {e['node_id'] for e in enabled}
 
@@ -201,18 +202,6 @@ class Runtime:
                 self.queries[identity] = (row['target'],row['task_id'],boot,now+15)
                 self.query_at[row['task_id']] = now+5
                 self.publish(row['target'],packet)
-        # Live notifications are best effort; durable cursor queries are authoritative.
-        for row in self.store.notifications(self.notify_cursor):
-            self.notify_cursor = row['cursor']
-            if row['owner'] == 'local-console':
-                continue
-            try:
-                self.targets(row['owner'])
-            except ValueError:
-                continue
-            body = dict(v=1,type='task.event',node_id='ugv-service',cursor=row['cursor'],**json.loads(row['body']))
-            self.channel.notify(row['owner'],body)
-
     def close(self):
         if self.closed:return
         self.closed=True

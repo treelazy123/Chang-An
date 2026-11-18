@@ -12,17 +12,17 @@ from task_store import Store
 from task_runtime import Runtime
 from changan_ugv.agents.ugv import HostDiagnostics
 from changan_ugv.transport.node_channel import MQTTNodeChannel
-from mqtt_controller import Registry
+from changan_ugv.nodes.controller import Registry
 from node_inventory import defaults, write_inventory, write_acl, load_inventory
-from ugv_requests import Requests
-from mesh_protocol import encode
+from changan_ugv.service.requests import Requests
+from changan_ugv.protocol.messages import encode
 
 class TaskLifecycle(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.path=Path(self.temp.name)/'tasks.db';self.now=1000;self.index=0
         self.store=Store(self.path,clock=lambda:self.now);self.addCleanup(lambda:self.store.close())
-        self.owner='pc-root-001';self.targets={'micro-001','micro-002'}
+        self.owner='http-local';self.targets={'micro-001','micro-002'}
     def request(self,message_type,**fields):
         self.index+=1
         return dict(v=1,type=message_type,node_id=self.owner,msg_id=str(self.index),deadline_unix=self.now+20,**fields)
@@ -205,35 +205,34 @@ class LocalAgent(unittest.TestCase):
             agent.handle(pause);self.assertEqual('RUNNING',agent.row['state'])
 
 class TaskIntegration(unittest.TestCase):
-    def test_legacy_router_task_source_and_malformed_type(self):
+    def test_http_router_scope_and_malformed_type(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);write_inventory(root,defaults())
             connected=threading.Event();connected.set()
             c=SimpleNamespace(connected=connected,condition=threading.Condition(),registry=Registry(nodes=['micro-001']))
             c.client=SimpleNamespace(publish=lambda *args,**kwargs:SimpleNamespace(rc=0))
-            runtime=Runtime(MQTTNodeChannel(c),database=root/'runtime/tasks.sqlite3',
-                            executor_factory=lambda emit,snapshot:HostDiagnostics(root/'runtime/ugv-task-agent.json','ugv-001',emit,snapshot),
+            runtime=Runtime(MQTTNodeChannel(c),database=root/'runtime/ugv-root/tasks.sqlite3',
+                            executor_factory=lambda emit,snapshot:HostDiagnostics(root/'runtime/ugv-root/agent.json','ugv-root',emit,snapshot),
                             inventory_loader=lambda:load_inventory(root));c.tasks=runtime
             try:
                 api=Requests(c,root,clock=lambda:1000)
-                base=dict(v=1,type='task.create',node_id='pc-root-001',msg_id='create',deadline_unix=1020,
+                base=dict(v=1,type='task.create',node_id='http-local',msg_id='create',deadline_unix=1020,
                           task_id='task',target='micro-001',kind='diagnostics')
-                self.assertEqual('task.reply',api.handle(base,'pc-root-001')[0]['type'])
-                self.assertEqual('terminal_not_authorized',api.handle(base,'micro-001')[0]['error'])
-                self.assertEqual('invalid_request',api.handle(dict(base,type={}),'pc-root-001')[0]['error'])
-                inv=defaults();inv['nodes'][0]['ugv_id']='elsewhere';write_inventory(root,inv)
-                self.assertIn('authorized',api.handle(dict(base,msg_id='new'),'pc-root-001')[0]['error'])
+                self.assertEqual('task.reply',api.handle(base,local=True)[0]['type'])
+                self.assertEqual('http_transport_required',api.handle(base,local=False)[0]['error'])
+                self.assertEqual('invalid_request',api.handle(dict(base,type={}),local=True)[0]['error'])
+                inv=defaults();inv['nodes'][-1]['enabled']=False;write_inventory(root,inv)
+                self.assertIn('authorized',api.handle(dict(base,msg_id='new'),local=True)[0]['error'])
             finally:runtime.close()
 
     def test_new_topic_permissions_are_per_node_and_car(self):
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory);write_acl(root,defaults());text=(root/'runtime/acl.conf').read_text()
+            root=Path(directory);write_acl(root,defaults());text=(root/'runtime/ugv-root/acl.conf').read_text()
             micro=text.split('user micro-001\n')[1].split('\n\n')[0]
             self.assertIn('read mesh/v1/nodes/micro-001/task_commands',micro)
             self.assertIn('write mesh/v1/nodes/micro-001/task_events',micro)
             self.assertNotIn('nodes/+',micro);self.assertNotIn('terminals/',micro)
-            root_acl=text.split('user pc-root-001\n')[1].split('\n\n')[0]
-            self.assertIn('read mesh/v1/terminals/pc-root-001/events',root_acl)
-            self.assertNotIn('write mesh/v1/nodes/uav-001/task_commands',root_acl)
+            self.assertNotIn('terminals/',text)
+            self.assertNotIn('user ugv-root\n',text)
 
 if __name__=='__main__':unittest.main()

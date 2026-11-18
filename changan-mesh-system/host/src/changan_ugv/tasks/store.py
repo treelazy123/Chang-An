@@ -157,7 +157,7 @@ class Store:
                 return json.loads(cached['reply'])
             result = self._request(packet, owner, targets)
             reply = dict(v=1, type='task.reply', node_id='ugv-service', msg_id=packet['msg_id'], ok=True, **result)
-            from changan_ugv.protocol.frames import encode
+            from changan_ugv.protocol.messages import encode
             encode(reply)  # Roll back, rather than commit an unrepresentable reply.
             if kind in ('task.create', 'task.control', 'task.update'):
                 self.db.execute('INSERT INTO requests VALUES(?,?,?,?)',

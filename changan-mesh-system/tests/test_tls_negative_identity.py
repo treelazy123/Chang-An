@@ -18,8 +18,8 @@ class NegativeIdentity(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
         with contextlib.redirect_stdout(io.StringIO()):provision(self.root)
         from node_identity import enroll
-        enroll(self.root,"uav","uav-001","ugv-001")
-        enroll(self.root,"micro_uav","micro-001","ugv-001")
+        enroll(self.root,"uav","uav-001","ugv-root")
+        enroll(self.root,"micro_uav","micro-001","ugv-root")
     def snapshot(self):
         return {str(p.relative_to(self.root)):hashlib.sha256(p.read_bytes()).hexdigest()
                 for p in (self.root/'secrets').rglob('*') if p.is_file()}

@@ -1,8 +1,9 @@
 #include "sdkconfig.h"
 #include "mqtt_serial.h"
+#include "parent_policy.h"
 #if CONFIG_APP_TRANSPORT_MQTT_SERIAL
 #include "service_discovery.h"
-#if !CONFIG_APP_ROLE_UGV
+#if !CONFIG_APP_ROOT_GATEWAY
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -21,7 +22,6 @@
 #include "lwip/inet.h"
 #include "node_role.h"
 #include "app_protocol.h"
-#include "car_gateway.h"
 #include "task_agent.h"
 extern const char ca[] asm("_binary_ca_pem_start");
 extern const char cert[] asm("_binary_client_pem_start");
@@ -30,9 +30,7 @@ extern const char key[] asm("_binary_client_key_start");
 #define SUBSCRIBED (1U << 1)
 #define CLOCKED (1U << 2)
 #define LOST (1U << 3)
-#define CAR_READY (1U << 4)
 static const char *TAG="mesh_mqtt";
-static mqtt_serial_ingress_t ingress;
 static EventGroupHandle_t state;
 static QueueHandle_t commands;
 static esp_mqtt_client_handle_t client;
@@ -54,25 +52,22 @@ static int publish(const char *suffix,const cJSON *body,int qos,bool retain) {
 }
 static void mqtt_event(void *ctx,esp_event_base_t base,int32_t id,void *data) {
     (void)ctx;(void)base;esp_mqtt_event_handle_t e=data;
-    if(id!=MQTT_EVENT_CONNECTED && id!=MQTT_EVENT_DATA) { car_gateway_event(client,id,e); }
     if(id==MQTT_EVENT_CONNECTED) {
         receiving=false;assembled=0;xEventGroupSetBits(state,CONNECTED);
         subscription=esp_mqtt_client_subscribe_single(client,command_topic,1);
         task_subscription=esp_mqtt_client_subscribe_single(client,task_topic,1);
         (void)esp_mqtt_client_subscribe_single(client,"mesh/v1/clock",1);
-        car_gateway_event(client,id,e);
     } else if(id==MQTT_EVENT_SUBSCRIBED && e->msg_id==subscription) {
         xEventGroupSetBits(state,SUBSCRIBED);
     } else if(id==MQTT_EVENT_SUBSCRIBED && e->msg_id==task_subscription) {
         xEventGroupSetBits(state,TASK_READY);
     } else if(id==MQTT_EVENT_DISCONNECTED || id==MQTT_EVENT_ERROR) {
-        xEventGroupClearBits(state,CONNECTED|SUBSCRIBED|CLOCKED|CAR_READY|TASK_READY);xEventGroupSetBits(state,LOST);
+        xEventGroupClearBits(state,CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY);xEventGroupSetBits(state,LOST);
         if(id==MQTT_EVENT_ERROR && e->error_handle) {
             ESP_LOGE(TAG,"TLS/MQTT error type=%d tls=0x%x verify=0x%x",e->error_handle->error_type,
                 e->error_handle->esp_tls_last_esp_err,e->error_handle->esp_tls_cert_verify_flags);
         }
     } else if(id==MQTT_EVENT_DATA) {
-        if(car_gateway_event(client,id,e)) { return; }
 
         if(e->current_data_offset==0 && e->topic_len==13 && !memcmp(e->topic,"mesh/v1/clock",13)) {
             if(e->total_data_len!=e->data_len || e->data_len<=0 || e->data_len>100) { return; }
@@ -102,7 +97,6 @@ static void mqtt_event(void *ctx,esp_event_base_t base,int32_t id,void *data) {
 static bool endpoint(uint32_t *ip) {
     esp_netif_ip_info_t local={0};esp_netif_t *sta=esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
     if(!sta || esp_mesh_lite_get_level()<1 || esp_netif_get_ip_info(sta,&local)!=ESP_OK) { return false; }
-    if(ingress == MQTT_SERIAL_UGV_STA) { return service_discovery_ugv(ip); }
     if(!local.ip.addr) { return false; }
     return service_discovery_ugv_ap(ip);
 }
@@ -129,6 +123,12 @@ static void reply_command(const command_t *packet) {
        !(xEventGroupGetBits(state)&CLOCKED)) {
         cJSON_ReplaceItemInObjectCaseSensitive(reply,"ok",cJSON_CreateBool(false));
         cJSON_AddStringToObject(reply,"error","expired_or_invalid_deadline");
+    } else if (node_role_is_leaf() && !strcmp(app_json_string(cmd,"op"),"parent")) {
+        const char *error=parent_policy_prepare(cJSON_GetObjectItemCaseSensitive(cmd,"payload"));
+        if (error) {
+            cJSON_ReplaceItemInObjectCaseSensitive(reply,"ok",cJSON_CreateBool(false));
+            cJSON_AddStringToObject(reply,"error",error);
+        }
     }
     char *json=cJSON_PrintUnformatted(reply);
     if(json && strlen(json)<=APP_JSON_MAX) {
@@ -148,6 +148,7 @@ static void announce_capabilities(bool force) {
         cJSON_AddStringToObject(cap,"boot_id",boot);cJSON *ops=cJSON_AddArrayToObject(cap,"operations");
         cJSON_AddItemToArray(ops,cJSON_CreateString("ping"));cJSON_AddItemToArray(ops,cJSON_CreateString("status"));
         cJSON_AddItemToArray(ops,cJSON_CreateString("echo"));task_agent_capabilities(cap);
+        if (node_role_is_leaf()) { cJSON_AddItemToArray(ops,cJSON_CreateString("parent")); }
         const char *status=app_json_string(cap,"task_status"),*task=app_json_string(cap,"task_id");
         if(!task) { task=""; }
         if(status && (force || strcmp(status,capability_state) || strcmp(task,capability_task))) {
@@ -173,14 +174,12 @@ static void mqtt_task(void *arg) {
     snprintf(command_topic,sizeof(command_topic),"mesh/v1/nodes/%s/commands",node_role_id());
     snprintf(task_topic,sizeof(task_topic),"mesh/v1/nodes/%s/task_commands",node_role_id());
     ESP_ERROR_CHECK(task_agent_init(boot,task_emit));
-    car_gateway_init();
     snprintf(presence,sizeof(presence),"mesh/v1/nodes/%s/presence",node_role_id());
     snprintf(will,sizeof(will),"{\"v\":1,\"type\":\"presence\",\"node_id\":\"%s\",\"online\":false}",node_role_id());
     if(time(NULL)<CONFIG_APP_TLS_BOOTSTRAP_UNIX) {
         struct timeval tv={.tv_sec=CONFIG_APP_TLS_BOOTSTRAP_UNIX};settimeofday(&tv,NULL);
     }
     for(;;) {
-        car_gateway_poll(client,false);
         task_agent_tick(false);
         uint32_t address;
         if(!endpoint(&address)) { vTaskDelay(pdMS_TO_TICKS(1000));continue; }
@@ -197,7 +196,7 @@ static void mqtt_task(void *arg) {
             .network.disable_auto_reconnect=true,.network.timeout_ms=15000,
             .task.stack_size=8192,.buffer.size=1024,.buffer.out_size=1024,.outbox.limit=8192,
         };
-        xEventGroupClearBits(state,CONNECTED|SUBSCRIBED|CLOCKED|CAR_READY|TASK_READY|LOST);xQueueReset(commands);
+        xEventGroupClearBits(state,CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY|LOST);xQueueReset(commands);
         client=esp_mqtt_client_init(&config);
         if(!client) { vTaskDelay(pdMS_TO_TICKS(2000));continue; }
         ESP_LOGI(TAG,"CONNECT node=%s target=%s identity=%s",node_role_id(),uri,CONFIG_APP_MQTT_SERVER_NAME);
@@ -209,7 +208,6 @@ static void mqtt_task(void *arg) {
             if(!endpoint(&current) || current!=address) { break; }
             EventBits_t bits=xEventGroupGetBits(state);
             bool active=(bits&(CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY))==(CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY);
-            car_gateway_poll(client,active);
             task_agent_tick(active);
             if(!announced && active) { announce_ready();announced=true; }
             if(announced && active && capabilities_dirty) { announce_capabilities(false); }
@@ -227,16 +225,13 @@ static void mqtt_task(void *arg) {
             }
             vTaskDelay(pdMS_TO_TICKS(50));
         }
-        car_gateway_poll(client,false);
         task_agent_tick(false);
         esp_mqtt_client_stop(client);esp_mqtt_client_destroy(client);client=NULL;
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
-esp_err_t mqtt_serial_start(mqtt_serial_ingress_t selected_ingress) {
+esp_err_t mqtt_serial_start(void) {
     if(CONFIG_APP_TLS_BOOTSTRAP_UNIX<1700000000) { ESP_LOGE(TAG,"Provision trusted lab UTC and certificates first");return ESP_ERR_INVALID_STATE; }
-    if(selected_ingress != MQTT_SERIAL_UGV_STA && selected_ingress != MQTT_SERIAL_UGV_SOFTAP) { return ESP_ERR_INVALID_ARG; }
-    ingress = selected_ingress;
     state=xEventGroupCreate();commands=xQueueCreate(4,sizeof(command_t));
     if(!state || !commands) { return ESP_ERR_NO_MEM; }
     esp_err_t err=service_discovery_start();if(err!=ESP_OK) { return err; }
@@ -244,5 +239,5 @@ esp_err_t mqtt_serial_start(mqtt_serial_ingress_t selected_ingress) {
 }
 #endif
 #else
-esp_err_t mqtt_serial_start(mqtt_serial_ingress_t selected_ingress) { (void)selected_ingress;return ESP_ERR_NOT_SUPPORTED; }
+esp_err_t mqtt_serial_start(void) { return ESP_ERR_NOT_SUPPORTED; }
 #endif

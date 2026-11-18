@@ -5,9 +5,6 @@ import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from car_terminal.tasks import TaskClient, task_line
 from car_terminal.client import request_line
-from car_terminal.protocol import Decoder, encode
-from car_terminal.serial_link import RootLink
-from test_terminal import FakeSerial
 
 class FakeTransport:
     def __init__(self):self.seen=[]
@@ -100,20 +97,5 @@ class TaskAPITests(unittest.TestCase):
         class Rejected:
             def request(self,p):return dict(type='error',error='revision_conflict')
         with self.assertRaisesRegex(ValueError,'revision_conflict'):TaskClient(Rejected()).get('task')
-
-    def test_task_reply_and_live_event_are_separate_on_fragmented_serial(self):
-        class Serial(FakeSerial):
-            def write(self,data):
-                for p in self.decoder.feed(data):
-                    for message in [dict(v=1,type='task.event',task_id='t',state='RUNNING',cursor=1),
-                                    dict(v=1,type='task.reply',msg_id=p['msg_id'],ok=True,task=dict(task_id='t'))]:
-                        wire=encode(message)
-                        for i in range(0,len(wire),5):self.input.put(wire[i:i+5])
-                return len(data)
-        received=[];link=RootLink(Serial(),on_message=received.append).start()
-        try:
-            response=link.request(dict(v=1,type='task.get',msg_id='abc',task_id='t'),timeout=2)
-            self.assertEqual('task.reply',response['type']);self.assertTrue(any(m['type']=='task.event' for m in received))
-        finally:link.close()
 
 if __name__=='__main__':unittest.main()

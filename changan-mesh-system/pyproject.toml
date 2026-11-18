@@ -1,12 +1,13 @@
 [project]
 name = "changan-mesh-system"
 version = "0.7.0"
-description = "UGV host runtime and administration for the Changan Mesh system"
+description = "UGV root host: HTTP/WebSocket operator API and MQTT/TLS node task management"
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "pyserial>=3.5,<4",
     "paho-mqtt==2.1.0",
     "cryptography>=43,<47",
+    "aiohttp>=3.11,<4",
 ]
 
 [build-system]

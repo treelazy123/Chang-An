@@ -17,7 +17,7 @@
     uint32_t version,revision,op_seq,duration_s,period_ms,elapsed_ms,samples,heap_min; \
     int32_t rssi_min,rssi_max; \
     char task_id[33],command_id[33],op[16],state[24];
-typedef struct { JOURNAL_BASE_FIELDS } legacy_journal_t;
+typedef struct { JOURNAL_BASE_FIELDS } v1_journal_t;
 typedef struct {
     JOURNAL_BASE_FIELDS
     char kind[20],area_id[13],point_ids[3][13],event_id[33],test_verdict[16];
@@ -140,16 +140,16 @@ esp_err_t task_agent_init(const char *boot,task_agent_emit_t callback) {
     emit=callback;snprintf(boot_id,sizeof(boot_id),"%s",boot);
     esp_err_t err=nvs_open("m1_task",NVS_READWRITE,&storage);if(err!=ESP_OK) { return err; }
     memset(&journal,0,sizeof(journal));
-    size_t size=0;bool legacy=false;err=nvs_get_blob(storage,"journal_v2",NULL,&size);
-    if(err==ESP_ERR_NVS_NOT_FOUND) { legacy=true;err=nvs_get_blob(storage,"journal",NULL,&size); }
+    size_t size=0;bool from_v1=false;err=nvs_get_blob(storage,"journal_v2",NULL,&size);
+    if(err==ESP_ERR_NVS_NOT_FOUND) { from_v1=true;err=nvs_get_blob(storage,"journal",NULL,&size); }
     if(err==ESP_ERR_NVS_NOT_FOUND) { snprintf(journal.kind,sizeof(journal.kind),"diagnostics"); }
-    else if(err==ESP_OK && legacy && size==sizeof(legacy_journal_t)) {
-        legacy_journal_t old;err=nvs_get_blob(storage,"journal",&old,&size);
+    else if(err==ESP_OK && from_v1 && size==sizeof(v1_journal_t)) {
+        v1_journal_t old;err=nvs_get_blob(storage,"journal",&old,&size);
         if(err!=ESP_OK || old.version!=1) { return ESP_ERR_INVALID_STATE; }
         memcpy(&journal,&old,sizeof(old));journal.version=2;
         snprintf(journal.kind,sizeof(journal.kind),"diagnostics");
         if(!persist(&journal)) { return ESP_FAIL; }
-    } else if(err==ESP_OK && !legacy && size==sizeof(journal)) {
+    } else if(err==ESP_OK && !from_v1 && size==sizeof(journal)) {
         err=nvs_get_blob(storage,"journal_v2",&journal,&size);
         if(err!=ESP_OK || journal.version!=2 || !memchr(journal.kind,'\0',sizeof(journal.kind))) { return ESP_ERR_INVALID_STATE; }
     } else { return ESP_ERR_INVALID_STATE; }

@@ -9,8 +9,8 @@
 #include "esp_mesh_lite.h"
 #include "node_role.h"
 #include "app_protocol.h"
+#include "parent_policy.h"
 
-static const uint8_t MAGIC[4] = {'M', 'L', 'T', '1'};
 uint16_t app_crc16(const uint8_t *data, size_t size)
 {
     uint16_t crc = 0xffff;
@@ -21,45 +21,6 @@ uint16_t app_crc16(const uint8_t *data, size_t size)
         }
     }
     return crc;
-}
-size_t app_frame_encode(const char *json, size_t size, uint8_t out[APP_FRAME_MAX])
-{
-    if (!json || size < 2 || size > APP_JSON_MAX) { return 0; }
-    memcpy(out, MAGIC, 4);
-    out[4] = (uint8_t)(size >> 8);
-    out[5] = (uint8_t)size;
-    uint16_t crc = app_crc16((const uint8_t *)json, size);
-    out[6] = (uint8_t)(crc >> 8);
-    out[7] = (uint8_t)crc;
-    memcpy(out + APP_FRAME_HEADER, json, size);
-    return size + APP_FRAME_HEADER;
-}
-static void discard(app_frame_decoder_t *decoder, size_t size)
-{
-    memmove(decoder->data, decoder->data + size, decoder->used - size);
-    decoder->used -= size;
-}
-void app_frame_feed(app_frame_decoder_t *decoder, uint8_t byte,
-                    app_frame_callback_t callback, void *ctx)
-{
-    if (decoder->used == sizeof(decoder->data)) { discard(decoder, 1); }
-    decoder->data[decoder->used++] = byte;
-    while (decoder->used >= 4) {
-        if (memcmp(decoder->data, MAGIC, 4)) { discard(decoder, 1); continue; }
-        if (decoder->used < APP_FRAME_HEADER) { return; }
-        size_t size = ((size_t)decoder->data[4] << 8) | decoder->data[5];
-        if (size < 2 || size > APP_JSON_MAX) { discard(decoder, 1); continue; }
-        if (decoder->used < APP_FRAME_HEADER + size) { return; }
-        uint16_t expected = ((uint16_t)decoder->data[6] << 8) | decoder->data[7];
-        if (app_crc16(decoder->data + APP_FRAME_HEADER, size) != expected) {
-            discard(decoder, 1); continue;
-        }
-        char json[APP_JSON_MAX + 1];
-        memcpy(json, decoder->data + APP_FRAME_HEADER, size);
-        json[size] = '\0';
-        discard(decoder, APP_FRAME_HEADER + size);
-        callback(json, size, ctx);
-    }
 }
 const char *app_json_string(const cJSON *object, const char *key)
 {
@@ -87,7 +48,7 @@ cJSON *app_message_parse(const char *json, size_t size)
         !type || !type[0] || strlen(type) > 24) {
         cJSON_Delete(message); return NULL;
     }
-    // Reject duplicate top-level keys to keep PC and firmware interpretation identical.
+    // Reject duplicate top-level keys to keep host and firmware interpretation identical.
     for (const cJSON *a = message->child; a; a = a->next) {
         for (const cJSON *b = a->next; b; b = b->next) {
             if (!strcmp(a->string, b->string)) { cJSON_Delete(message); return NULL; }
@@ -128,13 +89,21 @@ static void status_add_network(cJSON *payload)
     esp_netif_ip_info_t info = {0};
     esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
     esp_netif_t *ap = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    const bool ap_enabled = esp_wifi_get_mode(&mode) == ESP_OK && (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA);
+    cJSON_AddBoolToObject(payload, "ap_enabled", ap_enabled);
     if (sta && esp_netif_get_ip_info(sta, &info) == ESP_OK && info.ip.addr) {
         status_add_ip(payload, "sta_ip", &info.ip);
         status_add_ip(payload, "gateway", &info.gw);
         status_add_ip(payload, "netmask", &info.netmask);
     }
-    if (ap && esp_netif_get_ip_info(ap, &info) == ESP_OK) {
+    if (ap_enabled && ap && esp_netif_get_ip_info(ap, &info) == ESP_OK) {
         status_add_ip(payload, "ap_ip", &info.ip);
+        wifi_config_t config = {0};
+        if (esp_wifi_get_config(WIFI_IF_AP, &config) == ESP_OK) {
+            char ssid[33]={0};memcpy(ssid,config.ap.ssid,32);
+            cJSON_AddStringToObject(payload,"ap_ssid",ssid);
+        }
     }
     uint8_t mac[6];
     char text[18];
@@ -142,7 +111,7 @@ static void status_add_network(cJSON *payload)
         snprintf(text, sizeof(text), MACSTR, MAC2STR(mac));
         cJSON_AddStringToObject(payload, "sta_mac", text);
     }
-    if (esp_wifi_get_mac(WIFI_IF_AP, mac) == ESP_OK) {
+    if (ap_enabled && esp_wifi_get_mac(WIFI_IF_AP, mac) == ESP_OK) {
         snprintf(text, sizeof(text), MACSTR, MAC2STR(mac));
         cJSON_AddStringToObject(payload, "ap_mac", text);
     }
@@ -160,7 +129,7 @@ static void status_add_network(cJSON *payload)
         cJSON_AddNumberToObject(payload, "channel", channel);
     }
     wifi_sta_list_t children = {0};
-    if (esp_wifi_ap_get_sta_list(&children) == ESP_OK) {
+    if (ap_enabled && esp_wifi_ap_get_sta_list(&children) == ESP_OK) {
         cJSON_AddNumberToObject(payload, "associated_children", children.num);
     }
 }
@@ -175,6 +144,7 @@ cJSON *app_status_payload(void)
         cJSON_AddNumberToObject(payload, "heap_min", esp_get_minimum_free_heap_size());
         cJSON_AddNumberToObject(payload, "uptime_ms", (double)(esp_timer_get_time() / 1000));
         status_add_network(payload);
+        parent_policy_status(payload);
     }
     return payload;
 }
@@ -188,7 +158,8 @@ cJSON *app_command_reply(const cJSON *command)
     cJSON_AddStringToObject(reply, "msg_id", app_json_string(command, "msg_id"));
     cJSON_AddStringToObject(reply, "op", op);
     bool addressed = !strcmp(target, node_role_id());
-    bool supported = !strcmp(op, "ping") || !strcmp(op, "status") || !strcmp(op, "echo");
+    bool supported = !strcmp(op, "ping") || !strcmp(op, "status") || !strcmp(op, "echo") ||
+                     (node_role_is_leaf() && !strcmp(op,"parent"));
     cJSON_AddBoolToObject(reply, "ok", addressed && supported);
     if (!addressed) {
         cJSON_AddStringToObject(reply, "error", "wrong_target");

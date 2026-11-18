@@ -1,5 +1,5 @@
 # Deployment template; install the referenced files before starting.
-# The backend can keep using loopback while Broker also listens on the USB IP interface.
+# The host connects to its local Broker; the root radio reaches it through USB.
 [broker]
 host = "127.0.0.1"
 port = 8883
@@ -11,9 +11,8 @@ client_key = "/etc/changan/pki/controller-001/client.key"
 [paths]
 inventory_file = "/etc/changan/nodes.json"
 task_database = "/var/lib/changan/tasks.sqlite3"
-agent_journal = "/var/lib/changan/ugv-task-agent.json"
+agent_journal = "/var/lib/changan/agent.json"
 lock_file = "/var/lib/changan/controller.lock"
 
 [service]
-ugv_id = "ugv-001"
-rpc_port = 8787
+ugv_id = "ugv-root"

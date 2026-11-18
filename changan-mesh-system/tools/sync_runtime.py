@@ -49,9 +49,8 @@ def sync_runtime(source,target):
     source,target=Path(source).resolve(),Path(target).resolve()
     if source==target or source in target.parents or target in source.parents:
         raise ValueError('Source and target must be separate repositories')
-    old_layout=(source/'host/config/nodes.json').is_file()
-    source_runtime=source/('host/runtime' if old_layout else 'runtime')
-    inventory_path=source/('host/config/nodes.json' if old_layout else 'config/nodes.json')
+    source_runtime=source/'runtime/ugv-root'
+    inventory_path=source/'config/nodes.json'
     inventory=validate(json.loads(inventory_path.read_text(encoding='utf-8')))
     for root in (source,target):
         if not (root/'secrets/ca.pem').is_file():raise ValueError('Missing existing CA in '+str(root))
@@ -72,11 +71,11 @@ def sync_runtime(source,target):
         # Validate source before touching the destination.
         with closing(sqlite3.connect(database.as_uri()+'?mode=ro',uri=True)) as db:
             if db.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise ValueError('Invalid source database')
-        runtime=target/'runtime';runtime.mkdir(exist_ok=True)
+        runtime=target/'runtime/ugv-root';runtime.mkdir(parents=True,exist_ok=True)
         backup=runtime/'backups'/datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
         backup.mkdir(parents=True)
         if (runtime/'tasks.sqlite3').exists():backup_database(runtime/'tasks.sqlite3',backup/'tasks.sqlite3')
-        for name in ('ugv-task-agent.json','mosquitto.conf','acl.conf'):
+        for name in ('agent.json','mosquitto.conf','acl.conf'):
             if (runtime/name).exists():shutil.copy2(runtime/name,backup/name)
         if (target/'config/nodes.json').exists():shutil.copy2(target/'config/nodes.json',backup/'nodes.json')
         for path,dest in copies:
@@ -84,13 +83,12 @@ def sync_runtime(source,target):
             if not dest.exists():shutil.copy2(path,dest)
             elif path.name=='clock.defaults':shutil.copy2(path,dest)
         backup_database(database,runtime/'tasks.sqlite3')
-        journal=source_runtime/'ugv-task-agent.json'
+        journal=source_runtime/'agent.json'
         if journal.exists():shutil.copy2(journal,runtime/journal.name)
-        elif (runtime/journal.name).exists():(runtime/journal.name).rename(backup/'stale-ugv-task-agent.json')
+        elif (runtime/journal.name).exists():(runtime/journal.name).rename(backup/'stale-agent.json')
         write_inventory(target,inventory);write_acl(target,inventory)
         config=(source_runtime/'mosquitto.conf').read_text(encoding='utf-8')
         config=config.replace(source.as_posix(),target.as_posix()).replace(str(source),str(target))
-        if old_layout:config=config.replace('host/runtime','runtime').replace('host\\runtime','runtime')
         (runtime/'mosquitto.conf').write_text(config,encoding='utf-8')
         return backup
 

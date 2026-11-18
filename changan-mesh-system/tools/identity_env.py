@@ -11,20 +11,30 @@ def crypto_available():
     except ImportError:
         return False
 
-def apply_identity(root,role,node_id,ugv_id=None,check_only=False):
+def apply_identity(root,role,node_id,ugv_id=None,check_only=False,inventory_path=None):
     from node_inventory import load_inventory
     from node_identity import check_identity,enroll
+    if inventory_path is not None:
+        entry=next((e for e in load_inventory(path=inventory_path)['nodes'] if e['node_id']==node_id),None)
+        if not entry or entry['role']!=role or not entry.get('enabled',True):
+            raise ValueError('Device must be enabled in the selected inventory')
+        if role=='ugv_root':return dict(entry,created=False,certificate_sha256=None)
+        fingerprint=check_identity(root,node_id)
+        metadata=Path(root)/'secrets'/node_id/'identity.json'
+        if metadata.exists() and json.loads(metadata.read_text(encoding='utf-8')).get('certificate_sha256')!=fingerprint:
+            raise ValueError('Existing identity fingerprint mismatch')
+        return dict(entry,created=False,certificate_sha256=fingerprint)
     if not check_only:
         return enroll(root,role,node_id,ugv_id)
     entry=next((e for e in load_inventory(root)['nodes'] if e['node_id']==node_id),None)
     if not entry or entry['role']!=role or not entry.get('enabled',True):
         raise ValueError('Device must be enrolled with this role and enabled before monitor')
-    return dict(entry,created=False,certificate_sha256=check_identity(root,node_id))
+    return dict(entry,created=False,certificate_sha256=None if role=='ugv_root' else check_identity(root,node_id))
 
-def ensure_identity(root,role,node_id,ugv_id=None,check_only=False,host_python=None):
+def ensure_identity(root,role,node_id,ugv_id=None,check_only=False,host_python=None,inventory_path=None):
     root=Path(root).resolve()
     if crypto_available():
-        return apply_identity(root,role,node_id,ugv_id,check_only)
+        return apply_identity(root,role,node_id,ugv_id,check_only,inventory_path)
     executable=Path(host_python) if host_python else root/'.venv'/('Scripts/python.exe' if os.name=='nt' else 'bin/python')
     if not executable.is_file():
         raise ValueError('Certificate operations require the uv host environment. Run uv sync --locked in the project directory; do not install cryptography into IDF Python.')
@@ -32,6 +42,7 @@ def ensure_identity(root,role,node_id,ugv_id=None,check_only=False,host_python=N
     command=[str(executable),'-X','utf8',str(worker),'--root',str(root),'--role',role,'--node-id',node_id]
     if ugv_id:command+=['--ugv-id',ugv_id]
     if check_only:command+=['--check-only']
+    if inventory_path is not None:command+=['--inventory',str(Path(inventory_path).resolve())]
     env=dict(os.environ)
     for name in ('PYTHONHOME','PYTHONPATH'):
         env.pop(name,None)
@@ -47,7 +58,7 @@ def ensure_identity(root,role,node_id,ugv_id=None,check_only=False,host_python=N
     try:record=json.loads(result.stdout)
     except ValueError as exc:raise ValueError('Invalid response from host certificate worker') from exc
     if (not isinstance(record,dict) or record.get('node_id')!=node_id or record.get('role')!=role
-            or type(record.get('created')) is not bool or not record.get('certificate_sha256')):
+            or type(record.get('created')) is not bool or (role!='ugv_root' and not record.get('certificate_sha256'))):
         raise ValueError('Host certificate worker returned a different device identity')
     print('Certificate operations: project uv .venv (IDF Python unchanged)',flush=True)
     return record

@@ -37,14 +37,14 @@ class ServicePaths:
     @classmethod
     def from_root(cls,root):
         root=Path(root)
-        return cls(root/'config/nodes.json',root/'runtime/tasks.sqlite3',root/'runtime/ugv-task-agent.json',root/'secrets/.controller.lock')
+        return cls(root/'config/nodes.json',root/'runtime/ugv-root/tasks.sqlite3',root/'runtime/ugv-root/agent.json',root/'secrets/.controller.lock')
 
 @dataclass(frozen=True)
 class ServiceConfig:
     broker: BrokerConfig
     paths: ServicePaths
-    ugv_id: str = 'ugv-001'
-    rpc_port: int = 8787
+    ugv_id: str = 'ugv-root'
+    http_port: int = 8080
     @classmethod
     def from_root(cls,root=None):
         root=Path(root) if root is not None else repository_root()
@@ -57,28 +57,26 @@ class ServiceConfig:
         broker=data.get('broker',{});paths=data.get('paths',{});service=data.get('service',{})
         if set(broker)-{'host','port','server_name','ca_file','client_cert','client_key'}:raise ValueError('Unknown Broker option')
         if set(paths)-{'inventory_file','task_database','agent_journal','lock_file'}:raise ValueError('Unknown path option')
-        if set(service)-{'ugv_id','rpc_port'}:raise ValueError('Unknown service option')
+        if set(service)-{'ugv_id','http_port'}:raise ValueError('Unknown service option')
         def path(value):return (file.parent/Path(value)).resolve()
         # A file-based deployment is explicit; it never falls back to installed source paths.
         tls={key:path(broker[key]) for key in ('ca_file','client_cert','client_key')}
         state={key:path(paths[key]) for key in ('inventory_file','task_database','agent_journal','lock_file')}
         cfg=cls(BrokerConfig(BrokerEndpoint(**{key:broker[key] for key in ('host','port','server_name') if key in broker}),**tls),ServicePaths(**state),**service)
-        if type(cfg.rpc_port) is not int or not 1<=cfg.rpc_port<=65535:raise ValueError('Invalid maintenance RPC port')
+        if type(cfg.http_port) is not int or not 0<=cfg.http_port<=65535:raise ValueError('Invalid HTTP port')
         from changan_ugv.nodes.inventory import valid_id
         valid_id(cfg.ugv_id)
         return cfg
 
 def service_arguments(parser):
     parser.add_argument('--config',type=Path,help='Explicit deployment TOML; relative paths resolve beside this file')
-    parser.add_argument('--secrets',type=Path,help='Legacy repository layout; prefer --config for deployment')
     parser.add_argument('--broker-host')
     parser.add_argument('--broker-port',type=int)
     parser.add_argument('--server-name')
     parser.add_argument('--inventory',type=Path)
 
 def resolve_arguments(args):
-    if args.config and args.secrets:raise ValueError('--config and --secrets cannot be combined')
-    cfg=ServiceConfig.from_file(args.config) if args.config else ServiceConfig.from_root(args.secrets.resolve().parent if args.secrets else None)
+    cfg=ServiceConfig.from_file(args.config) if args.config else ServiceConfig.from_root()
     endpoint=replace(cfg.broker.endpoint,**{key:value for key,value in {'host':args.broker_host,'port':args.broker_port,'server_name':args.server_name}.items() if value is not None})
     paths=replace(cfg.paths,inventory_file=args.inventory.resolve()) if args.inventory else cfg.paths
     return replace(cfg,broker=replace(cfg.broker,endpoint=endpoint),paths=paths)

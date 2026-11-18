@@ -1,4 +1,4 @@
-"""Manual actual-broker mTLS/ACL acceptance. Exit mqtt_terminal and power off Micro before running."""
+"""Manual actual-broker mTLS/ACL acceptance. Exit UGV Service and power off Micro before running."""
 import argparse
 import json
 from pathlib import Path
@@ -8,7 +8,7 @@ import struct
 import tempfile
 import time
 import uuid
-from mqtt_terminal import BrokerTLSContext
+from changan_ugv.nodes.controller import BrokerTLSContext
 
 def varint(value):
     out=bytearray()
@@ -153,11 +153,11 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--broker-port',type=int,default=8883)
     parser.add_argument('--secrets',type=Path,default=Path(__file__).resolve().parents[1]/'secrets')
-    parser.add_argument('--clients-stopped',action='store_true',help='mqtt_terminal exited and Micro powered off before this test')
+    parser.add_argument('--clients-stopped',action='store_true',help='UGV Service exited and Micro powered off before this test')
     args=parser.parse_args()
     if not args.clients_stopped:
-        parser.error('Exit mqtt_terminal and power off Micro first; this test reuses their certificate identities. Then pass --clients-stopped.')
+        parser.error('Exit UGV Service and power off Micro first; this test reuses their certificate identities. Then pass --clients-stopped.')
     try:run(args.secrets,args.broker_port)
     except (OSError,ValueError,RuntimeError,TimeoutError) as exc:parser.exit(1,str(exc)+'\n')
-    print('Actual-broker mTLS/ACL acceptance passed. Restart mqtt_terminal, power on Micro, then wait for fresh ready.')
+    print('Actual-broker mTLS/ACL acceptance passed. Restart UGV Service, power on Micro, then wait for fresh ready.')
 if __name__=='__main__':main()

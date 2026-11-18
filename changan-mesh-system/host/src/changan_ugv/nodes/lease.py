@@ -19,7 +19,7 @@ class Lease:
                 fcntl.flock(stream.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
         except OSError as exc:
             stream.close()
-            raise ValueError('Another UGV manager owns controller-001. Use mqtt_terminal through the running service, or stop the standalone manager first.') from exc
+            raise ValueError('Another UGV manager owns controller-001. Use UGV Service through the running service, or stop the standalone manager first.') from exc
         self.file=stream
     def close(self):
         if self.file is not None:self.file.close();self.file=None

@@ -22,14 +22,14 @@ class HostIdentityEnvironment(unittest.TestCase):
     def test_idf_without_crypto_delegates_to_host_and_preserves_existing_keys(self):
         before=self.hashes()
         with patch('identity_env.crypto_available',return_value=False),contextlib.redirect_stdout(io.StringIO()):
-            record=ensure_identity(self.root,'ugv','ugv-001','ugv-001',host_python=sys.executable)
+            record=ensure_identity(self.root,'ugv','ugv-001','ugv-root',host_python=sys.executable)
         self.assertFalse(record['created']);self.assertEqual('ugv-001',record['node_id'])
         self.assertEqual(before,self.hashes())
     def test_new_node_can_be_enrolled_in_host_process_and_monitor_only_checks(self):
         with patch('identity_env.crypto_available',return_value=False),contextlib.redirect_stdout(io.StringIO()):
-            added=ensure_identity(self.root,'micro_uav','micro-099','ugv-001',host_python=sys.executable)
+            added=ensure_identity(self.root,'micro_uav','micro-099','ugv-root',host_python=sys.executable)
             before=self.hashes()
-            checked=ensure_identity(self.root,'micro_uav','micro-099','ugv-001',check_only=True,host_python=sys.executable)
+            checked=ensure_identity(self.root,'micro_uav','micro-099','ugv-root',check_only=True,host_python=sys.executable)
         self.assertTrue(added['created']);self.assertFalse(checked['created']);self.assertEqual(before,self.hashes())
     def test_missing_host_environment_reports_uv_sync_without_touching_idf(self):
         with patch('identity_env.crypto_available',return_value=False):

@@ -1,20 +1,27 @@
-# 文档索引
+# 项目文档
 
-维护日期：2026-11-17。当前平台为ESP32-C6 / ESP-IDF 6.1.x，提供诊断、主机监视及明确标注的ESP32业务流程验证。
+当前拓扑：ugv-root（第1层）→ ugv（第2层）→ uav（第3层）→ micro_uav（第4层）。
+独立终端通过本机 HTTP/WebSocket 连接 UGV Service，不加入 Mesh。
 
-| 文档 | 内容 |
+## 按工作查找
+
+| 要做什么 | 统一入口 |
 | --- | --- |
-| [系统架构](architecture.md) | 仓库职责、无线与业务链路、主机接口、运行数据 |
-| [运行与排障](operations.md) | Broker、USB 桥接、后台、车机 GUI/CLI、网络结构与常见故障 |
-| [固件与设备身份](firmware.md) | SDK、角色、增量登记、独立构建、用户烧录、兼容层 |
-| [任务操作](tasks.md) | diagnostics、CLI、任务接口、版本、排队、暂停与故障恢复 |
-| [ESP32巡检与异常复核](esp32-workflows.md) | 按角色公告、流程测试、测试异常事件、NVS升级及实机验收步骤 |
-| [主机诊断与运行监视](host-services.md) | 主动Ping、RTT、反馈超时与服务目录 |
-| [部署与交接](deployment.md) | 配置文件、状态迁移、ACL、Jetson 与 S31 交付边界 |
-| [Jetson / S31 同学交接任务](handoff/README.md) | 电脑车机 C6—Jetson S31—UAV C6、部署步骤、服务发现兼容点和 H0–H7 验收 |
-| [验收与部署状态](status.md) | 已有验证、原始记录和待部署/验收边界 |
-| [协议 v1](../protocols/v1/README.md) | MLT1、MQTT 主题、网络字段、MUX1 网络报告及任务合同 |
+| 理解硬件、无线拓扑、程序职责和调用链 | [系统架构](architecture.md) |
+| 启动程序、管理准入、指定 Micro 父节点、排障 | [运行手册](operations.md) |
+| 登记身份、规划 AP 子网、构建烧录、处理旧缓存 | [固件与身份](firmware.md) |
+| 创建和控制任务、诊断、验证 ESP32 测试流程 | [任务手册](tasks.md) |
+| 硬件交接、迁移 Jetson、保留数据和凭据 | [部署与交接](deployment.md) |
+| 查看回归结果及待完成的实物验收 | [验收状态](status.md) |
+| 专门的不可信证书测试 | [TLS 负向测试](tls-negative-client.md) |
 
-线协议只在 `protocols/v1/` 维护。原始验收 JSON 位于 `legacy/verification/`，源文件摘要在 [迁移清单](migration-source-manifest.json)；它们是带日期的证据，不是当前启动指南。第三方版本与许可证保留在 `third_party/`，实验原始材料保留在 `legacy/`。
+首次使用按“架构 → 固件准备 → 运行 → 任务”阅读；负向测试不用于正常部署。
 
-旧版本 README、三节点说明、旧 TCP 启动教程、分散的迁移记录和重复设计稿已合并删除。当前命令以本索引链接的文档为准；各项验收的适用版本和范围见状态页。
+## 协议与证据
+
+- [HTTP/WebSocket v1](../protocols/http/v1/README.md)：终端与后台的版本化合同。
+- [节点协议 v1](../protocols/v1/README.md)：MQTT/TLS、MUX1 与任务消息。
+- [历史验证证据](../legacy/verification/)：带日期的原始记录，不是当前运行入口。
+
+启动与排障集中在运行手册，构建与子网表集中在固件手册，任务参数与结果语义集中在任务手册。
+协议目录保留线格式，各手册通过链接引用。

@@ -1,14 +1,10 @@
-"""Wire protocol shared by the PC terminal and firmware: MLT1 + !HH + UTF-8 JSON."""
-import binascii
+"""Bounded JSON control messages for node MQTT/TLS."""
 import json
 import re
-import struct
 import uuid
 
-MAGIC = b'MLT1'
 MAX_JSON = 1024
 MAX_COMMAND = 512
-HEADER = struct.Struct('!4sHH')
 NODE_ID = re.compile(r'^[A-Za-z0-9_-]{1,32}$')
 
 
@@ -35,52 +31,7 @@ def encode(message):
     payload = json.dumps(message, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode('utf-8')
     if not 2 <= len(payload) <= MAX_JSON:
         raise ValueError('Message exceeds 1024 UTF-8 bytes')
-    return HEADER.pack(MAGIC, len(payload), binascii.crc_hqx(payload, 0xffff)) + payload
-
-
-class Decoder:
-    """Bounded streaming decoder; recovers after garbage, bad length, or CRC failure."""
-    def __init__(self):
-        self.buffer = bytearray()
-        self.discarded = 0
-        self.bad_frames = 0
-
-    def reset(self):
-        self.buffer.clear()
-
-    def feed(self, data):
-        messages = []
-        # Processing one byte at a time also bounds memory for arbitrarily large input chunks.
-        for byte in data:
-            self.buffer.append(byte)
-            while len(self.buffer) >= len(MAGIC):
-                if not self.buffer.startswith(MAGIC):
-                    del self.buffer[0]
-                    self.discarded += 1
-                    continue
-                if len(self.buffer) < HEADER.size:
-                    break
-                _, size, crc = HEADER.unpack_from(self.buffer)
-                if not 2 <= size <= MAX_JSON:
-                    del self.buffer[0]
-                    self.bad_frames += 1
-                    continue
-                total = HEADER.size + size
-                if len(self.buffer) < total:
-                    break
-                payload = bytes(self.buffer[HEADER.size:total])
-                if binascii.crc_hqx(payload, 0xffff) != crc:
-                    del self.buffer[0]
-                    self.bad_frames += 1
-                    continue
-                del self.buffer[:total]
-                try:
-                    message = json.loads(payload.decode('utf-8'), object_pairs_hook=_unique_object,
-                                         parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
-                    messages.append(validate(message))
-                except (ValueError, UnicodeError):
-                    self.bad_frames += 1
-        return messages
+    return payload
 
 
 def command(line, msg_id=None):
@@ -107,6 +58,6 @@ def command(line, msg_id=None):
             message['payload'] = parts[2]
     else:
         raise ValueError('Supported commands: list, ping, status, echo')
-    if len(encode(message)) - HEADER.size > MAX_COMMAND:
+    if len(encode(message)) > MAX_COMMAND:
         raise ValueError('PC request exceeds the 512-byte command limit')
     return message

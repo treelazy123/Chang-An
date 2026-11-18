@@ -16,14 +16,11 @@
 #include "node_role.h"
 #include "service_discovery.h"
 
-#if CONFIG_APP_TRANSPORT_MQTT_SERIAL
 #define SERVICE_TYPE "changan_ugv_mqtt_v1"
 #define SERVICE_PORT CONFIG_APP_MQTT_PORT
-#else
-#define SERVICE_TYPE "changan_ugv_tcp_v1"
-#define SERVICE_PORT CONFIG_APP_UGV_TCP_PORT
-#endif
 #define SERVICE_TTL_MS 15000
+#define ROOT_NETIF "WIFI_AP_DEF"
+#define ROOT_MIN_LEVEL 1
 
 typedef struct {
     uint32_t address;
@@ -116,17 +113,17 @@ static void discovery_task(void *arg)
 {
     (void)arg;
     uint32_t generation = 0;
-#if CONFIG_APP_ROLE_UGV
+#if CONFIG_APP_ROOT_GATEWAY
     uint32_t last_announced_ip = 0;
 #endif
     char epoch[17];
     snprintf(epoch, sizeof(epoch), "%08" PRIx32 "%08" PRIx32, esp_random(), esp_random());
     for (;;) {
         cJSON *payload = NULL;
-#if CONFIG_APP_ROLE_UGV
-        esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+#if CONFIG_APP_ROOT_GATEWAY
+        esp_netif_t *sta = esp_netif_get_handle_from_ifkey(ROOT_NETIF);
         esp_netif_ip_info_t local = {0};
-        if (sta && esp_mesh_lite_get_level() >= 2 &&
+        if (sta && esp_mesh_lite_get_level() >= ROOT_MIN_LEVEL &&
             esp_netif_get_ip_info(sta, &local) == ESP_OK && local.ip.addr) {
             char ip[16]; snprintf(ip, sizeof(ip), IPSTR, IP2STR(&local.ip));
             if (last_announced_ip != local.ip.addr) {
@@ -144,8 +141,8 @@ static void discovery_task(void *arg)
                 cJSON_AddStringToObject(payload, "epoch", epoch);
                 cJSON_AddNumberToObject(payload, "generation", ++generation);
                 cJSON_AddNumberToObject(payload, "port", SERVICE_PORT);
-                // Root also redistributes the record, supporting star and auto topologies.
-                announce(payload, esp_mesh_lite_send_msg_to_root);
+                // The root announces its AP ingress down the registered mesh tree.
+
             }
         }
 #else
@@ -176,7 +173,7 @@ static void discovery_task(void *arg)
 esp_err_t service_discovery_start(void)
 {
     if (!app_node_id_valid(CONFIG_APP_UGV_NODE_ID)) { return ESP_ERR_INVALID_ARG; }
-#if CONFIG_APP_ROLE_UGV
+#if CONFIG_APP_ROOT_GATEWAY
     if (strcmp(node_role_id(), CONFIG_APP_UGV_NODE_ID)) { return ESP_ERR_INVALID_ARG; }
 #endif
     esp_err_t result = esp_mesh_lite_msg_action_list_register(s_actions);

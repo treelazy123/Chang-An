@@ -7,7 +7,7 @@ import unittest
 from changan_ugv.agents.services import HostServices
 from changan_ugv.nodes.controller import Registry
 from changan_ugv.nodes.inventory import defaults
-from changan_ugv.protocol.frames import encode
+from changan_ugv.protocol.messages import encode
 from changan_ugv.tasks.ports import NodeSnapshot,SendReceipt
 from changan_ugv.tasks.runtime import Runtime
 from changan_ugv.tasks.workflows import MODE, config_valid
@@ -30,17 +30,17 @@ class WorkflowTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name);self.now=1000.;self.counter=0
         self.inventory=defaults()
-        self.inventory['nodes'] += [dict(node_id=node,role=role,ugv_id='ugv-001',enabled=True)
+        self.inventory['nodes'] += [dict(node_id=node,role=role,root_id='ugv-root',enabled=True)
             for node,role in [('scout-A','uav'),('tiny-A','micro_uav'),('tiny-B','micro_uav')]]
         self.channel=Channel()
         for node,kind in [('scout-A','anomaly_review'),('tiny-A','patrol'),('tiny-B','patrol')]:
             self.channel.entries[node]=NodeSnapshot(True,'boot-'+node,('diagnostics',kind),MODE,OPS)
         self.runtime=Runtime(self.channel,database=self.root/'tasks.db',inventory_loader=lambda:self.inventory,
-            executor_factory=lambda emit,snapshot:HostServices(self.root/'agent','ugv-001',emit,snapshot,probe=lambda *a,**k:dict(ok=True),network_snapshot=lambda _:None))
+            executor_factory=lambda emit,snapshot:HostServices(self.root/'agent','ugv-root',emit,snapshot,probe=lambda *a,**k:dict(ok=True),network_snapshot=lambda _:None))
         self.runtime.store.clock=lambda:self.now
         self.addCleanup(self.runtime.close)
 
-    def call(self,message_type,owner='pc-root-001',**fields):
+    def call(self,message_type,owner='http-local',**fields):
         self.counter+=1
         reply=self.runtime.handle(dict(v=1,type=message_type,msg_id=str(self.counter),**fields),owner)
         encode(reply);return reply
@@ -65,19 +65,19 @@ class WorkflowTests(unittest.TestCase):
         return packet
 
     def test_every_registered_role_gets_its_own_service_and_old_firmware_is_unavailable(self):
-        rows={r['service_id']:r for r in self.runtime.service_snapshot('pc-root-001')}
+        rows={r['service_id']:r for r in self.runtime.service_snapshot('http-local')}
         for node in ('tiny-A','tiny-B'):
             self.assertEqual(('available',MODE),(rows[node+'/patrol']['availability'],rows[node+'/patrol']['execution_mode']))
         self.assertEqual('available',rows['scout-A/anomaly-review']['availability'])
         self.channel.entries['tiny-B']=NodeSnapshot(True,'boot-tiny-B',('diagnostics','patrol'),MODE,OPS,'previous-task','UNKNOWN')
-        pending=next(r for r in self.runtime.service_snapshot('pc-root-001') if r['service_id']=='tiny-B/patrol')
+        pending=next(r for r in self.runtime.service_snapshot('http-local') if r['service_id']=='tiny-B/patrol')
         self.assertEqual(('busy','UNKNOWN'),(pending['availability'],pending['task_status']))
         self.assertEqual('firmware_required',rows['uav-001/anomaly-review']['reason'])
         self.channel.entries['tiny-A']=NodeSnapshot(False,'boot-tiny-A',('diagnostics','patrol'),MODE,OPS)
-        row=next(r for r in self.runtime.service_snapshot('pc-root-001') if r['service_id']=='tiny-A/patrol')
+        row=next(r for r in self.runtime.service_snapshot('http-local') if r['service_id']=='tiny-A/patrol')
         self.assertEqual(('unavailable','node_not_ready'),(row['availability'],row['reason']))
         self.inventory['nodes']=[e for e in self.inventory['nodes'] if e['node_id']!='tiny-B']
-        self.assertNotIn('tiny-B/patrol',{r['service_id'] for r in self.runtime.service_snapshot('pc-root-001')})
+        self.assertNotIn('tiny-B/patrol',{r['service_id'] for r in self.runtime.service_snapshot('http-local')})
 
     def test_role_and_firmware_gates_and_explicit_test_mode(self):
         with self.assertRaisesRegex(ValueError,'workflow_role_mismatch'):
@@ -97,7 +97,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(('patrol','P02',True),(event['source_task_id'],event['point_id'],event['test']))
         self.assertEqual([],self.call('task.events',scope='incidents',cursor=0,owner='local-console')['items'][1:])
         self.assertFalse(self.runtime.receive('tiny-A',self.event(packet,seq=3,event_id='forged')))
-        self.assertEqual([],self.runtime.store.request(dict(type='task.events',msg_id='private',scope='incidents'),'other',self.runtime.targets('pc-root-001'))['items'])
+        self.assertEqual([],self.runtime.store.request(dict(type='task.events',msg_id='private',scope='incidents'),'other',self.runtime.targets('http-local'))['items'])
         self.call('task.create',task_id='review',target='scout-A',kind='anomaly_review',
             config=dict(execution_mode=MODE,event_id='patrol',test_verdict='cleared',duration_s=2))
         review=self.start('review')
@@ -131,7 +131,7 @@ class WorkflowTests(unittest.TestCase):
         restored=Store(self.root/'tasks.db')
         try:
             self.assertEqual('RECONCILING',restored._row('patrol')['state'])
-            self.assertEqual('P02',restored.request(dict(type='task.events',scope='incidents',msg_id='restore'),'pc-root-001',self.runtime.targets('pc-root-001'))['items'][0]['point_id'])
+            self.assertEqual('P02',restored.request(dict(type='task.events',scope='incidents',msg_id='restore'),'http-local',self.runtime.targets('http-local'))['items'][0]['point_id'])
         finally:restored.close()
 
     def test_long_identifiers_frames_and_config_updates(self):

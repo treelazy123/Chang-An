@@ -49,21 +49,21 @@ class NaptCompatibility(unittest.TestCase):
 
 
 class BuildConfiguration(unittest.TestCase):
-    def test_all_twelve_dry_runs_are_isolated(self):
+    def test_all_four_role_dry_runs_are_isolated(self):
         dirs = set()
-        for role, topology in itertools.product(('pc_root', 'ugv', 'uav', 'micro_uav'), ('star', 'chain', 'auto')):
+        for role, topology in itertools.product(('ugv_root', 'ugv', 'uav', 'micro_uav'), ('chain',)):
             result = subprocess.run([sys.executable, str(ROOT/'tools/lab.py'), '--role', role,
                                      '--topology', topology, '--dry-run'], capture_output=True, text=True)
             self.assertEqual(0, result.returncode, result.stderr)
-            directory = str(ROOT/'build'/'four-node'/(role+'-'+topology))
+            directory = str(ROOT/'build/mqtt_serial/nodes'/dict(ugv_root='ugv-root',ugv='ugv-001',uav='uav-001',micro_uav='micro-001')[role]/(role+'-'+topology))
             self.assertIn(directory, result.stdout)
             self.assertIn('SDKCONFIG='+str(Path(directory)/'sdkconfig'), result.stdout)
             dirs.add(directory)
-        self.assertEqual(12, len(dirs))
+        self.assertEqual(4, len(dirs))
 
     def test_flash_and_monitor_require_explicit_port(self):
         for action in ('flash', 'monitor'):
-            result = subprocess.run([sys.executable, str(ROOT/'tools/lab.py'), '--role', 'pc_root',
+            result = subprocess.run([sys.executable, str(ROOT/'tools/lab.py'), '--role', 'ugv_root',
                                      '--dry-run', action], capture_output=True, text=True)
             self.assertNotEqual(0, result.returncode)
             self.assertIn('Provide --port', result.stderr)

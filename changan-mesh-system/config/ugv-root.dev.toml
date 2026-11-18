@@ -1,0 +1,19 @@
+# Root host configuration. Existing credentials are never regenerated.
+[service]
+ugv_id = "ugv-root"
+http_port = 8080
+
+[broker]
+host = "127.0.0.1"
+port = 8883
+server_name = "ugv-broker.lab"
+ca_file = "../secrets/ca.pem"
+client_cert = "../secrets/controller-001/client.pem"
+client_key = "../secrets/controller-001/client.key"
+
+[paths]
+inventory_file = "nodes.json"
+task_database = "../runtime/ugv-root/tasks.sqlite3"
+agent_journal = "../runtime/ugv-root/agent.json"
+# The single controller identity is protected by an exclusive lock.
+lock_file = "../secrets/.controller.lock"

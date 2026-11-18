@@ -8,7 +8,7 @@ import unittest
 
 from changan_ugv.agents.services import HostServices
 from changan_ugv.nodes.inventory import defaults
-from changan_ugv.protocol.frames import encode
+from changan_ugv.protocol.messages import encode
 from changan_ugv.service.requests import Requests
 from changan_ugv.tasks.ports import NodeSnapshot, SendReceipt
 from changan_ugv.tasks.runtime import Runtime
@@ -43,20 +43,20 @@ class HostServiceTests(unittest.TestCase):
             return dict(ok=True)
         self.root = Path(self.temp.name)
         self.runtime = Runtime(self.channel, database=self.root/'tasks.db',
-            executor_factory=lambda emit,snapshot:HostServices(self.root/'journal.json','ugv-001',emit,snapshot,
+            executor_factory=lambda emit,snapshot:HostServices(self.root/'journal.json','ugv-root',emit,snapshot,
                 probe=probe, network_snapshot=lambda node:dict(ready=self.channel.ready), monotonic=lambda:self.now,probe_clock=lambda:self.now),
             inventory_loader=lambda:self.inventory)
         self.runtime.store.clock = lambda:self.now
         self.addCleanup(self.runtime.close)
 
-    def call(self, message_type, owner='pc-root-001', **fields):
+    def call(self, message_type, owner='http-local', **fields):
         self.index += 1
         reply = self.runtime.handle(dict(v=1,type=message_type,msg_id=str(self.index),**fields),owner)
         encode(reply)
         return reply
 
     def create(self, task, kind, **config):
-        return self.call('task.create',task_id=task,target='ugv-001',kind=kind,
+        return self.call('task.create',task_id=task,target='ugv-root',kind=kind,
                          config=dict(duration_s=10,period_ms=200,**config))
 
     def control(self, task, op):
@@ -70,7 +70,7 @@ class HostServiceTests(unittest.TestCase):
         config = dict(probe_node='micro-001')
         success = actor.network_sample(config)
         self.assertEqual(12,success['rtt_ms'])
-        self.assertEqual([('micro-001','ping',dict(timeout=1))],self.probes)
+        self.assertEqual([('micro-001','ping',dict(timeout=4))],self.probes)
         self.probe_error = TimeoutError()
         self.assertEqual('probe_timeout',actor.network_sample(config)['error'])
         self.probe_error = OSError()
@@ -137,9 +137,9 @@ class HostServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'probe_node_not_authorized'):
             self.create('bad','network_diagnostics',probe_node='stranger')
         with self.assertRaisesRegex(ValueError,'probe_requires_remote_node'):
-            self.create('bad','network_diagnostics',probe_node='ugv-001')
+            self.create('bad','network_diagnostics',probe_node='ugv-root')
         with self.assertRaises(ValueError):
-            self.call('task.create',task_id='bad',target='ugv-001',kind='network_diagnostics',config=[])
+            self.call('task.create',task_id='bad',target='ugv-root',kind='network_diagnostics',config=[])
         self.call('task.create',task_id='private',target='micro-001',kind='diagnostics',owner='local-console')
         with self.assertRaisesRegex(ValueError,'task_not_found'):
             self.create('bad','task_monitor',watch_task_id='private')
@@ -149,20 +149,20 @@ class HostServiceTests(unittest.TestCase):
         self.create('watch','task_monitor',watch_task_id='net',stale_after_s=2)
         with self.assertRaisesRegex(ValueError,'cannot_monitor_monitor'):
             self.create('recursive','task_monitor',watch_task_id='watch')
-        self.inventory['nodes'] = [n for n in self.inventory['nodes'] if n['node_id'] != 'ugv-001']
+        self.inventory['nodes'] = [n for n in self.inventory['nodes'] if n['node_id'] != 'ugv-root']
         self.assertEqual('not_authorized',self.runtime.monitor_snapshot('net',2)['health'])
 
     def test_service_discovery_live_status_and_same_kind_queue(self):
-        services = self.runtime.service_snapshot('pc-root-001')
+        services = self.runtime.service_snapshot('http-local')
         self.assertEqual({'network_diagnostics','task_monitor','patrol','anomaly_review'},{s['service_type'] for s in services})
         self.create('net','network_diagnostics',probe_node='micro-001')
         self.control('net','start')
         self.create('queued','network_diagnostics',probe_node='uav-001')
         self.control('queued','start')
         self.assertEqual('QUEUED',self.row('queued')['state'])
-        self.assertEqual('busy',self.runtime.service_snapshot('pc-root-001')[0]['availability'])
+        self.assertEqual('busy',self.runtime.service_snapshot('http-local')[0]['availability'])
         self.channel.online = False
-        self.assertEqual('unavailable',self.runtime.service_snapshot('pc-root-001')[0]['availability'])
+        self.assertEqual('unavailable',self.runtime.service_snapshot('http-local')[0]['availability'])
         # Existing list framing transports service rows without a new firmware request type.
         class Controller:
             def refresh_inventory(self):pass
@@ -172,7 +172,7 @@ class HostServiceTests(unittest.TestCase):
         c.registry = type('Registry',(),{'snapshot':lambda self:[]})()
         c.tasks = self.runtime
         request = Requests(c,clock=lambda:1000,inventory_loader=lambda:self.inventory)
-        replies = request.handle(dict(v=1,type='list',scope='services',msg_id='a',node_id='pc-root-001',deadline_unix=1020),'pc-root-001')
+        replies = request.handle(dict(v=1,type='list',scope='services',msg_id='a',node_id='http-local',deadline_unix=1020),local=True)
         self.assertEqual(len(services)+1,len(replies))
         for reply in replies:encode(reply)
 
@@ -191,7 +191,7 @@ class HostServiceTests(unittest.TestCase):
         self.assertEqual(result,history['items'][0]['result'])
         # Persisted journals recover as UNKNOWN and never launch a probe automatically.
         calls=len(self.probes)
-        restored=HostServices(self.root/'journal.json','ugv-001',lambda _:None,lambda:0,
+        restored=HostServices(self.root/'journal.json','ugv-root',lambda _:None,lambda:0,
             probe=lambda *a,**k:self.fail('Restart replayed a probe'),network_snapshot=lambda _:dict(ready=True))
         try:
             self.assertEqual('UNKNOWN',restored.actors['network_diagnostics'].row['state'])

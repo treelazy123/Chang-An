@@ -13,13 +13,13 @@ class Configuration(unittest.TestCase):
     def test_file_relative_paths_do_not_depend_on_repository_layout(self):
         with tempfile.TemporaryDirectory() as folder:
             folder=Path(folder);file=folder/'service.toml'
-            file.write_text('[broker]\nhost="192.0.2.10"\nport=9443\nserver_name="ugv-broker.lab"\nca_file="pki/ca.pem"\nclient_cert="pki/controller.pem"\nclient_key="pki/controller.key"\n[paths]\ninventory_file="admin/nodes.json"\ntask_database="data/tasks.db"\nagent_journal="data/agent.json"\nlock_file="state/controller.lock"\n[service]\nugv_id="ugv-001"\nrpc_port=18787\n',encoding='utf-8')
+            file.write_text('[broker]\nhost="192.0.2.10"\nport=9443\nserver_name="ugv-broker.lab"\nca_file="pki/ca.pem"\nclient_cert="pki/controller.pem"\nclient_key="pki/controller.key"\n[paths]\ninventory_file="admin/nodes.json"\ntask_database="data/tasks.db"\nagent_journal="data/agent.json"\nlock_file="state/controller.lock"\n[service]\nugv_id="ugv-001"\nhttp_port=18080\n',encoding='utf-8')
             cfg=ServiceConfig.from_file(file)
             self.assertEqual(folder/'pki/ca.pem',cfg.broker.ca_file)
             self.assertEqual(folder/'data/tasks.db',cfg.paths.task_database)
             self.assertEqual(folder/'admin/nodes.json',cfg.paths.inventory_file)
             self.assertEqual('192.0.2.10',cfg.broker.endpoint.host)
-            self.assertEqual(18787,cfg.rpc_port)
+            self.assertEqual(18080,cfg.http_port)
             with self.assertRaises(FileNotFoundError):load_inventory(path=cfg.paths.inventory_file)
     def test_invalid_endpoint_fails_before_network_access(self):
         for kwargs in ({'port':0},{'port':True},{'port':65536},{'host':'a\nb'},{'server_name':''}):
@@ -60,7 +60,7 @@ class TaskPorts(unittest.TestCase):
         self.addCleanup(self.runtime.close)
     def request(self,type,**fields):
         self.sequence+=1
-        return self.runtime.handle(dict(v=1,type=type,msg_id=str(self.sequence),deadline_unix=int(time.time())+20,**fields),'pc-root-001')
+        return self.runtime.handle(dict(v=1,type=type,msg_id=str(self.sequence),deadline_unix=int(time.time())+20,**fields),'http-local')
     def start(self,target='micro-001'):
         self.request('task.create',task_id='test-task',target=target,kind='diagnostics')
         self.request('task.control',task_id='test-task',op='start',expected_revision=1)
@@ -78,7 +78,7 @@ class TaskPorts(unittest.TestCase):
         self.assertEqual('RECONCILING',self.row()['state'])
         self.assertEqual('publish_failed',self.row()['error'])
     def test_local_executor_is_injected_and_receives_transport_state(self):
-        self.start('ugv-001')
+        self.start('ugv-root')
         self.assertEqual('start',self.executors[0].handled[0]['op'])
         self.assertEqual(7,self.executors[0].snapshot())
         self.channel.online=False;self.runtime.tick()

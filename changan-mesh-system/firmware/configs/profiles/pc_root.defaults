@@ -1,5 +1,0 @@
-CONFIG_APP_ROLE_PC_ROOT=y
-CONFIG_APP_NODE_ID="pc-root-001"
-# Native USB is reserved exclusively for framed PC messages.
-CONFIG_ESP_CONSOLE_UART_DEFAULT=y
-CONFIG_ESP_CONSOLE_SECONDARY_NONE=y

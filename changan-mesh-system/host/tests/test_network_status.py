@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import unittest
 
 from changan_ugv.nodes.controller import Registry
-from changan_ugv.protocol.frames import encode
+from changan_ugv.protocol.messages import encode
 from changan_ugv.protocol.tunnel import Frame, Decoder, RESET, READY, NETWORK
 from changan_ugv.transport.serial_bridge import Engine
 from changan_ugv.nodes.network import NetworkStatusFile, read_network_status
@@ -43,6 +43,22 @@ class NetworkStatusTests(unittest.TestCase):
         self.assertTrue(row['online'])  # Presence alone is not fresh readiness.
         self.assertEqual(payload, row['status'])
 
+    def test_current_parent_capability_restores_readiness_after_firmware_upgrade(self):
+        self.receive('presence', online=True, boot_id='old')
+        self.receive('capabilities', boot_id='old', operations=['ping','status','echo'])
+        self.receive('presence', online=True, boot_id='new')
+        self.receive('telemetry', boot_id='new', payload=dict(role='micro_uav',level=4,
+            ap_enabled=False,parent_connected=True,gateway='192.168.8.1'))
+        row = self.registry.snapshot()[0]
+        self.assertTrue(row['online'])
+        self.assertTrue(row['status_current_boot'])
+        self.assertEqual(0, row['status_age_s'])
+        self.assertFalse(row['ready'])
+        self.assertTrue(self.receive('capabilities', boot_id='new', operations=['ping','status','echo','parent']))
+        row = self.registry.snapshot()[0]
+        self.assertTrue(row['ready'])
+        self.assertIn('parent', row['operations'])
+
     def test_reboot_and_offline_keep_history_explicit(self):
         self.receive('presence', online=True, boot_id='old')
         self.receive('telemetry', boot_id='old', payload=dict(level=2, sta_ip='192.168.4.2'))
@@ -75,12 +91,12 @@ class NetworkStatusTests(unittest.TestCase):
                        dict(v=1, type='ack', node_id='n'*32, msg_id='m'*64,
                             op='status', ok=True, payload=payload)]:
             self.assertLessEqual(len(encode(packet)), 1032)
-            self.assertEqual(payload, json.loads(encode(packet)[8:]).get('payload', payload))
+            self.assertEqual(payload, json.loads(encode(packet)).get('payload', payload))
 
 
 class UGVNetworkTunnelTests(unittest.TestCase):
-    def report(self, node='ugv-001'):
-        return dict(v=1, type='network', node_id=node, payload=dict(role='ugv', level=1,
+    def report(self, node='ugv-root'):
+        return dict(v=1, type='network', node_id=node, payload=dict(role='ugv_root', level=1,
             sta_ip='192.168.1.10', ap_ip='192.168.4.1', gateway='192.168.1.1',
             netmask='255.255.255.0', sta_mac='aa:bb:cc:00:00:01', ap_mac='aa:bb:cc:00:00:02',
             parent_connected=True, parent_bssid='aa:bb:cc:00:00:03', rssi=-45,
@@ -115,14 +131,14 @@ class UGVNetworkTunnelTests(unittest.TestCase):
     def test_network_snapshot_expires_and_reset_removes_it(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);path=root/'runtime/ugv-network.json'
-            sink=NetworkStatusFile(path,clock=lambda:100)
+            sink=NetworkStatusFile(path,'ugv-root',clock=lambda:100)
             sink(self.report(),7)
-            self.assertTrue(read_network_status('ugv-001',root,clock=lambda:101)['fresh'])
-            stale=read_network_status('ugv-001',root,clock=lambda:113)
+            self.assertTrue(read_network_status('ugv-root',root,clock=lambda:101)['fresh'])
+            stale=read_network_status('ugv-root',root,clock=lambda:113)
             self.assertFalse(stale['fresh'])
             self.assertEqual(13,stale['age_s'])
             self.assertIsNone(read_network_status('other',root,clock=lambda:101))
-            self.assertIsNone(read_network_status('ugv-001',root,clock=lambda:99))
+            self.assertIsNone(read_network_status('ugv-root',root,clock=lambda:99))
             sink(None,0)
             self.assertFalse(path.exists())
             sink(self.report('other'),8)
@@ -134,10 +150,10 @@ class UGVNetworkTunnelTests(unittest.TestCase):
             NetworkStatusFile(root/'runtime/ugv-network.json')(self.report(),7)
             connected=threading.Event();connected.set()
             controller=SimpleNamespace(connected=connected,condition=threading.RLock(),
-                registry=Registry(nodes=[]),tasks=SimpleNamespace(ugv_id='ugv-001'),refresh_inventory=lambda:None)
+                registry=Registry(nodes=[]),tasks=SimpleNamespace(ugv_id='ugv-root'),refresh_inventory=lambda:None)
             requests=Requests(controller,root=root,clock=lambda:100)
             result=requests.handle(dict(v=1,type='list',msg_id='network-list',deadline_unix=110))
-            row=result[0]['nodes'][0]
+            row=next(n for page in result for n in page.get('nodes',[]) if n['node_id']=='ugv-root')
             self.assertTrue(row['ready'])
             self.assertEqual('local',row['status']['execution_host'])
             self.assertEqual('192.168.4.1',row['status']['network_status']['status']['ap_ip'])

@@ -16,6 +16,7 @@
 #include "esp_mesh_lite.h"
 #include "node_role.h"
 #include "network_mesh_lite.h"
+#include "parent_policy.h"
 
 static const char *TAG = "mesh_lab";
 
@@ -52,6 +53,7 @@ void network_mesh_lite_start(void)
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STADISCONNECTED,
                                                        ap_peer_event, NULL, NULL));
     esp_bridge_create_all_netif();
+    ESP_ERROR_CHECK(network_mesh_lite_configure_addresses());
 
     wifi_config_t station_config = {0};
     ESP_ERROR_CHECK(esp_bridge_wifi_set_config(WIFI_IF_STA, &station_config));
@@ -75,6 +77,22 @@ void network_mesh_lite_start(void)
     char ssid[sizeof(applied_ap.ap.ssid) + 1] = {0};
     memcpy(ssid, applied_ap.ap.ssid, sizeof(applied_ap.ap.ssid));
     ESP_ERROR_CHECK(esp_mesh_lite_set_softap_info(ssid, CONFIG_APP_SOFTAP_PASSWORD));
+    if (node_role_is_leaf()) {
+        /* Mesh-Lite initializes AP bookkeeping, but leaves must not serve a LAN. */
+        esp_mesh_lite_set_leaf_node_softap_status(DISABLE_SOFTAP);
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+        esp_netif_t *ap = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+        if (ap) {
+            esp_netif_ip_info_t current = {0}, empty = {0};
+            ESP_ERROR_CHECK(esp_netif_get_ip_info(ap, &current));
+            ESP_ERROR_CHECK(esp_bridge_netif_set_ip_info(ap, &current, false, false));
+            esp_netif_dhcp_status_t state;
+            ESP_ERROR_CHECK(esp_netif_dhcps_get_status(ap, &state));
+            if (state != ESP_NETIF_DHCP_STOPPED) { ESP_ERROR_CHECK(esp_netif_dhcps_stop(ap)); }
+            ESP_ERROR_CHECK(esp_netif_set_ip_info(ap, &empty));
+        }
+        ESP_LOGI(TAG, "AP_DISABLED node=%s mode=STA", node_role_id());
+    }
 
     if (!node_role_is_root()) {
         ESP_ERROR_CHECK(esp_mesh_lite_set_disallowed_level(1));
@@ -87,6 +105,7 @@ void network_mesh_lite_start(void)
     ESP_LOGI(TAG, "BOOT node=%s role=%s topology=%s fixed_level=%u target=esp32c6 idf=%s",
              node_role_id(), node_role_name(), node_topology_name(),
              (unsigned)fixed_level, esp_get_idf_version());
+    ESP_ERROR_CHECK(parent_policy_init());
     esp_mesh_lite_start();
 }
 

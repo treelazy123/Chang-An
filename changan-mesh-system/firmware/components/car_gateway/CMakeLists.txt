@@ -1,5 +1,0 @@
-set(sources)
-if(CONFIG_APP_ROLE_PC_ROOT)
-    list(APPEND sources "../../apps/root/car_gateway.c")
-endif()
-idf_component_register(SRCS ${sources} INCLUDE_DIRS "include" REQUIRES mqtt app_protocol node_role serial_gateway)

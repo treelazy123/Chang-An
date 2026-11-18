@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from changan_ugv.tasks.store import Store, TERMINAL
-from changan_ugv.protocol.frames import encode
+from changan_ugv.protocol.messages import encode
 
 
 class TaskDeletion(unittest.TestCase):
@@ -16,7 +16,7 @@ class TaskDeletion(unittest.TestCase):
         self.store=Store(self.path,clock=lambda:1000)
         self.addCleanup(lambda:self.store.close())
         self.index=0
-        self.targets={'micro-001','ugv-001'}
+        self.targets={'micro-001','ugv-root'}
 
     def packet(self, message_type, **fields):
         self.index+=1
@@ -94,7 +94,7 @@ class TaskDeletion(unittest.TestCase):
 
     def test_running_or_waiting_monitor_prevents_deletion(self):
         self.create();self.finish()
-        self.call('task.create',task_id='monitor',target='ugv-001',kind='task_monitor',config=dict(watch_task_id='history'))
+        self.call('task.create',task_id='monitor',target='ugv-root',kind='task_monitor',config=dict(watch_task_id='history'))
         with self.assertRaisesRegex(ValueError,'task_in_use_by_monitor'):self.delete()
         self.finish('monitor')
         self.assertTrue(self.delete()['deleted'])
@@ -111,7 +111,7 @@ class TaskDeletion(unittest.TestCase):
     def test_failed_reply_encoding_rolls_back_entire_deletion(self):
         from unittest.mock import patch
         self.create();self.finish()
-        with patch('changan_ugv.protocol.frames.encode',side_effect=ValueError('encoding')):
+        with patch('changan_ugv.protocol.messages.encode',side_effect=ValueError('encoding')):
             with self.assertRaisesRegex(ValueError,'encoding'):self.delete()
         self.assertEqual('history',self.call('task.get',task_id='history')['task']['task_id'])
         self.assertEqual(0,self.store.db.execute('SELECT COUNT(*) FROM deleted_tasks').fetchone()[0])

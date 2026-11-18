@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from car_terminal.gui import DebugWindow, SessionWorker
-from car_terminal.network import network_snapshot
+from car_terminal.network import network_snapshot, readiness
 
 
 def node(identity, level, ap, parent=None, **extra):
@@ -17,6 +17,17 @@ def node(identity, level, ap, parent=None, **extra):
 
 
 class TopologyTests(unittest.TestCase):
+    def test_business_readiness_does_not_mislabel_mqtt_online_node_as_offline(self):
+        row = dict(node_id='micro-001', ready=False, online=True, status_age_s=1,
+                   status_current_boot=True, status=dict(role='micro_uav', parent_connected=True,
+                       parent_bssid='aa:bb:cc:00:00:01', sta_ip='192.168.8.2', gateway='192.168.8.1'))
+        result = network_snapshot([node('uav-001',3,'aa:bb:cc:00:00:01'), row])['micro-001']
+        self.assertEqual('uav-001', result['parent'])
+        self.assertEqual('在线·未就绪', readiness(result))
+        self.assertEqual('离线', readiness(dict(ready=False, online=False)))
+        self.assertEqual('未就绪', readiness(dict(ready=False)))
+        self.assertEqual('就绪', readiness(dict(ready=True, online=True)))
+
     def test_branching_mesh_and_external_uplink_use_mac_not_role_or_subnet(self):
         rows = [
             node("bridge", 1, "aa:bb:cc:00:00:01", "ff:ee:dd:cc:bb:aa"),
@@ -30,7 +41,7 @@ class TopologyTests(unittest.TestCase):
         self.assertEqual("uav", result["micro"]["parent"])
 
     def test_old_firmware_levels_do_not_invent_parent_or_ip(self):
-        result = network_snapshot([dict(node_id="root", ready=True, status=dict(role="pc_root",level=1)),
+        result = network_snapshot([dict(node_id="root", ready=True, status=dict(role="ugv_root",level=1)),
                                    dict(node_id="micro", ready=False, status=dict(role="micro_uav",level=2))])
         self.assertIsNone(result["micro"]["parent"])
         self.assertEqual("unknown", result["micro"]["group"])
@@ -66,6 +77,27 @@ class TopologyTests(unittest.TestCase):
 
 
 class NetworkWindowTests(unittest.TestCase):
+    def test_online_not_ready_status_keeps_link_and_explains_capability_checks(self):
+        rows = [node('uav-001',3,'aa:bb:cc:00:00:01'),
+                dict(node_id='micro-001',ready=False,online=True,status_age_s=1,status_current_boot=True,
+                     status=dict(parent_connected=True,parent_bssid='aa:bb:cc:00:00:01'))]
+        self.window._apply('nodes', rows)
+        panel = self.window.network
+        self.assertEqual('在线·未就绪', panel.tree.set('micro-001','ready'))
+        panel.tree.selection_set('micro-001');panel._selected()
+        self.assertIn('能力公告', panel.detail.get())
+        self.assertEqual('uav-001', panel.tree.parent('micro-001'))
+
+    def test_sta_only_leaf_has_no_ap_and_keeps_parent_relationship(self):
+        parent='aa:bb:cc:00:00:01'
+        self.window._apply('nodes',[node('uav-001',3,parent),
+            dict(node_id='micro-001',ready=True,status=dict(role='micro_uav',level=4,
+                 ap_enabled=False,sta_ip='192.168.8.2',gateway='192.168.8.1',parent_bssid=parent,parent_connected=True))])
+        panel=self.window.network
+        self.assertEqual('uav-001',panel.tree.parent('micro-001'))
+        self.assertEqual('不适用（STA）',panel.tree.set('micro-001','ap_ip'))
+        self.assertEqual('192.168.8.2',panel.tree.set('micro-001','sta_ip'))
+
     def setUp(self):
         self.root = tk.Tk()
         self.root.withdraw()

@@ -1,0 +1,30 @@
+{
+  "v": 1,
+  "examples": [
+    {
+      "v": 1,
+      "type": "command",
+      "target": "ugv-001",
+      "msg_id": "example-1",
+      "op": "ping",
+      "deadline_unix": 2000000000
+    },
+    {
+      "v": 1,
+      "type": "task.command",
+      "target": "micro-001",
+      "task_id": "example-task",
+      "msg_id": "command-1",
+      "revision": 1,
+      "op_seq": 1,
+      "boot_id": "example-boot",
+      "op": "start",
+      "deadline_unix": 2000000000,
+      "kind": "diagnostics",
+      "config": {
+        "duration_s": 30,
+        "period_ms": 1000
+      }
+    }
+  ]
+}

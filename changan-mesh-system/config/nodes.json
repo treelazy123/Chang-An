@@ -1,35 +1,57 @@
 {
-  "schema": 1,
+  "schema": 2,
   "nodes": [
     {
-      "node_id": "pc-root-001",
-      "role": "pc_root",
-      "ugv_id": "ugv-001",
-      "enabled": true
+      "node_id": "ugv-root",
+      "ap_subnet": 5,
+      "role": "ugv_root",
+      "enabled": true,
+      "root_id": "ugv-root"
     },
     {
       "node_id": "ugv-001",
+      "ap_subnet": 6,
       "role": "ugv",
-      "ugv_id": "ugv-001",
-      "enabled": true
+      "enabled": true,
+      "root_id": "ugv-root"
     },
     {
       "node_id": "uav-001",
+      "ap_subnet": 8,
       "role": "uav",
-      "ugv_id": "ugv-001",
-      "enabled": true
+      "enabled": true,
+      "root_id": "ugv-root"
     },
     {
       "node_id": "micro-001",
+      "ap_subnet": null,
       "role": "micro_uav",
-      "ugv_id": "ugv-001",
-      "enabled": true
+      "enabled": true,
+      "root_id": "ugv-root",
+      "trust_status": "trusted",
+      "admission_revision": 1
     },
     {
       "node_id": "micro-002",
+      "ap_subnet": null,
       "role": "micro_uav",
-      "ugv_id": "ugv-001",
-      "enabled": true
+      "enabled": true,
+      "root_id": "ugv-root"
+    },
+    {
+      "node_id": "uav-002",
+      "ap_subnet": 9,
+      "role": "uav",
+      "enabled": true,
+      "root_id": "ugv-root"
+    },
+    {
+      "node_id": "ugv-002",
+      "role": "ugv",
+      "root_id": "ugv-root",
+      "enabled": true,
+      "trust_status": "pending",
+      "ap_subnet": 7
     }
   ]
 }

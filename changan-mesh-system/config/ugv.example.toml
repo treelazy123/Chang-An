@@ -9,10 +9,9 @@ client_key = "../secrets/controller-001/client.key"
 
 [paths]
 inventory_file = "nodes.json"
-task_database = "../runtime/tasks.sqlite3"
-agent_journal = "../runtime/ugv-task-agent.json"
+task_database = "../runtime/ugv-root/tasks.sqlite3"
+agent_journal = "../runtime/ugv-root/agent.json"
 lock_file = "../secrets/.controller.lock"
 
 [service]
-ugv_id = "ugv-001"
-rpc_port = 8787
+ugv_id = "ugv-root"

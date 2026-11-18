@@ -1,147 +1,85 @@
 # 固件与设备身份
 
-## 工程与角色
+唯一固件工程位于firmware，使用ESP-IDF 6.1.x与ESP32-C6。角色是ugv_root、ugv、uav、
+micro_uav，固定层级1/2/3/4。控制传输固定为mqtt_serial，构建配置版本为3。
+根节点ID与后台ugv_id统一为ugv-root，设备清单位于config/nodes.json。
 
-只有 `firmware/` 一个 ESP-IDF 6.1.x / ESP32-C6 工程。`pc_root`、`ugv`、`uav`、`micro_uav` 通过配置选择角色，应用代码位于 `firmware/apps/`，共享代码位于 `firmware/components/`。角色名 `pc_root` 对应源码目录 `apps/root/`。
+## 身份
 
-当前业务使用 `--transport mqtt_serial`。`lab.py` 的默认值仍是 `legacy`，因此以下命令显式指定 MQTT 模式。legacy TCP 实现仅供兼容，不能混用它的 9000/9001 连接教程与当前 8883 MQTT 链路。
+根C6是透明网关，没有MQTT客户端证书。普通UGV/UAV/Micro各有独立证书，CN、Client ID、
+node_id一致。后台身份controller-001，Broker服务名ugv-broker.lab；IP地址不代表身份。
 
-chain 配置预期 root=1、UGV=2、UAV=3、Micro=4。当前 `mqtt_serial` 仅支持已确认的 chain；star/auto 属于 legacy 配置，不能直接用于以下 MQTT 命令。所有板应使用相同 Mesh ID、信道、密码与拓扑。实际父子关系以 BSSID/AP MAC 和状态上报为准；level=0 或没有有效 IP 时不能认定入网完成。
-
-## 现有身份与新设备
-
-公开清单为 `config/nodes.json`。node_id 是固定资产身份，1–32 个 ASCII 字母、数字、横线或下划线；拒绝保留身份、路径、Windows 设备名和仅大小写不同的重复编号。MAC、IP、COM、boot_id 不替代 node_id。
-
-```powershell
-cd D:\changan\changan-mesh-system
-uv sync --locked
-uv run --locked python tools/provision_mqtt.py --list
-```
-
-只在增加新设备时增量登记，例如：
+已有secrets必须保留。查看登记：`uv run --locked python tools/provision_mqtt.py --list`。
+新设备使用现有CA增量登记，例如：
 
 ```powershell
-uv run --locked python tools/provision_mqtt.py --role uav --node-id uav-017 --ugv-id ugv-001
+uv run --locked python tools/provision_mqtt.py --role ugv --node-id ugv-002 --ugv-id ugv-root
+uv run --locked python tools/provision_mqtt.py --role uav --node-id uav-002 --ugv-id ugv-root
 ```
 
-证书与私钥保存在 `secrets/<node_id>/`，与该编号、角色及指纹绑定。重复登记复用原有身份，不重建 CA，不覆盖其他设备密钥。UGV 也保留自己的证书，但当前 UGV C6 是透明 USB 网关，不用自身身份登录 MQTT；USB 网络诊断报告不增加认证授权。
+首次CA初始化仅用于空环境；有凭据时禁止重新初始化。登记不自动重启Broker。
 
-发证或修改清单后，需要由管理员部署生成的 ACL 才能接入；具体步骤见 [部署与交接](deployment.md)。清单数量不写死，实时容量仍受硬件限制。USB 隧道默认最多 8 通道，范围 1–8；超过现有上限需修改协议与资源配置并重新验收。
+## 用户构建与烧录
 
-## 启动 ESP-IDF 环境
-
-在准备编译或烧录的 PowerShell 窗口执行本机安装器提供的脚本，然后进入主仓库：
+在仓库根目录执行配置预览，不启动IDF、不打开串口：
 
 ```powershell
-& 'C:\Espressif\tools\Microsoft.v6.1.PowerShell_profile.ps1'
-cd D:\changan\changan-mesh-system
-$env:PYTHONUTF8 = '1'
-python --version
-python "$env:IDF_PATH\tools\idf.py" --version
+uv run --locked python tools/lab.py --role ugv_root --node-id ugv-root --dry-run
+uv run --locked python tools/lab.py --role ugv --node-id ugv-001 --dry-run
+uv run --locked python tools/lab.py --role uav --node-id uav-001 --dry-run
+uv run --locked python tools/lab.py --role micro_uav --node-id micro-001 --dry-run
+uv run --locked python tools/verify_builds.py
 ```
 
-本机已验证输出 `ESP-IDF v6.1`；`IDF_PATH` 为 `D:\esp\v6.1\esp-idf`，Python 为 `C:\Espressif\tools\python\v6.1\venv\Scripts\python.exe`。其他机器替换为自己的安装路径。
-
-环境只对执行脚本的 PowerShell 进程及其子进程生效；新窗口需要重新加载。下面的固件命令使用此环境中的 `python`，主机程序继续按运行说明使用 `uv run --locked`。
-
-如果提示“禁止运行脚本”，仅为当前窗口临时放行后重新加载：
+实际编译和烧录由用户在ESP-IDF环境执行，例如：
 
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-& 'C:\Espressif\tools\Microsoft.v6.1.PowerShell_profile.ps1'
+python tools/lab.py --role ugv_root --node-id ugv-root build
+python tools/lab.py --role ugv_root --node-id ugv-root --port COM_ROOT flash
 ```
 
-关闭窗口后该执行策略设置失效，不修改 CurrentUser 或 LocalMachine 策略。若出现 Unicode 环境提示，在同一窗口设置 `$env:PYTHONUTF8 = '1'` 再运行命令即可。
+其他板将role/node-id/port替换为对应实物。每个node使用独立build/mqtt_serial/nodes目录。
+缓存不符合架构版本3、角色、节点ID或管理root时明确拒绝，不能复用错误缓存烧录。
 
-## 配置预览
+AP网段也属于设备构建配置：`config/nodes.json`的`ap_subnet`生成
+`CONFIG_APP_SOFTAP_SUBNET`。中继节点的网段在同一清单中不得重复，STA地址继续由父AP的DHCP分配。
+Micro是STA-only叶子，清单为`ap_subnet: null`，构建值为0，不占用AP网段。
 
-以下命令不构建、不连接设备，也不签发身份：
+| 节点 | 预留AP地址（/24） |
+| --- | --- |
+| ugv-root | 192.168.5.1 |
+| ugv-001 | 192.168.6.1 |
+| ugv-002 | 192.168.7.1（预留，待登记证书及授权） |
+| uav-001 | 192.168.8.1 |
+| uav-002 | 192.168.9.1 |
+| micro-001 | 无AP，仅STA |
+| micro-002 | 无AP，仅STA |
+
+旧固件不执行该规划，需逐台重新构建、烧录（先根与UGV，再UAV，最后Micro）。
+仅修改清单或重启后台不会改变板上的AP地址。首次更新为每台设备加`--reset-config`。
+Micro连接uav-001时获取192.168.8.x，连接uav-002时获取192.168.9.x；默认由Mesh自动选择；指定父节点见[运行手册](operations.md#parent-selection)。
+Micro启动日志应出现`AP_DISABLED`，工作模式为STA，关闭DHCP服务，遥测中`ap_enabled=false`，不报告AP地址。
+车机网络表的AP地址与关联客户端显示“不适用（STA）”。
+启动日志`AP_ADDRESS_PLAN`应与清单一致，`ADDR`及遥测应上报同一实际AP地址。
+若出现`AP_SUBNET_OVERLAP`，修正父子节点的规划并重启，不能靠关闭检查维持连接。
+手动重配后也不要擦除NVS或重新签发证书。ugv-002目前仅预留地址，未生成证书；
+设备到位后运行`uv run --locked python tools/provision_mqtt.py --role ugv --node-id ugv-002 --ugv-id ugv-root`，
+再通过后台授权接入。新增中继设备登记从192.168.10.0/24起保留未占用网段，Micro不分配AP网段；
+禁用或撤销不会释放地址。旧自定义清单缺少`ap_subnet`时，用该设备的登记命令增量补齐，
+复用现有证书和私钥；只读查询与dry-run不自动修改清单。
+
+从旧架构升级时，同一设备的缓存可能仍是版本2，且管理节点仍为ugv-001。为该设备首次
+重新构建时加一次`--reset-config`，例如：
 
 ```powershell
-uv run --locked python tools/lab.py --transport mqtt_serial --role pc_root --node-id pc-root-001 --dry-run
-uv run --locked python tools/lab.py --transport mqtt_serial --role ugv --node-id ugv-001 --dry-run
-uv run --locked python tools/lab.py --transport mqtt_serial --role uav --node-id uav-001 --dry-run
-uv run --locked python tools/lab.py --transport mqtt_serial --role micro_uav --node-id micro-001 --dry-run
-uv run --locked python tools/lab.py --transport mqtt_serial --role micro_uav --node-id micro-002 --dry-run
+python tools/lab.py --role ugv --node-id ugv-001 --reset-config build
+python tools/lab.py --role ugv --node-id ugv-001 --port COM5 flash
 ```
 
-MQTT 固件按设备隔离在 `build/mqtt_serial/nodes/<node_id>/<role>-<topology>/`。不要跨编号复用 bin、sdkconfig 或 Ninja/CMake 缓存；已有配置优先于 defaults，更新 defaults 后应检查实际生效配置。
+COM5仅为示例，必须按实物确认。工具将原sdkconfig备份为同目录的
+sdkconfig.before-reset-时间戳，按当前默认配置重新生成，校验通过后执行请求的动作。
+自定义menuconfig设置需要从备份核对后重新设置。节点ID或角色不一致仍拒绝重置；
+证书、私钥、运行数据和设备NVS不受配置重置影响。可加`--dry-run`预览差异，不改文件。
 
-## 用户编译与烧录
-
-新增巡检/复核测试需要分别更新UAV与每台Micro固件；按角色公告服务，任务参数和结果均标注esp32_test。task_agent将旧m1_task/journal记录迁移至journal_v2，保留旧键及设备身份。用户构建和上板检查步骤见 [流程验证说明](esp32-workflows.md)。
-
-先按上节加载 IDF 环境，确保当前目录是主仓库根目录。刷写前退出占用目标板原生 USB 的桥接、车机 GUI/CLI 或串口监视器。用以下命令枚举端口（不打开设备）：
-
-```powershell
-python -m serial.tools.list_ports -v
-```
-
-核对实物与 node_id，不能只凭历史端口号选板。只编译、不烧录的示例：
-
-```powershell
-python tools/lab.py --transport mqtt_serial --role ugv --node-id ugv-001 --topology chain build
-```
-
-以下是五块现有设备的烧录方法，按实际需要逐条执行。此前端口为 root=COM7、UGV=COM4、UAV=COM5；若重新枚举后发生变化，先修改命令。
-
-root / 车机 C6：
-
-```powershell
-python tools/lab.py --transport mqtt_serial --role pc_root --node-id pc-root-001 --topology chain --port COM7 flash
-```
-
-UGV C6：
-
-```powershell
-python tools/lab.py --transport mqtt_serial --role ugv --node-id ugv-001 --topology chain --port COM4 flash
-```
-
-UAV C6：
-
-```powershell
-python tools/lab.py --transport mqtt_serial --role uav --node-id uav-001 --topology chain --port COM5 flash
-```
-
-Micro-001 / Micro-002 的端口需分别确认；以下命令会先询问端口，再烧录对应设备，不自动猜测：
-
-```powershell
-$micro001Port = Read-Host '输入 micro-001 的实际串口，例如 COM6'
-python tools/lab.py --transport mqtt_serial --role micro_uav --node-id micro-001 --topology chain --port $micro001Port flash
-```
-
-```powershell
-$micro002Port = Read-Host '输入 micro-002 的实际串口，例如 COM8'
-python tools/lab.py --transport mqtt_serial --role micro_uav --node-id micro-002 --topology chain --port $micro002Port flash
-```
-
-`flash` 会按 IDF 需要先编译，然后写入所选板。每块板使用自己的编号、证书和独立构建目录，不把其他板的 bin 当作本板固件，不擦除已登记身份和 NVS。`lab.py` 会在缺少必要 bootloader 配置元数据时先重新配置；不要手工拼造生成文件。
-
-只核对某条烧录命令、暂不执行时，加入 `--dry-run`，例如：
-
-```powershell
-python tools/lab.py --transport mqtt_serial --role ugv --node-id ugv-001 --topology chain --port COM4 --dry-run flash
-```
-
-确认烧录成功后，按 [运行说明](operations.md) 恢复对应桥接、后台与车机连接。
-
-`tools/idf_env.py` 本身读取安装器的静态配置来准备子进程环境，不执行 PowerShell 激活脚本。身份检查缺少 cryptography 时调用主仓库 `.venv` 的身份工作进程，无需向 IDF Python 补装主机依赖。
-
-容量检查使用已有产物：
-
-```powershell
-uv run --locked python tools/check_firmware_size.py --node-id ugv-001
-```
-
-新增完整网络显示需要更新 root/UAV/Micro 的状态上报固件，以及 UGV 的协商式 USB 网络报告固件；主机代码更新本身不会改变已经烧录的程序。
-
-## SDK 与资源约束
-
-- 本地第三方组件、版本和许可证位于 `third_party/`，组件管理器保持关闭；不自动替换预编译 Mesh-Lite 核心。
-- 本地 Mesh-Lite 1.0.2 的旧 netif 兼容层在 TCP/IP 上下文调用新接口；STA/AP 在启动时创建且运行期不删除。成功链接不能证明全部私有 ABI 运行路径正确。
-- NAPT 扩展由兼容脚本核对 SDK 输入后生成到构建目录，不修改 SDK 源文件。更换 SDK 或核心库后需重新核对接口、地址字节序与补丁输入。
-- `firmware/partitions.csv` 保留 NVS/PHY 偏移，factory 从 `0x10000` 开始、大小 `0x1f0000`，对应现有 2 MiB 布局。实际镜像和板载容量由用户编译验收。
-- 保留 FreeRTOS timer 4096 字节栈及水位日志；NVS 初始化失败不自动擦除。
-- root 和 UGV 原生 USB 专用于二进制链路，主控制台为 UART0，USB 副控制台关闭。Wi-Fi AP 关联表只表示驱动记录，不等同于 MQTT 在线或诊断任务存活。
-
-当前构建和真实硬件边界见 [验收状态](status.md)。
+根板原生USB保留给MUX1，UART0输出日志。用户编译后检查分区、Flash容量、堆/栈和NVS。
+NVS记录包含已有格式读取，保持已记录任务不被擦除；固件升级不自动清空NVS。

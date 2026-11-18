@@ -1,12 +1,14 @@
 {
-  "idf.buildPath": "${workspaceFolder}/../build/mqtt_serial/nodes/pc-root-001/pc_root-chain",
-  "idf.sdkconfigFilePath": "${workspaceFolder}/../build/mqtt_serial/nodes/pc-root-001/pc_root-chain/sdkconfig",
+  "idf.buildPath": "${workspaceFolder}/../build/mqtt_serial/nodes/ugv-root/ugv_root-chain",
+  "idf.sdkconfigFilePath": "${workspaceFolder}/../build/mqtt_serial/nodes/ugv-root/ugv_root-chain/sdkconfig",
   "idf.sdkconfigDefaults": [
     "sdkconfig.defaults",
-    "configs/profiles/pc_root.defaults",
+    "configs/profiles/ugv_root.defaults",
     "configs/topologies/chain.defaults",
-    "../secrets/pc-root-001/clock.defaults"
+    "../secrets/clock.defaults"
   ],
   "files.encoding": "utf8",
-  "idf.currentSetup": "D:\\esp\\v6.1\\esp-idf"
+  "idf.currentSetup": "D:\\esp\\v6.1\\esp-idf",
+  "idf.flashType": "UART",
+  "idf.port": "COM4"
 }

@@ -41,8 +41,8 @@ def network_snapshot(rows):
             node["status_age_s"] = radio.get("age_s")
             node["status_current_boot"] = True
         nodes[identity] = node
-        ap = mac_address(status.get("ap_mac"))
-        if ap:
+        ap = mac_address(node['status'].get("ap_mac"))
+        if ap and node['status'].get('ap_enabled') is not False:
             ap_owners[ap].append(identity)
     for identity, node in nodes.items():
         status = node["status"]
@@ -51,6 +51,9 @@ def network_snapshot(rows):
             continue
         if node.get("status_current_boot") is False and status:
             node.update(group="history", relation="状态来自旧启动，仅保留历史数据")
+            continue
+        if status.get('role')=='ugv_root' and status.get('level')==1:
+            node.update(group='root',relation='无人车根节点')
             continue
         if status.get("parent_connected") is False:
             node.update(group="detached", relation="未关联上游 AP")
@@ -86,10 +89,12 @@ def readiness(node):
         return "就绪"
     if node.get("online") is False:
         return "离线"
+    if node.get("online") is True:
+        return "在线·未就绪"
     return "未就绪"
 
 
-GROUPS = dict(external="外部 / 未登记的上游 AP", unknown="父节点未上报",
+GROUPS = dict(root="无人车根节点", external="外部 / 未登记的上游 AP", unknown="父节点未上报",
               detached="未关联上游", history="旧启动的历史状态", conflict="关系待确认",
               host="主机服务（非 Mesh 无线节点）")
 
@@ -97,6 +102,7 @@ GROUPS = dict(external="外部 / 未登记的上游 AP", unknown="父节点未�
 class NetworkPanel:
     def __init__(self, parent, refresh, select_target):
         self.nodes = {}
+        self._selected_identity = None
         self.select_target = select_target
         self.summary = tk.StringVar(parent, value="等待刷新网络结构")
         self.detail = tk.StringVar(parent, value="选择节点查看 MAC、网关和连接详情。")
@@ -135,6 +141,7 @@ class NetworkPanel:
 
     def clear(self):
         self.nodes.clear()
+        self._selected_identity = None
         self.tree.delete(*self.tree.get_children())
         self.summary.set("等待刷新网络结构")
         self.detail.set("选择节点查看 MAC、网关和连接详情。")
@@ -167,6 +174,9 @@ class NetworkPanel:
                           status.get("level", UNKNOWN)]
                 values.extend(status.get(key, UNKNOWN) for key in
                               ("sta_ip", "ap_ip", "gateway", "rssi", "channel", "associated_children"))
+                if status.get('ap_enabled') is False:
+                    values[4] = '不适用（STA）'
+                    values[8] = '不适用（STA）'
                 values.append(node.get("status_age_s") if node.get("status_age_s") is not None else UNKNOWN)
                 self.tree.insert(parent or "group:" + node["group"], "end", iid=identity,
                                  text=identity, values=values, open=expanded.get(identity, True),
@@ -178,6 +188,7 @@ class NetworkPanel:
             self.tree.selection_set(selected[0])
             self._selected()
         else:
+            self._selected_identity = None
             self.detail.set("选择节点查看 MAC、网关和连接详情。")
 
     def _selected(self, _=None):
@@ -188,10 +199,14 @@ class NetworkPanel:
         node = self.nodes[identity]
         status = node["status"]
         fields = [identity, node["relation"]]
+        if node.get('online') is True and not node.get('ready'):
+            fields.append('MQTT 在线，业务未就绪；请核对能力公告、启动版本及遥测时效')
         if "service_ready" in node:
             fields.append("UGV USB 网络设备；主机任务服务：" + ("就绪" if node["service_ready"] else "未就绪"))
         fields += [f"{label}: {status.get(key, UNKNOWN)}" for key, label in
                    (("parent_bssid", "父 BSSID"), ("sta_mac", "STA MAC"),
                     ("ap_mac", "AP MAC"), ("netmask", "子网掩码"))]
         self.detail.set("  |  ".join(fields))
-        self.select_target(identity)
+        if identity != self._selected_identity:
+            self._selected_identity = identity
+            self.select_target(identity)

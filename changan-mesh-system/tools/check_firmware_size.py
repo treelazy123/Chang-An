@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import struct
 ENTRY=struct.Struct('<HBBII16sI')
-ROLES=('pc_root','ugv','uav','micro_uav')
+ROLES=('ugv_root','ugv','uav','micro_uav')
 def inspect(directory):
     directory=Path(directory)
     image=directory/'mesh_lite_node.bin'
@@ -43,8 +43,6 @@ def main():
     else:
         for node in nodes:
             directory=root/'build/mqtt_serial/nodes'/node['node_id']/(node['role']+'-chain')
-            legacy=root/'build/mqtt_serial'/(node['role']+'-chain')
-            if not directory.exists() and node['node_id']==DEFAULT_IDS[node['role']] and legacy.exists():directory=legacy
             directories.append(directory)
     try: rows=[inspect(p) for p in directories]
     except (ValueError,OSError) as exc: parser.exit(2,str(exc)+'\n')

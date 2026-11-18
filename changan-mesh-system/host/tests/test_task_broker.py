@@ -15,7 +15,7 @@ import unittest
 ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT/'tools'))
 from provision_mqtt import provision
 from changan_ugv.agents.ugv import HostDiagnostics
-from ugv_service import ServiceController
+from changan_ugv.service.server import ServiceController
 from node_inventory import load_inventory
 from node_identity import enroll
 from workflow_reference import WorkflowReference
@@ -27,7 +27,7 @@ class Node:
     """Host test executor; validates actual TLS/ACL/routing, not the C implementation."""
     def __init__(self,root,node,port):
         import paho.mqtt.client as mqtt
-        from mqtt_controller import BrokerTLSContext
+        from changan_ugv.nodes.controller import BrokerTLSContext
         import ssl
         self.lock=threading.RLock()
         self.node=node;self.stopped=threading.Event();self.ready=threading.Event();self.seen=[];self.command_packets=[]
@@ -75,7 +75,8 @@ class Node:
 @unittest.skipUnless(Path(BROKER).is_file() and CAR.is_dir(),'Requires local Mosquitto and independent car repo')
 class RealBrokerM1(unittest.TestCase):
     def test_tls_car_two_nodes_lifecycle_and_new_topic_acl(self):
-        from car_terminal.client import MQTTClient
+        from car_terminal.client import HTTPClient
+        from changan_ugv.api.server import LocalAPI
         from car_terminal.tasks import TaskClient
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
@@ -87,13 +88,13 @@ class RealBrokerM1(unittest.TestCase):
             from changan_ugv.deployment import render_broker_config
             with socket.socket() as listener:listener.bind(('127.0.0.1',0));second_port=listener.getsockname()[1]
             config=render_broker_config(ca_file=root/'secrets/ca.pem',server_cert=root/'secrets/ugv-broker.lab/client.pem',
-                server_key=root/'secrets/ugv-broker.lab/client.key',acl_file=root/'runtime/acl.conf',
+                server_key=root/'secrets/ugv-broker.lab/client.key',acl_file=root/'runtime/ugv-root/acl.conf',
                 listeners=[('127.0.0.1',port),('127.0.0.1',second_port)])
             conf.write_text(config+'\nlog_dest stderr\n',encoding='utf-8')
             log=(root/'broker.log').open('w')
             process=subprocess.Popen([BROKER,'-c',str(conf)],stdout=log,stderr=log,
                                      creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
-            service=None;nodes=[];car=None
+            service=None;nodes=[];car=None;http=None
             try:
                 for _ in range(100):
                     try:
@@ -119,7 +120,8 @@ class RealBrokerM1(unittest.TestCase):
                 while not all(service.registry.ready(n.node) for n in nodes):
                     if time.monotonic()>deadline:raise AssertionError('Nodes did not become ready')
                     time.sleep(.05)
-                car=MQTTClient('127.0.0.1',port,'pc-root-001',root/'secrets/pc-root-001');api=TaskClient(car)
+                http=LocalAPI(service,0);http.start()
+                car=HTTPClient(f'http://127.0.0.1:{http.port}');api=TaskClient(car)
                 first=api.create('micro-001',5,200,task_id='first')['task']['task_id']
                 second=api.create('micro-002',2,200,task_id='second')['task']['task_id']
                 api.control(first,'start');api.control(second,'start')
@@ -133,8 +135,8 @@ class RealBrokerM1(unittest.TestCase):
                 wait_state(first,{'RUNNING'});api.control(first,'pause');wait_state(first,{'PAUSED'})
                 services=api.services()
                 self.assertEqual({'network_diagnostics','task_monitor','patrol','anomaly_review'},{s['service_type'] for s in services})
-                network=api.network('ugv-001','micro-001',2,200)['task']['task_id']
-                monitor=api.monitor('ugv-001',first,2,200,10)['task']['task_id']
+                network=api.network('ugv-root','micro-001',2,200)['task']['task_id']
+                monitor=api.monitor('ugv-root',first,2,200,10)['task']['task_id']
                 api.control(network,'start');api.control(monitor,'start')
                 wait_state(network,{'RUNNING'});wait_state(monitor,{'RUNNING'})
                 self.assertTrue(all(s['availability']=='busy' for s in api.services() if s['agent_type']=='ugv'))
@@ -170,6 +172,8 @@ class RealBrokerM1(unittest.TestCase):
                 self.assertTrue(deletion['deleted'])
                 with self.assertRaisesRegex(ValueError,'task_not_found'):api.get(first)
                 self.assertNotEqual(first,api.list()['items'][0]['task_id'])
+                car.close();car=None
+                http.close();http=None
                 service.close();service=None
                 # Restart through explicit deployment paths/config, without deriving a repository from secrets.
                 from changan_ugv.config import BrokerConfig,BrokerEndpoint,ServicePaths
@@ -186,6 +190,8 @@ class RealBrokerM1(unittest.TestCase):
                 service=ServiceController(paths=paths,broker=broker,lock_file=paths.lock_file,
                     inventory=load_inventory(root),inventory_path=paths.inventory_file)
 
+                http=LocalAPI(service,0);http.start()
+                car=HTTPClient(f'http://127.0.0.1:{http.port}');api=TaskClient(car)
                 wait_state(third,{'RUNNING','SUCCEEDED'})
                 starts=[p for p in nodes[1].command_packets if p['task_id']==third and p['op']=='start']
                 self.assertEqual(1,len(starts),'Restart must reconcile, not replay start')
@@ -206,7 +212,7 @@ class RealBrokerM1(unittest.TestCase):
                 self.assertEqual('P02',incidents[0]['point_id'])
                 review=api.review_test('uav-001',incidents[0]['event_id'],'cleared',2)['task']['task_id']
                 api.control(review,'start');wait_state(review,{'RUNNING'})
-                watched=api.monitor('ugv-001',review,2,200,10)['task']['task_id']
+                watched=api.monitor('ugv-root',review,2,200,10)['task']['task_id']
                 api.control(watched,'start')
                 self.assertEqual('esp32_test',wait_state(patrol,{'SUCCEEDED'})['result']['mode'])
                 reviewed=wait_state(review,{'SUCCEEDED'})['result']
@@ -214,6 +220,7 @@ class RealBrokerM1(unittest.TestCase):
                 self.assertEqual('esp32_test',wait_state(watched,{'SUCCEEDED'})['result']['mode'])
             finally:
                 if car:car.close()
+                if http:http.close()
                 for node in nodes:node.close()
                 if service:service.close()
                 process.terminate()

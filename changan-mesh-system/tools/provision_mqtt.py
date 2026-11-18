@@ -10,8 +10,8 @@ def provision(root):
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
     root = Path(root).resolve()
-    from node_inventory import load_inventory, write_inventory, write_acl
-    inventory=load_inventory(root)
+    from node_inventory import load_inventory, write_inventory, write_acl, assign_ap_subnets
+    inventory=assign_ap_subnets(load_inventory(root))
     secret = root / 'secrets'
     if secret.exists() and any(secret.iterdir()):
         raise ValueError('secrets is nonempty; existing keys are never overwritten. Use --node-id/--role for incremental enrollment, or --refresh-clock; existing keys are never replaced.')
@@ -34,7 +34,7 @@ def provision(root):
     ca_bytes = ca.public_bytes(serialization.Encoding.PEM)
     (secret/'ca.pem').write_bytes(ca_bytes)
     save_key(secret/'ca.key', ca_key)
-    for identity in ('ugv-broker.lab','controller-001',*(e['node_id'] for e in inventory['nodes'])):
+    for identity in ('ugv-broker.lab','controller-001',*(e['node_id'] for e in inventory['nodes'] if e['role']!='ugv_root')):
         directory = secret/identity
         directory.mkdir()
         key = ec.generate_private_key(ec.SECP256R1())
@@ -51,7 +51,7 @@ def provision(root):
         (directory/'client.pem').write_bytes(cert.public_bytes(serialization.Encoding.PEM))
         save_key(directory/'client.key',key)
         (directory/'ca.pem').write_bytes(ca_bytes)
-    runtime = root/'runtime'
+    runtime = root/'runtime/ugv-root'
     runtime.mkdir(parents=True, exist_ok=True)
     write_inventory(root,inventory)
     write_acl(root,inventory)
@@ -60,7 +60,7 @@ def provision(root):
                                server_key=secret/'ugv-broker.lab/client.key',acl_file=runtime/'acl.conf')
     (runtime/'mosquitto.conf').write_text(config,encoding='utf-8')
     refresh_clock(root)
-    print('Created lab identities and runtime/mosquitto.conf. Private keys are in ignored secrets/.')
+    print('Created lab identities and runtime/ugv-root/mosquitto.conf. Existing credentials are preserved in secrets/.')
 def refresh_clock(root):
     root=Path(root)
     if not (root/'secrets/ca.pem').is_file():
@@ -72,7 +72,7 @@ def main():
     parser.add_argument('--refresh-clock',action='store_true')
     parser.add_argument('--sync-acl',action='store_true',help='Regenerate ACL from inventory without issuing certificates')
     parser.add_argument('--list',action='store_true',help='List all registered device identities and certificate status')
-    parser.add_argument('--role',choices=('pc_root','ugv','uav','micro_uav'))
+    parser.add_argument('--role',choices=('ugv_root','ugv','uav','micro_uav'))
     parser.add_argument('--node-id',help='Incrementally enroll one device without replacing the CA or other keys')
     parser.add_argument('--ugv-id',help='UGV service identity for this device')
     args=parser.parse_args()
@@ -87,16 +87,18 @@ def main():
             from node_inventory import load_inventory
             from node_identity import check_identity
             for entry in load_inventory(args.root)['nodes']:
-                try:check_identity(args.root,entry['node_id']);status='valid'
+                try:
+                    if entry['role']=='ugv_root':status='not_required_for_root_gateway'
+                    else:check_identity(args.root,entry['node_id']);status='valid'
                 except (OSError,ValueError):status='missing_or_invalid'
-                print(entry['node_id']+' role='+entry['role']+' ugv='+entry.get('ugv_id','ugv-001')+
+                print(entry['node_id']+' role='+entry['role']+' ugv='+entry['root_id']+
                       ' enabled='+str(entry.get('enabled',True))+' certificate='+status)
         elif args.node_id:
             if not args.role or args.refresh_clock: parser.error('--node-id requires --role and cannot combine with --refresh-clock')
             from node_identity import enroll
             result=enroll(args.root,args.role,args.node_id,args.ugv_id)
             print(('Created' if result['created'] else 'Reused')+' identity '+result['node_id']+' ('+result['role']+'). Existing keys preserved.')
-            print('Inventory/ACL updated; restart or reload the project Broker to apply ACL changes; a running new-version mqtt_terminal reloads the inventory automatically.')
+            print('Inventory/ACL updated; restart or reload the project Broker to apply ACL changes; a running new-version UGV Service reloads the inventory automatically.')
         elif args.role or args.ugv_id: parser.error('--role/--ugv-id require --node-id')
         elif args.refresh_clock: refresh_clock(args.root)
         else: provision(args.root)

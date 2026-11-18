@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import time
-from node_inventory import ROLES,valid_id,load_inventory,write_inventory,write_acl
+from node_inventory import ROLES,valid_id,load_inventory,write_inventory,write_acl,assign_ap_subnets,next_ap_subnet
 
 def check_identity(root,node_id):
     from cryptography import x509
@@ -79,15 +79,21 @@ def enroll(root,role,node_id,ugv_id=None):
     if role not in ROLES:raise ValueError('Unknown device role')
     if not (root/'secrets/ca.key').is_file():raise ValueError('Initialize the lab CA with tools/provision_mqtt.py first')
     with enrollment_lock(root):
-        data=load_inventory(root)
+        data=assign_ap_subnets(load_inventory(root))
         entry=next((e for e in data['nodes'] if e['node_id'].casefold()==node_id.casefold()),None)
         if entry and (entry['node_id']!=node_id or entry['role']!=role):raise ValueError('ID already belongs to a different role or spelling: '+node_id)
         if entry and not entry.get('enabled',True):raise ValueError('Node is disabled in administrator inventory: '+node_id)
-        target=node_id if role=='ugv' else (ugv_id or (entry or {}).get('ugv_id','ugv-001'))
+        subnet=None if role=='micro_uav' else (entry['ap_subnet'] if entry else next_ap_subnet(data))
+        target=node_id if role=='ugv_root' else (ugv_id or (entry or {}).get('root_id','ugv-root'))
         valid_id(target)
-        if role!='ugv' and not any(e['node_id']==target and e['role']=='ugv' for e in data['nodes']):
-            raise ValueError('Enroll the target UGV identity first: '+target)
-        if role=='ugv' and ugv_id and ugv_id!=node_id:raise ValueError('UGV service ID must match its own node ID')
+        if role!='ugv_root' and not any(e['node_id']==target and e['role']=='ugv_root' and e.get('enabled',True) for e in data['nodes']):
+            raise ValueError('Enroll the target root identity first: '+target)
+        if role=='ugv_root':
+            record=dict(node_id=node_id,role=role,root_id=node_id,enabled=True,ap_subnet=subnet)
+            if entry:entry.update(record)
+            else:data['nodes'].append(record)
+            write_inventory(root,data);write_acl(root,data)
+            return dict(record,created=False,certificate_sha256=None)
         directory=root/'secrets'/node_id
         metadata=directory/'identity.json'
         if metadata.exists():
@@ -100,7 +106,7 @@ def enroll(root,role,node_id,ugv_id=None):
         fingerprint=check_identity(root,node_id)
         if metadata.exists() and old.get('certificate_sha256')!=fingerprint:
             raise ValueError('Certificate fingerprint changed; inspect identity rather than silently reusing it')
-        record={'node_id':node_id,'role':role,'ugv_id':target,'enabled':(entry or {}).get('enabled',True)}
+        record={'node_id':node_id,'role':role,'root_id':target,'enabled':(entry or {}).get('enabled',True),'ap_subnet':subnet}
         if entry:entry.update(record)
         else:data['nodes'].append(record)
         metadata.write_text(json.dumps(dict(record,certificate_sha256=fingerprint),indent=2)+'\n',encoding='utf-8')

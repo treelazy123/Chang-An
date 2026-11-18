@@ -2,7 +2,7 @@
 
 原身份目录 secrets/uav-001 包含登记证书、私钥及 identity.json 指纹，不直接覆盖。新工具仅在 runtime/tls-negative/uav-001 生成另一套 CA 签发的匹配 client.pem/client.key；ca.pem 复制原受信 CA，保持 UAV 验证 Broker 的能力。没有修改 Broker CA、ACL、节点登记或正常证书。测试 CA 私钥不保存。
 
-测试文件已生成。也可幂等重新检查：
+需要此测试时，生成或幂等检查临时测试文件：
 
 ```powershell
 cd D:\changan\changan-mesh-system
@@ -13,10 +13,10 @@ uv run --locked python tools/tls_negative_identity.py --node-id uav-001
 
 ## 用户运行：烧录失败测试固件
 
-先启动 Wireshark，选择回环接口，捕获过滤器 tcp port 8883。保持 UGV USB 转发和实际 Broker 的 require_certificate true。UAV 串口按当前实际设备填写，以下沿用已知 COM5。
+先启动 Wireshark，选择回环接口，捕获过滤器 tcp port 8883。保持 UGV USB 转发和实际 Broker 的 require_certificate true。UAV 串口必须按实物确认，以下 COM_UAV 为占位符。
 
 ```powershell
-uv run --locked python tools/lab.py --transport mqtt_serial --role uav --node-id uav-001 --topology chain --tls-test-untrusted-client --port COM5 flash
+uv run --locked python tools/lab.py --transport mqtt_serial --role uav --node-id uav-001 --topology chain --tls-test-untrusted-client --port COM_UAV flash
 ```
 
 lab.py 仍校验并复用正常登记身份，只在 CMake 嵌入阶段切换测试凭据。测试目录为 build/mqtt_serial/tls-negative/uav-001/uav-chain；正常目录为 build/mqtt_serial/nodes/uav-001/uav-chain。无需删除 sdkconfig、修改 identity.json 或手工改 PEM。非 UAV 角色不能使用此选项。
@@ -36,7 +36,7 @@ TLS失败不等于Mesh Wi-Fi断开。UAV仍可能维持第3层网络中继。只
 不带测试选项重新烧录同一块 UAV：
 
 ```powershell
-uv run --locked python tools/lab.py --transport mqtt_serial --role uav --node-id uav-001 --topology chain --port COM5 flash
+uv run --locked python tools/lab.py --transport mqtt_serial --role uav --node-id uav-001 --topology chain --port COM_UAV flash
 ```
 
 正常路径始终使用原 secrets/uav-001/client.pem 和 client.key。恢复后确认 ready 与 ping/status。运行目录中的测试凭据可以保留供复测，不能用于部署或更新正式登记。

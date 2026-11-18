@@ -16,5 +16,3 @@ class MQTTNodeChannel:
             return sum(self.controller.registry.ready(node) for node in self.controller.registry.nodes)
     def send(self,node_id,packet):
         return SendReceipt(self.controller.client.publish(f'mesh/v1/nodes/{node_id}/task_commands',dumps(packet),qos=1,retain=False).rc==0)
-    def notify(self,terminal_id,packet):
-        return SendReceipt(self.controller.client.publish(f'mesh/v1/terminals/{terminal_id}/events',dumps(packet),qos=1,retain=False).rc==0)

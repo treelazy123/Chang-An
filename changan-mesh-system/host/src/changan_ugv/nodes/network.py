@@ -5,7 +5,7 @@ from pathlib import Path
 import time
 
 from changan_ugv.paths import repository_root
-from changan_ugv.protocol.frames import NODE_ID, _unique_object
+from changan_ugv.protocol.messages import NODE_ID, _unique_object
 
 
 def decode_network(data):
@@ -13,7 +13,7 @@ def decode_network(data):
                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError('Non-finite network status')))
     if (not isinstance(body, dict) or type(body.get('v')) is not int or body['v'] != 1 or
         body.get('type') != 'network' or not NODE_ID.fullmatch(str(body.get('node_id', ''))) or
-        not isinstance(body.get('payload'), dict) or body['payload'].get('role') != 'ugv'):
+        not isinstance(body.get('payload'), dict) or body['payload'].get('role') != 'ugv_root'):
         raise ValueError('Invalid UGV network report')
     if any(not isinstance(value, (str, int, float, bool, type(None))) for value in body['payload'].values()):
         raise ValueError('Invalid network status value')
@@ -21,7 +21,7 @@ def decode_network(data):
 
 
 class NetworkStatusFile:
-    def __init__(self, path, node_id='ugv-001', clock=time.monotonic):
+    def __init__(self, path, node_id='ugv-root', clock=time.monotonic):
         self.path, self.node_id, self.clock = Path(path), node_id, clock
 
     def __call__(self, body, epoch):

@@ -1,90 +1,66 @@
 # 系统架构
 
-当前主仓库为 `D:\changan\changan-mesh-system`，车机仓库为相邻的 `D:\changan\changan-car-terminal`。固件、UGV 主机和车机通过 [v1 协议](../protocols/v1/README.md) 交互，生产程序不跨仓库导入业务源码。
+## 设备和无线结构
 
-## 无线结构与业务链路
+ugv-root 是第1层根节点；普通 ugv 第2层；uav 第3层；micro_uav 第4层且为叶子。
+同层可有多个设备，设备类型不绑定某个固定编号。实际父子关系按 parent_bssid 匹配
+唯一 ap_mac，不能根据角色、IP或层级猜测现场连接。汽车终端不加入自组网。
 
-chain 配置的预期无线层级为 root C6 → UGV C6 → UAV C6 → Micro C6。层级与父节点应从实际状态上报验证；业务连接的终点不必是无线直接父节点。
+AP采用清单预留的独立`192.168.N.0/24`网段，AP及DHCP网关为`192.168.N.1`；
+N由中继节点的`ap_subnet`指定，范围4..254，当前预留5/6/7/8/9给根、两台UGV和两台UAV。
+Micro关闭AP与DHCP服务，清单中`ap_subnet=null`，仅STA从父UAV的DHCP获取地址。
+兄弟分支不能复用AP网段，
+禁用或撤销节点仍保留地址。该规划覆盖同一清单内的节点，不提供跨独立部署的地址协调。
+Mesh-Lite的自动选择主要避开本机/上游网段，不承担全网唯一分配；应用启动时应用预留地址，
+阻止默认分配器改写，并在STA/AP网段重叠时断开Mesh连接、要求修正规划后重启。
+AP唯一不等于下级STA可以从其他分支直接寻址；当前业务仍使用节点到根的MQTT/TLS会话。
 
-当前 `mqtt_serial` 业务路径为：
+## 根节点程序
+
+根节点由 C6 组网模块与主机组成，主机暂用电脑，后续为 Jetson。
+
+| 程序 | 职责 |
+| --- | --- |
+| UGV Service | HTTP/WS入口、节点信息、准入/授权/撤销、服务目录、任务调度、SQLite与恢复对账 |
+| Mosquitto | mTLS证书认证、客户端主题ACL、现场消息路由 |
+| ugv-serial-bridge | MUX1 USB通道与本机Broker TCP连接之间的字节搬运 |
+| ugv_root 固件 | 第1层组网、根AP服务公告、TCP/USB透明隧道、只读无线状态报告 |
+
+普通 UGV、UAV 和 Micro 分别是独立 MQTT 客户端和执行节点；中继不终止其他节点的TLS。
+根C6本身不作为MQTT客户端，不需要单独的客户端证书；主机用controller-001连接Broker。
+
+## 业务调用
 
 ```text
-车机 GUI/CLI ↔ root C6 原生 USB / MLT1
-                     ↕ root MQTT/TLS 客户端
-               UGV C6 TCP/USB 透明字节隧道
-                     ↕ UGV 主机串口桥接
-                 Mosquitto mTLS Broker
-                     ↕
-                 UGV 主机常驻后台
-                     ↕ 节点 MQTT/TLS
-                 UAV / Micro 执行器
+临时车机终端 ↔ 本机 HTTP/WebSocket ↔ UGV Service
+                                     ↕ 本地 MQTT/TLS
+                                  Mosquitto
+                                     ↕ TCP字节
+                              USB桥接 ↔ 根C6
+                                     ↕ 无线转发
+                             普通UGV / UAV / Micro
 ```
 
-root 使用发现到的 UGV STA 入口，UAV/Micro 使用 UGV SoftAP 入口；实际地址由服务发现或部署配置提供，不把 Micro 的直接父网关当成 Broker。UGV C6 不运行 Broker，不终止 TLS，也不执行 UGV 主机的 diagnostics 任务。
+现场MQTT会话的逻辑终点是根节点主机上的Broker。各层无线边是转发路径，不是逐层
+重新发布任务。任务持久化与调度只在UGV Service中进行。HTTP操作只提交一次，事件按
+SQLite游标补查。汽车关闭不终止任务，后台/节点重启先对账，不自动重放开始命令。
 
-root 把车机请求来源绑定为自身证书身份；后台校验来源、清单权限、请求期限、目标及能力。证书 CN、MQTT Client ID 与 node_id 对应，不用来源 IP 代替身份。`controller-001` 只允许一个后台或独立维护客户端，本地 RPC 只在回环接口提供维护服务。
+控制、状态、轻量任务反馈通过MQTT/TLS；业务数据通道协议和终点另行设计，当前不实现。
+未来汽车与根节点各自连接真实云端，预计由公网/5G承载；当前不部署模拟云端。
 
-## 固件职责
+## 代码边界
 
-`firmware/main/app_main.c` 启动组网、调用选中角色并打印状态。只有一个 IDF 工程，按 Kconfig 选一个角色入口。
+`service/server.py`装配后台，`api/`提供HTTP/WS，`nodes/`管理清单、准入与观测，
+`tasks/`负责状态机和持久化，`agents/`提供主机执行能力，`transport/`适配节点和USB，
+`protocol/`定义JSON与MUX1。`tools/`仅管理与启动，不承载业务调度。
+独立车机通过HTTP合同访问后台，无运行时跨仓库导入。
 
-| 路径（相对 firmware） | 职责 |
-| --- | --- |
-| `apps/root/app.c`、`apps/root/car_gateway.c` | root 串口网关、来源绑定、MQTT 请求/回复与任务事件转发 |
-| `apps/ugv/app.c`、`apps/ugv/serial_tunnel.c` | UGV 服务发现、TCP/USB 字节隧道、协商式只读网络报告 |
-| `apps/uav/app.c`、`apps/micro_uav/app.c` | 启动各自 MQTT 客户端并选择入口 |
-| `components/network_mesh_lite/`、`components/node_role/` | Mesh 启动、角色/拓扑与无线状态 |
-| `components/app_protocol/` | MLT1、消息校验和共享状态 payload |
-| `components/mqtt_serial/`、`components/car_gateway/` | 公共 MQTT/TLS 接口和角色实现的装配 |
-| `components/task_agent/` | C6诊断、Micro巡检/UAV复核的ESP32测试状态机、NVS记录 |
-| `components/transport_tcp/` | 保留的 legacy TCP 兼容实现 |
+## 身份与授权
 
-`pc_root`仍是CLI/Kconfig角色名，目录采用`apps/root/`，不改变身份与topic。每台Micro公告patrol，每台UAV公告anomaly_review，均显式标注esp32_test，按实际node_id形成独立服务实例。真实飞行和无人机主控尚未接入，见 [流程验证说明](esp32-workflows.md)。
+清单只接受schema 2：node_id、role、root_id、enabled、ap_subnet，以及trust_status、admission_revision。
+根节点为ugv-root，子节点root_id指向所属根节点。已登记、已授权、在线和业务就绪分别判断。
+节点消息不能创建或批准自己的权限。后台准入管理校验证书签名、有效期、CN、用途及已记录
+指纹；不签发密钥。撤销立即阻止后续任务派发，Broker ACL生成待加载文件，回执不宣称已踢掉连接。
 
-## UGV 主机职责
-
-运行时代码通过 `changan_ugv.*` 导入；`tools/` 保留管理工具和兼容启动入口。
-
-| 模块（相对 host/src/changan_ugv） | 职责 |
-| --- | --- |
-| `service/server.py`、`service/requests.py` | 启停、请求/反馈队列、来源权限与请求路由 |
-| `nodes/controller.py`、`nodes/inventory.py`、`nodes/lease.py` | MQTT、受控清单、就绪判断、管理员排他锁 |
-| `nodes/network.py` | 校验/读取 UGV USB 网络快照，不授予设备或 MQTT 权限 |
-| `tasks/store.py`、`tasks/runtime.py`、`tasks/ports.py` | 持久化、调度、对账、任务通信接口 |
-| `agents/ugv.py` | UGV 电脑/Jetson 本地主机诊断执行器 |
-| `transport/serial_bridge.py`、`transport/node_channel.py` | USB 字节转发和节点 MQTT 适配 |
-| `transport/rpc.py`、`cli.py` | 本地维护入口及旧终端功能 |
-| `protocol/frames.py`、`protocol/tunnel.py` | MLT1 与 MUX1 |
-| `config.py`、`deployment.py`、`paths.py` | 显式配置、Broker 配置生成与仓库默认路径 |
-
-## 配置与适配接口
-
-`config.py` 定义 `BrokerEndpoint(host, port, server_name)`、`BrokerConfig`、`ServicePaths` 和 `ServiceConfig`。连接地址与 TLS 服务名分别配置；TOML 相对路径按配置文件所在目录解析。显式配置缺少必填字段或 inventory 文件时拒绝启动，不悄悄回退到源码目录。
-
-`tasks/ports.py` 的 `NodeChannel` 提供：
-
-```python
-is_connected() -> bool
-snapshot(node_id) -> NodeSnapshot
-ready_count() -> int
-send(node_id, packet) -> SendReceipt
-notify(terminal_id, packet) -> SendReceipt
-```
-
-`NodeSnapshot` 是含 ready、boot_id、task_types 的冻结数据。`SendReceipt.queued` 只表示传输接收发送请求，不表示节点接受或任务完成。`MQTTNodeChannel` 包装 Controller，任务调度不直接持有 Paho、不构造 topic。
-
-`LocalExecutor` 提供 `boot`、`handle(packet)`、`tick(connected)`、`close()`。Runtime 由启动层显式注入 executor_factory；工厂接收 emit/snapshot 回调。执行器应构造完再发事件，不能另开线程无同步地访问 SQLite。反馈经服务队列进入 `Runtime.receive()`，继续验证 boot、op_seq、期限和命令对应关系。
-
-Broker 配置生成器只读取现有证书并生成配置，不签发、不改清单、不重启服务。部署方式见 [部署与交接](deployment.md)。
-
-## 车机与网络可视化
-
-独立车机的 `RequestTransport.request(packet)` / `close()` 屏蔽串口和 MQTT 差异；`client.py`、`tasks.py` 提供业务 API，`gui.py`、`network.py` 提供调试与网络结构显示。
-
-网络树按子节点 `parent_bssid` 匹配唯一父节点 `ap_mac`。未知、重复、循环或旧启动数据不会被画成确定的实时连接。UGV 的主机服务就绪与 C6 无线状态分别表示，不能把主机 IP 当成 UGV C6 的无线地址。详细字段和 USB 协商只在 [协议](../protocols/v1/README.md) 定义。
-
-## 数据与兼容边界
-
-公开登记在 `config/nodes.json`；证书/私钥在 `secrets/`；Jetson 部署副本在 `changan-runtime/`；数据库、journal、Broker 配置和 UGV 网络快照在 `runtime/`；构建产物在 `build/`；依赖环境在 `.venv/`。项目所有者已明确要求提交现有 secrets 和 changan-runtime；现场 runtime、build、.venv、身份构建缓存和控制器锁保持不跟踪，不随文档整理或服务重启删除。
-
-本地供应商源码和许可证保留于 `third_party/`。legacy TCP 源码与原始实验材料保留用于兼容和证据核对，不作为当前 MQTT 的启动依据。
+`config/nodes.json`是权威清单；node_catalog保存登记与观测历史，admission_decisions保存
+授权审计。观测不授予信任。现场数据、journal、数据库和凭据不得通过清空目录重建。

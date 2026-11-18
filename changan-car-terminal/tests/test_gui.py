@@ -157,6 +157,90 @@ class OperationTests(unittest.TestCase):
 
 
 class WindowTests(unittest.TestCase):
+    def test_parent_buttons_dispatch_and_complete_without_leaving_ui_busy(self):
+        self.window.connected = True
+        self.window.values['parent_child'].set('micro-001')
+        self.window._states()
+        buttons = {button.cget('text'): button
+                   for frame in self.window.parent_controls.winfo_children()
+                   for button in frame.winfo_children() if button.winfo_class() == 'TButton'}
+        for text, action in [('查询配置', 'parent_get'), ('应用配置', 'parent_apply')]:
+            with self.subTest(action=action), patch.object(self.worker, 'submit') as submit:
+                buttons[text].invoke()
+                submit.assert_called_once()
+                self.assertEqual(action, submit.call_args.args[0])
+                self.assertTrue(self.window.busy)
+                self.worker.results.put((action, True, dict(target='micro-001', mode='auto',
+                    parent=None, revision=1, state='accepted'), .02))
+                self.window._drain()
+                self.assertFalse(self.window.busy)
+                self.assertTrue(self.window.records[-1]['ok'])
+                self.assertEqual('normal', str(buttons[text]['state']))
+
+    def test_node_debug_selection_focus_and_draft_survive_pushed_snapshots(self):
+        rows = [dict(node_id=n, ready=True, status={}) for n in ('micro-001','uav-001','ugv-001')]
+        self.window.connected = True
+        self.window._apply('nodes', rows)
+        tree = self.window.nodes
+        tree.selection_set('uav-001')
+        tree.focus('uav-001')
+        self.root.update()
+        self.assertEqual('uav-001', self.window.values['target'].get())
+        self.window.values['target'].set('custom-')
+        for age in range(3):
+            snapshot = [dict(row, status_age_s=age, ready=bool(age % 2)) for row in reversed(rows)]
+            self.worker.results.put(('push', True, dict(type='nodes.snapshot', nodes=snapshot), 0))
+            self.window._drain()
+            self.root.update()
+            self.assertEqual(('uav-001',), tree.selection())
+            self.assertEqual('uav-001', tree.focus())
+            self.assertEqual('custom-', self.window.values['target'].get())
+        self.window._apply('nodes', [rows[0], rows[2]])
+        self.root.update()
+        self.assertEqual((), tree.selection())
+        self.assertEqual('custom-', self.window.values['target'].get())
+
+    def test_parent_form_queries_revision_and_submits_selected_uav(self):
+        self.root.deiconify();self.root.geometry('980x720')
+        controls=self.window.parent_controls
+        controls.master.master.select(controls.master);self.root.update()
+        for widget in controls.winfo_children():
+            self.assertLessEqual(widget.winfo_x()+widget.winfo_width(),controls.winfo_width())
+        self.assertTrue(controls.winfo_ismapped())
+        self.window.values['parent_child'].set('micro-001')
+        self.window._apply('parent_get',dict(target='micro-001',mode='auto',parent=None,revision=3,state='applied'))
+        self.window.values['parent_uav'].set('uav-001');self.window.values['parent_mode'].set('固定指定')
+        values={k:v.get() for k,v in self.window.values.items()}
+        run_operation(self.client,'parent_apply',values)
+        packet=self.client.seen[-1]
+        self.assertEqual(('node.parent','micro-001','uav-001','fixed',3),
+            tuple(packet[k] for k in ('type','target','parent','mode','expected_revision')))
+        self.window.values['parent_child'].set('micro-002')
+        self.assertEqual('',self.window.values['parent_revision'].get())
+        with self.assertRaises(ValueError):run_operation(self.client,'parent_apply',{k:v.get() for k,v in self.window.values.items()})
+        self.window._apply('parent_snapshot',dict(target='micro-002',revision=8,mode='fixed',parent='uav-001',state='accepted'))
+        self.assertEqual('',self.window.values['parent_revision'].get())
+
+    def test_diagnostic_input_survives_snapshots_with_a_selected_network_node(self):
+        rows=[dict(node_id=n,ready=True,status={}) for n in ('micro-002','uav-001','ugv-001')]
+        self.window._apply('nodes',rows)
+        panel=self.window.network
+        panel.tree.selection_set('micro-002');panel._selected();self.root.update()
+        box=self.window.diagnostic_target_box
+        self.assertEqual('normal',str(box['state']))
+        self.assertIn('uav-001',box['values'])
+        for text in ('','u','uav-','uav-001','ugv-001','custom-node'):
+            box.delete(0,'end');box.insert(0,text)
+            self.window._apply('nodes',rows);self.root.update()
+            self.assertEqual(text,self.window.values['target'].get())
+        for kind in ('网络诊断','基础诊断（兼容）'):
+            self.window.values['task_kind'].set(kind)
+            box.delete(0,'end');box.insert(0,'uav-001')
+            values={k:v.get() for k,v in self.window.values.items()}
+            run_operation(self.client,'create',values)
+            packet=self.client.seen[-1]
+            self.assertEqual('uav-001',packet['config']['probe_node'] if kind=='网络诊断' else packet['target'])
+
     def test_role_services_and_incident_selection_do_not_assume_fixed_node_ids(self):
         rows=[dict(service_id=node+'/'+suffix,node_id=node,agent_type=role,service_type=kind,
                    execution_mode='esp32_test',availability='available',task_status='IDLE')
