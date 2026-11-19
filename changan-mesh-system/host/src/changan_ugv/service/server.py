@@ -130,7 +130,8 @@ def main():
     service_arguments(p)
     p.add_argument('--ugv-id')
     p.add_argument('--task-db',type=Path)
-    p.add_argument('--http-port',type=int,help='Loopback HTTP/WS port; 0 disables it')
+    p.add_argument('--http-port',type=int,help='HTTP/WS port; 0 disables it')
+    p.add_argument('--http-host',help='Explicit bind address; peers are limited by config')
     args=p.parse_args()
     try:
         cfg=resolve_arguments(args)
@@ -146,12 +147,13 @@ def main():
         service=ServiceController(inventory=inventory,inventory_path=cfg.paths.inventory_file,broker=cfg.broker,
                                   lock_file=cfg.paths.lock_file,paths=cfg.paths,ugv_id=ugv_id,database=args.task_db)
         http_port=args.http_port if args.http_port is not None else cfg.http_port
+        http_host=args.http_host or cfg.http_host
         if not 0<=http_port<=65535:raise ValueError('Invalid HTTP port')
         if http_port:
             from changan_ugv.api.server import LocalAPI
-            api=LocalAPI(service,http_port)
+            api=LocalAPI(service,http_port,http_host,cfg.http_allowed_peers)
             api.start()
-            logging.warning('Local terminal HTTP/WS: http://127.0.0.1:%s/api/v1',http_port)
+            logging.warning('Terminal HTTP/WS: http://%s:%s/api/v1',http_host,http_port)
         logging.warning('UGV root service active; task database retained on exit')
         while not service.stopped.wait(1):pass
     finally:

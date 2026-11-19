@@ -1,5 +1,6 @@
 """Explicit deployment configuration. Relative TOML paths are relative to its file."""
 from dataclasses import dataclass, replace
+from ipaddress import ip_network
 from pathlib import Path
 import tomllib
 from changan_ugv.paths import repository_root
@@ -45,6 +46,22 @@ class ServiceConfig:
     paths: ServicePaths
     ugv_id: str = 'ugv-root'
     http_port: int = 8080
+    http_host: str = '127.0.0.1'
+    http_allowed_peers: tuple[str, ...] = ('127.0.0.1', '::1')
+    def __post_init__(self):
+        if type(self.http_port) is not int or not 0<=self.http_port<=65535:
+            raise ValueError('Invalid HTTP port')
+        if (not isinstance(self.http_host,str) or not self.http_host
+                or any(c.isspace() for c in self.http_host) or self.http_host in ('0.0.0.0','::')):
+            raise ValueError('Invalid HTTP bind host; bind one explicit address')
+        if not isinstance(self.http_allowed_peers,tuple) or not self.http_allowed_peers:
+            raise ValueError('HTTP allowed peers must be a non-empty tuple')
+        try:
+            self.networks()
+        except ValueError as exc:
+            raise ValueError('Invalid HTTP allowed peer: '+str(exc)) from exc
+    def networks(self):
+        return tuple(ip_network(peer,strict=False) for peer in self.http_allowed_peers)
     @classmethod
     def from_root(cls,root=None):
         root=Path(root) if root is not None else repository_root()
@@ -57,13 +74,17 @@ class ServiceConfig:
         broker=data.get('broker',{});paths=data.get('paths',{});service=data.get('service',{})
         if set(broker)-{'host','port','server_name','ca_file','client_cert','client_key'}:raise ValueError('Unknown Broker option')
         if set(paths)-{'inventory_file','task_database','agent_journal','lock_file'}:raise ValueError('Unknown path option')
-        if set(service)-{'ugv_id','http_port'}:raise ValueError('Unknown service option')
+        if set(service)-{'ugv_id','http_port','http_host','http_allowed_peers'}:raise ValueError('Unknown service option')
+        if 'http_allowed_peers' in service:
+            peers=service['http_allowed_peers']
+            if not isinstance(peers,list) or not all(isinstance(p,str) for p in peers):
+                raise ValueError('HTTP allowed peers must be a list of addresses or networks')
+            service=dict(service,http_allowed_peers=tuple(peers))
         def path(value):return (file.parent/Path(value)).resolve()
         # A file-based deployment is explicit; it never falls back to installed source paths.
         tls={key:path(broker[key]) for key in ('ca_file','client_cert','client_key')}
         state={key:path(paths[key]) for key in ('inventory_file','task_database','agent_journal','lock_file')}
         cfg=cls(BrokerConfig(BrokerEndpoint(**{key:broker[key] for key in ('host','port','server_name') if key in broker}),**tls),ServicePaths(**state),**service)
-        if type(cfg.http_port) is not int or not 0<=cfg.http_port<=65535:raise ValueError('Invalid HTTP port')
         from changan_ugv.nodes.inventory import valid_id
         valid_id(cfg.ugv_id)
         return cfg

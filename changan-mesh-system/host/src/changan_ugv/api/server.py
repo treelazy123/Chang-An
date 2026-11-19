@@ -4,6 +4,7 @@ import json
 import threading
 import time
 import uuid
+from ipaddress import ip_address, ip_network
 from urllib.parse import urlsplit
 from aiohttp import web
 from changan_ugv.protocol.messages import _unique_object
@@ -14,14 +15,17 @@ def decode(text):
         parse_constant=lambda _:(_ for _ in ()).throw(ValueError('Non-finite JSON')))
 
 
-def application(service):
+def application(service,allowed_peers=('127.0.0.1','::1'),allowed_hosts=('127.0.0.1','localhost','::1')):
+    allowed_peers=tuple(ip_network(peer,strict=False) if isinstance(peer,str) else peer for peer in allowed_peers)
     @web.middleware
     async def local_only(request, handler):
-        # This adapter represents a single trusted local operator, not a cloud identity.
-        if request.remote not in ('127.0.0.1','::1') or request.headers.get('Origin'):
-            raise web.HTTPForbidden(text='Local native clients only')
-        if urlsplit('//'+request.host).hostname not in ('127.0.0.1','localhost','::1'):
-            raise web.HTTPForbidden(text='Invalid local host')
+        # This adapter represents one trusted operator; peers and Host are explicit allowlists.
+        try:remote=ip_address(request.remote)
+        except ValueError:raise web.HTTPForbidden(text='Client not allowed')
+        if not any(remote in network for network in allowed_peers) or request.headers.get('Origin'):
+            raise web.HTTPForbidden(text='Client not allowed')
+        if urlsplit('//'+request.host).hostname not in allowed_hosts:
+            raise web.HTTPForbidden(text='Invalid host')
         return await handler(request)
 
     app=web.Application(client_max_size=16384,middlewares=[local_only])
@@ -127,8 +131,10 @@ def application(service):
 
 
 class LocalAPI:
-    def __init__(self,service,port=8080):
-        self.service,self.port=service,port
+    def __init__(self,service,port=8080,host='127.0.0.1',allowed_peers=('127.0.0.1','::1')):
+        self.service,self.port,self.host=service,port,host
+        self.allowed_peers=tuple(ip_network(peer,strict=False) for peer in allowed_peers)
+        self.allowed_hosts=tuple(dict.fromkeys(('127.0.0.1','localhost','::1',host)))
         self.ready=threading.Event()
         self.error=None
         self.loop=None
@@ -148,10 +154,10 @@ class LocalAPI:
     async def _serve(self):
         self.loop=asyncio.get_running_loop()
         self.stop=asyncio.Event()
-        runner=web.AppRunner(application(self.service),access_log=None)
+        runner=web.AppRunner(application(self.service,self.allowed_peers,self.allowed_hosts),access_log=None)
         await runner.setup()
         try:
-            site=web.TCPSite(runner,'127.0.0.1',self.port)
+            site=web.TCPSite(runner,self.host,self.port)
             await site.start()
             self.port=site._server.sockets[0].getsockname()[1]
             self.ready.set()
