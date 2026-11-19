@@ -35,10 +35,11 @@ class ServicePaths:
     task_database: Path
     agent_journal: Path
     lock_file: Path
+    image_dir: Path
     @classmethod
     def from_root(cls,root):
         root=Path(root)
-        return cls(root/'config/nodes.json',root/'runtime/ugv-root/tasks.sqlite3',root/'runtime/ugv-root/agent.json',root/'secrets/.controller.lock')
+        return cls(root/'config/nodes.json',root/'runtime/ugv-root/tasks.sqlite3',root/'runtime/ugv-root/agent.json',root/'secrets/.controller.lock',root/'runtime/ugv-root/received')
 
 @dataclass(frozen=True)
 class ServiceConfig:
@@ -73,7 +74,7 @@ class ServiceConfig:
         if set(data)-{'broker','paths','service'}:raise ValueError('Unknown service configuration section')
         broker=data.get('broker',{});paths=data.get('paths',{});service=data.get('service',{})
         if set(broker)-{'host','port','server_name','ca_file','client_cert','client_key'}:raise ValueError('Unknown Broker option')
-        if set(paths)-{'inventory_file','task_database','agent_journal','lock_file'}:raise ValueError('Unknown path option')
+        if set(paths)-{'inventory_file','task_database','agent_journal','lock_file','image_dir'}:raise ValueError('Unknown path option')
         if set(service)-{'ugv_id','http_port','http_host','http_allowed_peers'}:raise ValueError('Unknown service option')
         if 'http_allowed_peers' in service:
             peers=service['http_allowed_peers']
@@ -84,6 +85,7 @@ class ServiceConfig:
         # A file-based deployment is explicit; it never falls back to installed source paths.
         tls={key:path(broker[key]) for key in ('ca_file','client_cert','client_key')}
         state={key:path(paths[key]) for key in ('inventory_file','task_database','agent_journal','lock_file')}
+        state['image_dir']=path(paths['image_dir']) if 'image_dir' in paths else state['task_database'].parent/'received'
         cfg=cls(BrokerConfig(BrokerEndpoint(**{key:broker[key] for key in ('host','port','server_name') if key in broker}),**tls),ServicePaths(**state),**service)
         from changan_ugv.nodes.inventory import valid_id
         valid_id(cfg.ugv_id)

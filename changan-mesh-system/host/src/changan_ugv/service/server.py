@@ -37,7 +37,8 @@ class ServiceController(Controller):
         self.task_feedback=queue.Queue(128)
         self.tasks=None
         self.requests=Requests(self,inventory_loader=inventory_loader)
-        super().__init__(*args,managed_root_id=ugv_id,**kwargs)
+        from changan_ugv.nodes.image_sink import ImageSink
+        super().__init__(*args,managed_root_id=ugv_id,image_sink=ImageSink(paths.image_dir),**kwargs)
         try:
             factory=executor_factory or (lambda emit,snapshot:HostServices(
                 paths.agent_journal,ugv_id,emit,snapshot,probe=self.command,network_snapshot=self.network_snapshot))

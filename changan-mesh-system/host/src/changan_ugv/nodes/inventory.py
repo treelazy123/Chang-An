@@ -97,11 +97,11 @@ def render_acl(data):
     rows=['# Generated from config/nodes.json by provision_mqtt.py; edit the inventory instead.']
     for node in clients(data):
         rows+=['user '+node]
-        rows += [f'topic write mesh/v1/nodes/{node}/{s}' for s in ('presence','capabilities','telemetry','acks','task_events')]
+        rows += [f'topic write mesh/v1/nodes/{node}/{s}' for s in ('presence','capabilities','telemetry','acks','task_events','image')]
         rows += [f'topic read mesh/v1/nodes/{node}/commands',f'topic read mesh/v1/nodes/{node}/task_commands','topic read mesh/v1/clock']
         rows += ['']
     rows += ['user controller-001']
-    rows += [f'topic read mesh/v1/nodes/+/{s}' for s in ('presence','capabilities','telemetry','acks','task_events')]
+    rows += [f'topic read mesh/v1/nodes/+/{s}' for s in ('presence','capabilities','telemetry','acks','task_events','image')]
     rows += ['topic write mesh/v1/clock']
     rows += [f'topic write mesh/v1/nodes/{node}/commands' for node in clients(data)]
     rows += [f'topic write mesh/v1/nodes/{node}/task_commands' for node in clients(data)]

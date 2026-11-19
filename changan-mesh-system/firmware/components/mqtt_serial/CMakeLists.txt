@@ -1,4 +1,4 @@
-set(req app_protocol parent_policy service_discovery node_role esp_netif esp_timer lwip freertos log esp_driver_usb_serial_jtag mqtt nvs_flash task_agent)
+set(req app_protocol parent_policy service_discovery node_role esp_netif esp_timer lwip freertos log esp_driver_usb_serial_jtag mqtt nvs_flash task_agent image_upload)
 set(embedded)
 if(CONFIG_APP_TRANSPORT_MQTT_SERIAL AND NOT CONFIG_APP_ROLE_UGV_ROOT)
     set(mqtt_identity_dir "${MESH_SYSTEM_ROOT}/secrets/${CONFIG_APP_NODE_ID}")

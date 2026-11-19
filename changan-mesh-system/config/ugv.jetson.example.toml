@@ -12,6 +12,7 @@ client_key = "/etc/changan/pki/controller-001/client.key"
 inventory_file = "/etc/changan/nodes.json"
 task_database = "/var/lib/changan/tasks.sqlite3"
 agent_journal = "/var/lib/changan/agent.json"
+image_dir = "/var/lib/changan/received"
 lock_file = "/var/lib/changan/controller.lock"
 
 [service]

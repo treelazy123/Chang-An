@@ -23,6 +23,7 @@
 #include "node_role.h"
 #include "app_protocol.h"
 #include "task_agent.h"
+#include "image_upload.h"
 extern const char ca[] asm("_binary_ca_pem_start");
 extern const char cert[] asm("_binary_client_pem_start");
 extern const char key[] asm("_binary_client_key_start");
@@ -49,6 +50,73 @@ static int publish(const char *suffix,const cJSON *body,int qos,bool retain) {
     char topic[128];snprintf(topic,sizeof(topic),"mesh/v1/nodes/%s/%s",node_role_id(),suffix);
     char *json=cJSON_PrintUnformatted(body);if(!json) { return -1; }
     int id=esp_mqtt_client_enqueue(client,topic,json,0,qos,retain,true);cJSON_free(json);return id;
+}
+
+/* ---------------- Image upload (leaf -> root -> host) ----------------
+ * Frames queued by a producer (video capture, or the embedded self-test assets)
+ * are streamed up the existing node->broker MQTT/TLS session in base64 JSON
+ * chunks; the tree routing is the mesh IP path, no relay code.
+ */
+#define IMAGE_CHUNK 512
+
+static size_t base64_encode(const uint8_t *src,size_t slen,char *dst) {
+    static const char *T="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    size_t i=0,o=0;
+    for(;i+3<=slen;i+=3) {
+        uint32_t v=((uint32_t)src[i]<<16)|((uint32_t)src[i+1]<<8)|src[i+2];
+        dst[o++]=T[(v>>18)&63];dst[o++]=T[(v>>12)&63];
+        dst[o++]=T[(v>>6)&63];dst[o++]=T[v&63];
+    }
+    if(i<slen) {
+        uint32_t v=(uint32_t)src[i]<<16;
+        if(i+1<slen) { v|=(uint32_t)src[i+1]<<8; }
+        dst[o++]=T[(v>>18)&63];dst[o++]=T[(v>>12)&63];
+        dst[o++]=(i+1<slen)?T[(v>>6)&63]:'=';
+        dst[o++]='=';
+    }
+    dst[o]='\0';
+    return o;
+}
+
+static image_frame_t *image_current;   /* frame being streamed; NULL when idle */
+static size_t image_chunk_idx;
+static bool images_primed;
+
+/* Stream the oldest queued frame, one base64 chunk per call so the MQTT loop stays
+ * responsive; runs from mqtt_task only. */
+static void image_upload_tick(void) {
+    if(image_current==NULL) {
+        image_current=image_upload_pop();
+        if(image_current==NULL) { return; }
+        image_chunk_idx=0;
+    }
+    const image_frame_t *img=image_current;
+    size_t n_chunks=(img->len+IMAGE_CHUNK-1)/IMAGE_CHUNK;
+    if(n_chunks==0) { n_chunks=1; }
+    size_t s=image_chunk_idx;
+    size_t off=s*IMAGE_CHUNK;
+    size_t n=img->len-off;
+    if(n>IMAGE_CHUNK) { n=IMAGE_CHUNK; }
+    char b64[IMAGE_CHUNK*4/3+4];
+    base64_encode(img->data+off,n,b64);
+    cJSON *body=app_message_new("image");
+    if(body) {
+        cJSON_AddStringToObject(body,"image_id",img->id);
+        cJSON_AddStringToObject(body,"name",img->id);
+        cJSON_AddNumberToObject(body,"seq",(double)s);
+        cJSON_AddNumberToObject(body,"count",(double)n_chunks);
+        cJSON_AddNumberToObject(body,"total_bytes",(double)img->len);
+        cJSON_AddStringToObject(body,"data",b64);
+        publish("image",body,1,false);
+        cJSON_Delete(body);
+    }
+    if(s+1>=n_chunks) {
+        image_upload_release(image_current);
+        image_current=NULL;
+        image_chunk_idx=0;
+    } else {
+        image_chunk_idx++;
+    }
 }
 static void mqtt_event(void *ctx,esp_event_base_t base,int32_t id,void *data) {
     (void)ctx;(void)base;esp_mqtt_event_handle_t e=data;
@@ -210,11 +278,13 @@ static void mqtt_task(void *arg) {
             bool active=(bits&(CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY))==(CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY);
             task_agent_tick(active);
             if(!announced && active) { announce_ready();announced=true; }
+            if(active && !images_primed) { images_primed=true;image_upload_prime(); }
             if(announced && active && capabilities_dirty) { announce_capabilities(false); }
             if(!announced && esp_timer_get_time()/1000-started>45000) { break; }
             if(active) {
                 command_t packet;
                 if(xQueueReceive(commands,&packet,0)==pdTRUE) { reply_command(&packet); }
+                image_upload_tick();
                 if(esp_timer_get_time()/1000-last_status>CONFIG_APP_STATUS_PERIOD_MS) {
                     cJSON *msg=app_message_new("telemetry");if(msg) {
                         cJSON_AddItemToObject(msg,"payload",app_status_payload());cJSON_AddStringToObject(msg,"boot_id",boot);
@@ -233,6 +303,7 @@ static void mqtt_task(void *arg) {
 esp_err_t mqtt_serial_start(void) {
     if(CONFIG_APP_TLS_BOOTSTRAP_UNIX<1700000000) { ESP_LOGE(TAG,"Provision trusted lab UTC and certificates first");return ESP_ERR_INVALID_STATE; }
     state=xEventGroupCreate();commands=xQueueCreate(4,sizeof(command_t));
+    image_upload_init();
     if(!state || !commands) { return ESP_ERR_NO_MEM; }
     esp_err_t err=service_discovery_start();if(err!=ESP_OK) { return err; }
     return xTaskCreate(mqtt_task,"mesh_mqtt_app",6144,NULL,3,NULL)==pdPASS?ESP_OK:ESP_ERR_NO_MEM;

@@ -11,6 +11,7 @@ client_key = "../secrets/controller-001/client.key"
 inventory_file = "nodes.json"
 task_database = "../runtime/ugv-root/tasks.sqlite3"
 agent_journal = "../runtime/ugv-root/agent.json"
+image_dir = "../runtime/ugv-root/received"
 lock_file = "../secrets/.controller.lock"
 
 [service]

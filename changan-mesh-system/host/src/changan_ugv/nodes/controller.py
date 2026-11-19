@@ -87,10 +87,11 @@ class Registry:
                  'status':e.get('telemetry',{}).get('payload'),
                  'task_types':e.get('capabilities',{}).get('task_types',[])} for n,e in self.nodes.items()]
 class Controller:
-    def __init__(self,secret=None,port=8883,inventory=None,inventory_path=None, *, broker=None,lock_file=None,managed_root_id=None):
+    def __init__(self,secret=None,port=8883,inventory=None,inventory_path=None, *, broker=None,lock_file=None,managed_root_id=None,image_sink=None):
         from changan_ugv.nodes.lease import Lease
         broker=broker or BrokerConfig.from_secrets(secret,port)
         self.broker_config=broker
+        self.image_sink=image_sink
         self.instance_lease=Lease(secret or broker.ca_file.parent,lock_file=lock_file)
         try:
             import paho.mqtt.client as mqtt
@@ -153,7 +154,7 @@ class Controller:
                 self.inventory_error=error
     def on_connect(self,client,userdata,flags,reason,properties):
         if not reason.is_failure:
-            client.subscribe([(f'mesh/v1/nodes/+/{s}',1) for s in ('presence','capabilities','telemetry','acks')])
+            client.subscribe([(f'mesh/v1/nodes/+/{s}',1) for s in ('presence','capabilities','telemetry','acks','image')])
     def on_subscribe(self,client,userdata,mid,reasons,properties):
         if reasons and all(not reason.is_failure for reason in reasons):
             self.connected.set()
@@ -171,8 +172,13 @@ class Controller:
                             parse_constant=lambda _: (_ for _ in ()).throw(ValueError('Non-finite JSON')))
             if not isinstance(body,dict):
                 return
+            parts=message.topic.split('/')
+            image_sink=getattr(self,'image_sink',None)
+            if (image_sink is not None and len(parts)==5 and parts[:3]==['mesh','v1','nodes']
+                    and parts[4]=='image'):
+                image_sink.consume(parts[3],body,message.retain)
+                return
             with self.condition:
-                parts=message.topic.split('/')
                 msg_id=body.get('msg_id')
                 if len(parts)==5 and parts[:3]==['mesh','v1','nodes'] and parts[4]=='acks':
                     if (not message.retain and body.get('v')==1 and body.get('type')=='ack' and
