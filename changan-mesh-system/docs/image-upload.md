@@ -70,6 +70,8 @@ QoS 1，retain = false。`<node_id>` 即节点在 inventory 中的 ID（如 `mic
 - 以 `(node_id, image_id)` 为主键缓冲各块，**乱序到达也正确**。
 - 集齐 `count` 块后按 `seq` 拼接写盘。
 - 丢弃条件：`retain` 消息、`seq`/`count` 非法、`data` 非合法 base64、`count > 100000`。
+- 内存有界：未完成的半成品在 10 分钟无新块后丢弃；同时最多保留 64 个、合计 64MB
+  的半成品，超限时按最后到达时间淘汰最旧者（`image_sink.py` 常量）。
 
 ## 生产者 API（固件侧）
 
@@ -129,6 +131,20 @@ if (n > 0) image_upload_enqueue("frame-0001.jpg", jpeg, n);
 - `node_id` 同样经安全名校验后才作为目录名。
 - 坏 base64、非法 seq/count、retain 消息均静默丢弃。
 
+### 清理与容量上限（磁盘）
+
+落盘不是无限增长：每次写盘后扫描 `image_dir`，总大小超过 `MAX_TOTAL_BYTES`
+（默认 **256 MiB**）时按 mtime 从旧到新删除，刚写入的文件始终保留。同名帧沿用同名
+文件覆盖，不会重复累积。阈值是 `image_sink.py` 模块常量，`ImageSink(max_bytes=...)`
+可在部署侧覆盖；如需按节点/按天保留，可在该目录上另加 cron 清理，互不冲突。
+
+示例人工检查：
+
+```bash
+du -sh runtime/ugv-root/received
+find runtime/ugv-root/received -type f | wc -l
+```
+
 ## 配置与部署
 
 ### image_dir
@@ -138,6 +154,7 @@ if (n > 0) image_upload_enqueue("frame-0001.jpg", jpeg, n);
 | `config/ugv-root.dev.toml` | `../runtime/ugv-root/received` |
 | `config/ugv.example.toml` | `../runtime/ugv-root/received` |
 | `config/ugv.jetson.example.toml` | `/var/lib/changan/received` |
+| 当前 Jetson 部署（`/etc/changan/ugv-root.toml`） | `<repo>/runtime/ugv-root/received` |
 
 ### ACL 授权
 
@@ -161,20 +178,20 @@ if (n > 0) image_upload_enqueue("frame-0001.jpg", jpeg, n);
 | `firmware/components/mqtt_serial/mqtt_serial.c` | 修改 | 消费端分块上传、base64、init/prime |
 | `firmware/components/mqtt_serial/CMakeLists.txt` | 修改 | 依赖加入 image_upload |
 | `firmware/figs/*.jpg` | 新增 | 3 张自测图片 |
-| `host/src/changan_ugv/nodes/image_sink.py` | 新增 | 分块重组 + 落盘 + 安全校验 |
+| `host/src/changan_ugv/nodes/image_sink.py` | 新增 | 分块重组 + 落盘 + 安全校验 + 容量/内存上限 |
 | `host/src/changan_ugv/nodes/controller.py` | 修改 | 订阅 image 主题并转发 |
 | `host/src/changan_ugv/service/server.py` | 修改 | 注入 ImageSink(image_dir) |
 | `host/src/changan_ugv/config.py` | 修改 | 新增 image_dir 路径 |
 | `host/src/changan_ugv/nodes/inventory.py` | 修改 | ACL 增加 image 主题 |
-| `host/tests/test_image_upload.py` | 新增 | 6 项单测 |
+| `host/tests/test_image_upload.py` | 新增 | 9 项单测（重组/安全/清理） |
 | `config/*.toml` | 修改 | `[paths]` 增加 image_dir |
 | `changan-runtime/acl.conf` | 重生成 | image 主题授权 |
 
 ## 约束与注意
 
-- **固件未编译验证**：本仓库工作规则约定固件构建/烧录由使用者执行。请在 ESP-IDF 6.1
-  环境跑一次 `lab.py --role micro_uav --node-id micro-001 build` 确认 `image_upload`
-  组件与 `mqtt_serial.c` 编译通过。
+- **已验证链路**：`ugv`（L2 叶子）固件已在 ESP-IDF 6.1 下编译、烧录并端到端验证：
+  `image_upload_prime()` 发出 3 张内嵌图，Jetson 侧落盘字节与 `firmware/figs/` SHA256 一致。
+  自测嵌图对 `ugv` 与 `micro_uav` 角色均启用。
 - **内存预算**：队列满载 4 帧 × 32KB = 128KB 堆上限，仅当 4 个满尺寸帧同时排队才发生；
   当前 7–11KB 自测图无压力。视频帧更大更密时下调 `IMAGE_FRAME_MAX` 或队列长度。
 - **吞吐**：当前每 50ms 循环发一个 512B 块 ≈ **10 KB/s**；11KB 图片约 1.1s。真实视频流

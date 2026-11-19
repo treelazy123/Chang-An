@@ -75,4 +75,12 @@ menu "Changan UGV root mesh"
         int "Telemetry interval"
         default 5000
         range 1000 10000
+    config APP_IMAGE_SELFTEST_PERIOD_S
+        int "Re-seed embedded self-test images every N seconds"
+        default 0
+        range 0 3600
+        help
+            Leaf builds that embed firmware/figs assets re-enqueue all of them
+            every N seconds to exercise the upload path continuously. Zero
+            keeps the one-shot seed on first MQTT readiness.
 endmenu

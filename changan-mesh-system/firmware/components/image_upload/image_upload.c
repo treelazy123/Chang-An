@@ -46,9 +46,13 @@ bool image_upload_enqueue(const char *id, const uint8_t *data, size_t len) {
 }
 
 void image_upload_prime(void) {
-    for (size_t i = 0; i < IMAGE_ASSET_COUNT; i++) {
-        image_upload_enqueue(IMAGE_ASSETS[i].name, IMAGE_ASSETS[i].data, IMAGE_ASSETS[i].len);
+#if IMAGE_ASSET_COUNT > 0
+    image_asset_t assets[IMAGE_ASSET_COUNT];
+    size_t count = image_assets_load(assets);
+    for (size_t i = 0; i < count; i++) {
+        image_upload_enqueue(assets[i].name, assets[i].data, assets[i].len);
     }
+#endif
 }
 
 image_frame_t *image_upload_pop(void) {

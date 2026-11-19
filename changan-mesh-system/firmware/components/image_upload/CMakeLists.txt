@@ -1,31 +1,33 @@
-# Embeds firmware/figs/*.jpg into the leaf (micro_uav) firmware and generates a
+# Embeds firmware/figs/*.jpg into non-root (leaf-capable) firmware and generates a
 # manifest so C code can enumerate them without hardcoding symbol names.
 set(figs_dir "${MESH_SYSTEM_ROOT}/firmware/figs")
 set(embedded)
 set(asset_externs "")
-set(asset_entries "")
+set(asset_assignments "")
 set(asset_count 0)
 
-if(CONFIG_APP_ROLE_MICRO_UAV)
+if(CONFIG_APP_ROLE_MICRO_UAV OR CONFIG_APP_ROLE_UGV)
     file(GLOB fig_files LIST_DIRECTORIES false "${figs_dir}/*.jpg" "${figs_dir}/*.jpeg" "${figs_dir}/*.png")
     list(LENGTH fig_files asset_count)
     foreach(f IN LISTS fig_files)
         get_filename_component(base "${f}" NAME)
-        string(MAKE_C_IDENTIFIER ident "${base}")
+        string(MAKE_C_IDENTIFIER "${base}" ident)
         list(APPEND embedded "${f}")
         string(APPEND asset_externs
             "extern const uint8_t _binary_${ident}_start[];\n"
             "extern const uint8_t _binary_${ident}_end[];\n")
-        string(APPEND asset_entries
-            "    { \"${base}\", _binary_${ident}_start, (size_t)(_binary_${ident}_end - _binary_${ident}_start) },\n")
+        # Symbol limits come from separate objects, so the length is computed at
+        # runtime inside the loader; it is not a constant expression.
+        string(APPEND asset_assignments
+            "    out[n++] = (image_asset_t){ \"${base}\", _binary_${ident}_start, (size_t)(_binary_${ident}_end - _binary_${ident}_start) };\n")
     endforeach()
 endif()
 
-# Always emit a non-empty array so the TU is valid even for non-leaf builds.
+# Always emit a callable loader so the TU is valid even for non-leaf builds.
 if(asset_count EQUAL 0)
-    set(asset_array "static const image_asset_t IMAGE_ASSETS[1] = { { NULL, NULL, 0 } };")
+    set(asset_loader "static inline size_t image_assets_load(image_asset_t *out) { (void)out; return 0; }")
 else()
-    set(asset_array "static const image_asset_t IMAGE_ASSETS[${asset_count}] = {\n${asset_entries}};")
+    set(asset_loader "static inline size_t image_assets_load(image_asset_t *out) {\n    size_t n = 0;\n${asset_assignments}    return n;\n}")
 endif()
 
 set(gen_header "${CMAKE_CURRENT_BINARY_DIR}/image_assets.gen.h")
@@ -34,8 +36,8 @@ file(WRITE "${gen_header}"
     "#pragma once\n"
     "#include \"image_upload.h\"\n"
     "${asset_externs}"
-    "${asset_array}\n"
-    "#define IMAGE_ASSET_COUNT ${asset_count}\n")
+    "#define IMAGE_ASSET_COUNT ${asset_count}\n"
+    "${asset_loader}\n")
 
 if(embedded)
     idf_component_register(SRCS "image_upload.c" INCLUDE_DIRS "include" "${CMAKE_CURRENT_BINARY_DIR}"

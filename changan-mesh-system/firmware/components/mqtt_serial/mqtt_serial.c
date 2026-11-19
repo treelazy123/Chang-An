@@ -107,8 +107,10 @@ static void image_upload_tick(void) {
         cJSON_AddNumberToObject(body,"count",(double)n_chunks);
         cJSON_AddNumberToObject(body,"total_bytes",(double)img->len);
         cJSON_AddStringToObject(body,"data",b64);
-        publish("image",body,1,false);
+        int mid=publish("image",body,1,false);
         cJSON_Delete(body);
+        /* Outbox backpressure: keep the chunk index so this chunk is retried. */
+        if(mid<0) { return; }
     }
     if(s+1>=n_chunks) {
         image_upload_release(image_current);
@@ -271,6 +273,9 @@ static void mqtt_task(void *arg) {
         esp_mqtt_client_register_event(client,ESP_EVENT_ANY_ID,mqtt_event,NULL);
         esp_err_t err=esp_mqtt_client_start(client);
         int64_t started=esp_timer_get_time()/1000,last_status=0;bool announced=false;
+#if CONFIG_APP_IMAGE_SELFTEST_PERIOD_S > 0
+        int64_t last_prime=0;
+#endif
         while(err==ESP_OK && !(xEventGroupGetBits(state)&LOST)) {
             uint32_t current;
             if(!endpoint(&current) || current!=address) { break; }
@@ -278,7 +283,18 @@ static void mqtt_task(void *arg) {
             bool active=(bits&(CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY))==(CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY);
             task_agent_tick(active);
             if(!announced && active) { announce_ready();announced=true; }
-            if(active && !images_primed) { images_primed=true;image_upload_prime(); }
+            if(active && !images_primed) {
+                images_primed=true;image_upload_prime();
+#if CONFIG_APP_IMAGE_SELFTEST_PERIOD_S > 0
+                last_prime=esp_timer_get_time()/1000;
+#endif
+            }
+#if CONFIG_APP_IMAGE_SELFTEST_PERIOD_S > 0
+            else if(active && esp_timer_get_time()/1000-last_prime>=1000LL*CONFIG_APP_IMAGE_SELFTEST_PERIOD_S) {
+                image_upload_prime();
+                last_prime=esp_timer_get_time()/1000;
+            }
+#endif
             if(announced && active && capabilities_dirty) { announce_capabilities(false); }
             if(!announced && esp_timer_get_time()/1000-started>45000) { break; }
             if(active) {

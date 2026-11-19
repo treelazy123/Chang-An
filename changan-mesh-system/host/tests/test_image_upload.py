@@ -1,5 +1,6 @@
-"""ImageSink reassembly, filename safety, and ACL image topic."""
+"""ImageSink reassembly, filename safety, retention bounds, and ACL image topic."""
 import base64
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -51,6 +52,32 @@ class ImageSinkTests(unittest.TestCase):
         self.sink.consume('micro-001', chunk('micro-001', 'c.jpg', 2, 1, b'z'))
         self.sink.consume('micro-001', chunk('micro-001', 'c.jpg', 0, 0, b'z'))
         self.assertFalse((Path(self.temp.name) / 'micro-001').exists())
+
+    def test_prunes_oldest_files_above_size_cap(self):
+        directory = Path(self.temp.name) / 'micro-001'
+        sink = ImageSink(Path(self.temp.name), max_bytes=10)
+        sink.consume('micro-001', chunk('micro-001', 'a.jpg', 0, 1, b'12345'))
+        os.utime(directory / 'a.jpg', (1000, 1000))
+        sink.consume('micro-001', chunk('micro-001', 'b.jpg', 0, 1, b'12345'))
+        os.utime(directory / 'b.jpg', (2000, 2000))
+        sink.consume('micro-001', chunk('micro-001', 'c.jpg', 0, 1, b'12345'))
+        self.assertEqual(sorted(p.name for p in directory.iterdir()), ['b.jpg', 'c.jpg'])
+
+    def test_drops_stale_partial_uploads(self):
+        now = [0.0]
+        sink = ImageSink(Path(self.temp.name), pending_ttl=10, clock=lambda: now[0])
+        sink.consume('micro-001', chunk('micro-001', 'slow.jpg', 0, 2, b'half'))
+        now[0] = 11
+        sink.consume('micro-001', chunk('micro-001', 'new.jpg', 0, 2, b'other'))
+        self.assertNotIn(('micro-001', 'slow.jpg'), sink.pending)
+        self.assertIn(('micro-001', 'new.jpg'), sink.pending)
+
+    def test_bounds_partial_upload_count(self):
+        sink = ImageSink(Path(self.temp.name), max_pending=1)
+        sink.consume('micro-001', chunk('micro-001', 'first.jpg', 0, 2, b'a'))
+        sink.consume('micro-001', chunk('micro-001', 'second.jpg', 0, 2, b'b'))
+        self.assertNotIn(('micro-001', 'first.jpg'), sink.pending)
+        self.assertIn(('micro-001', 'second.jpg'), sink.pending)
 
 
 class ImageACLTests(unittest.TestCase):

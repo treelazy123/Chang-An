@@ -9,7 +9,7 @@ import threading
 import time
 import uuid
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext, ttk
+from tkinter import filedialog, font as tkfont, messagebox, scrolledtext, ttk
 
 from .client import HTTPClient, request_line
 from .protocol import NODE_ID
@@ -23,6 +23,13 @@ STAGES={'point_check':'测试点位验证','receive_event':'接收测试事件',
 TASK_STATES={'IDLE':'空闲','CREATED':'已创建','QUEUED':'排队中','DISPATCHING':'下发中','ACCEPTED':'已受理','RUNNING':'执行中','PAUSED':'已暂停','UNKNOWN':'待确认','RECONCILING':'对账中'}
 HEALTH = {'waiting':'等待执行', 'reporting':'反馈正常', 'feedback_stale':'反馈超时',
           'node_not_ready':'节点未就绪', 'finished':'任务已结束', 'not_authorized':'授权已失效', 'not_found':'任务不存在'}
+UI_FONTS = ('Microsoft YaHei UI', 'Noto Sans CJK SC', 'WenQuanYi Micro Hei', 'DejaVu Sans')
+MONO_FONTS = ('Consolas', 'Noto Sans Mono CJK SC', 'DejaVu Sans Mono')
+
+def ui_font(widget, size, bold=False, mono=False):
+    installed = set(tkfont.families(widget))
+    family = next((name for name in (MONO_FONTS if mono else UI_FONTS) if name in installed), 'TkDefaultFont')
+    return (family, size, 'bold') if bold else (family, size)
 
 def service_result_text(row):
     result = row.get('result') or {}
@@ -261,9 +268,9 @@ class DebugWindow:
         style = ttk.Style(root)
         if 'clam' in style.theme_names():
             style.theme_use('clam')
-        style.configure('.', font=('Microsoft YaHei UI', 10))
+        style.configure('.', font=ui_font(root, 10))
         style.configure('Treeview', rowheight=27)
-        style.configure('Title.TLabel', font=('Microsoft YaHei UI', 17, 'bold'))
+        style.configure('Title.TLabel', font=ui_font(root, 17, bold=True))
         style.configure('Accent.TButton', padding=(13, 6))
         outer = ttk.Frame(root, padding=16)
         outer.pack(fill='both', expand=True)
@@ -450,7 +457,7 @@ class DebugWindow:
         ttk.Button(bar, text='导出 JSONL', command=self.export).pack(side='right')
         ttk.Button(bar, text='清空', command=self.clear).pack(side='right', padx=8)
         self.output = scrolledtext.ScrolledText(frame, height=12, wrap='word', state='disabled',
-                                               font=('Consolas', 10), background='#152332', foreground='#e1eaf4')
+                                               font=ui_font(frame, 10, mono=True), background='#152332', foreground='#e1eaf4')
         self.output.pack(fill='both', expand=True, pady=(6, 0))
         self.output.tag_configure('error', foreground='#ff9696')
         self.output.tag_configure('success', foreground='#8de0b2')
