@@ -10,10 +10,10 @@
 #include "node_role.h"
 #include "app_protocol.h"
 #include "parent_policy.h"
+#include "parent_auth.h"
 
-uint16_t app_crc16(const uint8_t *data, size_t size)
+uint16_t app_crc16(uint16_t crc, const uint8_t *data, size_t size)
 {
-    uint16_t crc = 0xffff;
     for (size_t i = 0; i < size; ++i) {
         crc ^= (uint16_t)data[i] << 8;
         for (int bit = 0; bit < 8; ++bit) {
@@ -145,6 +145,7 @@ cJSON *app_status_payload(void)
         cJSON_AddNumberToObject(payload, "uptime_ms", (double)(esp_timer_get_time() / 1000));
         status_add_network(payload);
         parent_policy_status(payload);
+        parent_auth_status(payload);
     }
     return payload;
 }

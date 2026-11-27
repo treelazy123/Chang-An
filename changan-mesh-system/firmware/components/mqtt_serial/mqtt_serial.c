@@ -1,6 +1,8 @@
 #include "sdkconfig.h"
 #include "mqtt_serial.h"
 #include "parent_policy.h"
+#include "parent_auth.h"
+#include "cap_measure.h"
 #if CONFIG_APP_TRANSPORT_MQTT_SERIAL
 #include "service_discovery.h"
 #if !CONFIG_APP_ROOT_GATEWAY
@@ -24,6 +26,7 @@
 #include "app_protocol.h"
 #include "task_agent.h"
 #include "image_upload.h"
+#include "mbedtls/base64.h"
 extern const char ca[] asm("_binary_ca_pem_start");
 extern const char cert[] asm("_binary_client_pem_start");
 extern const char key[] asm("_binary_client_key_start");
@@ -40,16 +43,23 @@ static int subscription,task_subscription;
 static char task_topic[100];
 #define TASK_READY (1U << 5)
 
-typedef struct { char json[513]; } command_t;
+static void access_phase(const char *phase) {
+    ESP_LOGI(TAG,"ACCESS_PHASE node=%s boot_id=%s phase=%s uptime_ms=%lld",node_role_id(),boot,phase,
+             (long long)(esp_timer_get_time()/1000));
+}
+
+typedef struct { char json[APP_COMMAND_MAX+1]; } command_t;
 static command_t assembly;
 static int assembled;
 static bool receiving;
-typedef struct { char id[65];char request[513];char reply[APP_JSON_MAX+1]; } cache_t;
+typedef struct { char id[65];char request[APP_COMMAND_MAX+1];char reply[APP_JSON_MAX+1]; } cache_t;
 static cache_t cache[8];static unsigned cache_pos;
 static int publish(const char *suffix,const cJSON *body,int qos,bool retain) {
     char topic[128];snprintf(topic,sizeof(topic),"mesh/v1/nodes/%s/%s",node_role_id(),suffix);
     char *json=cJSON_PrintUnformatted(body);if(!json) { return -1; }
-    int id=esp_mqtt_client_enqueue(client,topic,json,0,qos,retain,true);cJSON_free(json);return id;
+    size_t size=strlen(json);
+    int id=size<=APP_JSON_MAX?esp_mqtt_client_enqueue(client,topic,json,size,qos,retain,true):-1;
+    cJSON_free(json);return id;
 }
 
 /* ---------------- Image upload (leaf -> root -> host) ----------------
@@ -123,19 +133,28 @@ static void image_upload_tick(void) {
 static void mqtt_event(void *ctx,esp_event_base_t base,int32_t id,void *data) {
     (void)ctx;(void)base;esp_mqtt_event_handle_t e=data;
     if(id==MQTT_EVENT_CONNECTED) {
+        access_phase("MQTT_CONNECTED");
         receiving=false;assembled=0;xEventGroupSetBits(state,CONNECTED);
         subscription=esp_mqtt_client_subscribe_single(client,command_topic,1);
         task_subscription=esp_mqtt_client_subscribe_single(client,task_topic,1);
         (void)esp_mqtt_client_subscribe_single(client,"mesh/v1/clock",1);
+    } else if(id==MQTT_EVENT_SUBSCRIBED && e->error_handle &&
+              e->error_handle->error_type==MQTT_ERROR_TYPE_SUBSCRIBE_FAILED) {
+        xEventGroupSetBits(state,LOST);
+        xEventGroupClearBits(state,CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY);
     } else if(id==MQTT_EVENT_SUBSCRIBED && e->msg_id==subscription) {
         xEventGroupSetBits(state,SUBSCRIBED);
+        access_phase("COMMAND_SUBSCRIBED");
     } else if(id==MQTT_EVENT_SUBSCRIBED && e->msg_id==task_subscription) {
         xEventGroupSetBits(state,TASK_READY);
+        access_phase("TASK_SUBSCRIBED");
     } else if(id==MQTT_EVENT_DISCONNECTED || id==MQTT_EVENT_ERROR) {
+        parent_auth_online(false);
         xEventGroupClearBits(state,CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY);xEventGroupSetBits(state,LOST);
         if(id==MQTT_EVENT_ERROR && e->error_handle) {
-            ESP_LOGE(TAG,"TLS/MQTT error type=%d tls=0x%x verify=0x%x",e->error_handle->error_type,
-                e->error_handle->esp_tls_last_esp_err,e->error_handle->esp_tls_cert_verify_flags);
+            ESP_LOGE(TAG,"TLS/MQTT error type=%d tls=0x%x stack=0x%x verify=0x%x connack=%d",e->error_handle->error_type,
+                e->error_handle->esp_tls_last_esp_err,e->error_handle->esp_tls_stack_err,
+                e->error_handle->esp_tls_cert_verify_flags,e->error_handle->connect_return_code);
         }
     } else if(id==MQTT_EVENT_DATA) {
 
@@ -144,16 +163,19 @@ static void mqtt_event(void *ctx,esp_event_base_t base,int32_t id,void *data) {
             char text[101];memcpy(text,e->data,e->data_len);text[e->data_len]='\0';
             cJSON *msg=cJSON_Parse(text);const cJSON *t=cJSON_GetObjectItemCaseSensitive(msg,"unix");
             if(cJSON_IsNumber(t) && t->valuedouble>=CONFIG_APP_TLS_BOOTSTRAP_UNIX && t->valuedouble<2147483647) {
+                if (!(xEventGroupGetBits(state)&CLOCKED)) { access_phase("CLOCK_RECEIVED"); }
                 struct timeval tv={.tv_sec=(time_t)t->valuedouble};settimeofday(&tv,NULL);xEventGroupSetBits(state,CLOCKED);
             }
             cJSON_Delete(msg);return;
         }
         if(e->current_data_offset==0) {
             receiving=!e->retain && ((e->topic_len==(int)strlen(command_topic) && !memcmp(e->topic,command_topic,e->topic_len)) ||
-                 (e->topic_len==(int)strlen(task_topic) && !memcmp(e->topic,task_topic,e->topic_len))) && e->total_data_len>0 && e->total_data_len<=512;
+                 (e->topic_len==(int)strlen(task_topic) && !memcmp(e->topic,task_topic,e->topic_len))) &&
+                 e->total_data_len>0 && e->total_data_len<=APP_COMMAND_MAX;
             assembled=0;
         }
-        if(!receiving || e->current_data_offset!=assembled || e->data_len<0 || assembled+e->data_len>512) {
+        if(!receiving || e->current_data_offset!=assembled || e->data_len<=0 ||
+           e->data_len>APP_COMMAND_MAX-assembled || e->data_len>e->total_data_len-assembled) {
             receiving=false;return;
         }
         memcpy(assembly.json+assembled,e->data,e->data_len);assembled+=e->data_len;
@@ -170,8 +192,32 @@ static bool endpoint(uint32_t *ip) {
     if(!local.ip.addr) { return false; }
     return service_discovery_ugv_ap(ip);
 }
+static void announce_capabilities(bool force,const cJSON *request);
 static void reply_command(const command_t *packet) {
     cJSON *cmd=app_message_parse(packet->json,strlen(packet->json));
+    const char *kind=app_json_string(cmd,"type"),*target=app_json_string(cmd,"target");
+    if(kind&&target&&!strcmp(target,node_role_id())) {
+        if(!strcmp(kind,"cap.receipt")) {
+            cap_measure_receipt(cmd,boot,esp_timer_get_time());cJSON_Delete(cmd);return;
+        }
+        if(!strcmp(kind,"cap.request")) {
+            const char *requested_boot=app_json_string(cmd,"boot_id");
+            const cJSON *deadline=cJSON_GetObjectItemCaseSensitive(cmd,"deadline_unix");
+            time_t now=time(NULL);
+            if(requested_boot&&!strcmp(requested_boot,boot)&&(xEventGroupGetBits(state)&CLOCKED)&&
+               cJSON_IsNumber(deadline)&&deadline->valuedouble>=now&&deadline->valuedouble<=now+60&&cap_measure_new_request(cmd)) {
+                announce_capabilities(true,cmd);
+            }
+            cJSON_Delete(cmd);return;
+        }
+    }
+    if(cmd && app_json_string(cmd,"type") && !strcmp(app_json_string(cmd,"type"),"parent.auth.grant")) {
+        const char *proof=app_json_string(cmd,"proof");uint8_t grant[PA_GRANT_SIZE];size_t size=0;
+        if(proof && strlen(proof)==416 && mbedtls_base64_decode(grant,sizeof(grant),&size,(const uint8_t*)proof,strlen(proof))==0) {
+            (void)parent_auth_accept_grant(grant,size);
+        }
+        cJSON_Delete(cmd);return;
+    }
     if(cmd && app_json_string(cmd,"type") && !strcmp(app_json_string(cmd,"type"),"task.command")) {
         task_agent_command(cmd,(xEventGroupGetBits(state)&CLOCKED)!=0);cJSON_Delete(cmd);return;
     }
@@ -211,36 +257,60 @@ static void reply_command(const command_t *packet) {
 static bool capabilities_dirty=true;
 static char capability_state[24],capability_task[33];
 static bool task_emit(const cJSON *body) { capabilities_dirty=true;return publish("task_events",body,1,false)>=0; }
-static void announce_capabilities(bool force) {
-    if(force) { capabilities_dirty=true; }
-    cJSON *cap=app_message_new("capabilities");
-    if(cap) {
-        cJSON_AddStringToObject(cap,"boot_id",boot);cJSON *ops=cJSON_AddArrayToObject(cap,"operations");
+static bool cap_result_emit(const cJSON *body) { return publish("telemetry",body,1,false)>=0; }
+static void announce_capabilities(bool force,const cJSON *request) {
+    int64_t announce_started=esp_timer_get_time();
+    bool mci=request==NULL;
+    if(force && mci) { capabilities_dirty=true; }
+    cJSON *wire=mci?cJSON_CreateObject():app_message_new("capabilities");
+    if(wire) {
+        cJSON *cap=wire;
+        if(mci) {
+            cJSON_AddNumberToObject(wire,"v",1);
+            cJSON_AddStringToObject(wire,"service","Mesh_Node");
+            cJSON_AddStringToObject(wire,"method","Ntf_Capabilities");
+            cJSON_AddStringToObject(wire,"nodeId",node_role_id());
+            cJSON_AddStringToObject(wire,"bootId",boot);
+            cap=cJSON_AddObjectToObject(wire,"params");
+            if(!cap) { cJSON_Delete(wire);return; }
+        } else {
+            cJSON_AddStringToObject(wire,"boot_id",boot);
+        }
+        cJSON *ops=cJSON_AddArrayToObject(cap,"operations");
         cJSON_AddItemToArray(ops,cJSON_CreateString("ping"));cJSON_AddItemToArray(ops,cJSON_CreateString("status"));
-        cJSON_AddItemToArray(ops,cJSON_CreateString("echo"));task_agent_capabilities(cap);
+        cJSON_AddItemToArray(ops,cJSON_CreateString("echo"));task_agent_capabilities(cap,mci);
         if (node_role_is_leaf()) { cJSON_AddItemToArray(ops,cJSON_CreateString("parent")); }
-        const char *status=app_json_string(cap,"task_status"),*task=app_json_string(cap,"task_id");
+        const char *status=app_json_string(cap,mci?"taskStatus":"task_status");
+        const char *task=app_json_string(cap,mci?"taskId":"task_id");
         if(!task) { task=""; }
         if(status && (force || strcmp(status,capability_state) || strcmp(task,capability_task))) {
-            if(publish("capabilities",cap,1,true)>=0) {
-                snprintf(capability_state,sizeof(capability_state),"%s",status);snprintf(capability_task,sizeof(capability_task),"%s",task);
-                capabilities_dirty=false;
-            }
-        } else { capabilities_dirty=false; }
-        cJSON_Delete(cap);
+            cap_measure_begin(cap,boot,request,announce_started,mci);
+            if(publish("capabilities",wire,1,mci)>=0) {
+                if(mci) {
+                    snprintf(capability_state,sizeof(capability_state),"%s",status);
+                    snprintf(capability_task,sizeof(capability_task),"%s",task);
+                    capabilities_dirty=false;
+                }
+            } else { cap_measure_discard(app_json_string(cap,mci?"capId":"cap_id")); }
+        } else if(mci) { capabilities_dirty=false; }
+        cJSON_Delete(wire);
     }
 }
 static void announce_ready(void) {
-    announce_capabilities(true);
+    capability_state[0]='\0';
+    announce_capabilities(true,NULL);
     cJSON *presence=app_message_new("presence");if(presence) {
         cJSON_AddBoolToObject(presence,"online",true);cJSON_AddStringToObject(presence,"boot_id",boot);
         publish("presence",presence,1,true);cJSON_Delete(presence);
     }
     ESP_LOGI(TAG,"READY node=%s MQTT TLS authenticated; command subscription active",node_role_id());
+    access_phase("APPLICATION_READY");
 }
 static void mqtt_task(void *arg) {
     (void)arg;char uri[80],ip_text[16],will[160],presence[100];
     snprintf(boot,sizeof(boot),"%08lx%08lx",(unsigned long)esp_random(),(unsigned long)esp_random());
+    cap_measure_init();
+    access_phase("MQTT_TASK_STARTED");
     snprintf(command_topic,sizeof(command_topic),"mesh/v1/nodes/%s/commands",node_role_id());
     snprintf(task_topic,sizeof(task_topic),"mesh/v1/nodes/%s/task_commands",node_role_id());
     ESP_ERROR_CHECK(task_agent_init(boot,task_emit));
@@ -252,7 +322,7 @@ static void mqtt_task(void *arg) {
     for(;;) {
         task_agent_tick(false);
         uint32_t address;
-        if(!endpoint(&address)) { vTaskDelay(pdMS_TO_TICKS(1000));continue; }
+        if(!endpoint(&address)) { service_discovery_wait(1000);continue; }
         struct in_addr a={.s_addr=address};inet_ntop(AF_INET,&a,ip_text,sizeof(ip_text));
         snprintf(uri,sizeof(uri),"mqtts://%s:%d",ip_text,CONFIG_APP_MQTT_PORT);
         esp_mqtt_client_config_t config={
@@ -270,9 +340,10 @@ static void mqtt_task(void *arg) {
         client=esp_mqtt_client_init(&config);
         if(!client) { vTaskDelay(pdMS_TO_TICKS(2000));continue; }
         ESP_LOGI(TAG,"CONNECT node=%s target=%s identity=%s",node_role_id(),uri,CONFIG_APP_MQTT_SERVER_NAME);
+        access_phase("MQTT_CONNECT_START");
         esp_mqtt_client_register_event(client,ESP_EVENT_ANY_ID,mqtt_event,NULL);
         esp_err_t err=esp_mqtt_client_start(client);
-        int64_t started=esp_timer_get_time()/1000,last_status=0;bool announced=false;
+        int64_t started=esp_timer_get_time()/1000,last_status=0;bool announced=false,first_status=true;
 #if CONFIG_APP_IMAGE_SELFTEST_PERIOD_S > 0
         int64_t last_prime=0;
 #endif
@@ -281,6 +352,21 @@ static void mqtt_task(void *arg) {
             if(!endpoint(&current) || current!=address) { break; }
             EventBits_t bits=xEventGroupGetBits(state);
             bool active=(bits&(CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY))==(CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY);
+            parent_auth_online(active);
+            if(active) {
+                pa_request_t request;
+                if(parent_auth_take_request(&request)) {
+                    uint8_t proof[240];size_t size=0;
+                    if(mbedtls_base64_encode(proof,sizeof(proof),&size,(const uint8_t*)&request,sizeof(request))==0) {
+                        proof[size]='\0';
+                        cJSON *message=cJSON_CreateObject();
+                        if(message) {
+                            cJSON_AddNumberToObject(message,"v",1);cJSON_AddStringToObject(message,"type","parent.auth.request");
+                            cJSON_AddStringToObject(message,"proof",(char*)proof);publish("telemetry",message,1,false);cJSON_Delete(message);
+                        }
+                    }
+                }
+            }
             task_agent_tick(active);
             if(!announced && active) { announce_ready();announced=true; }
             if(active && !images_primed) {
@@ -295,24 +381,35 @@ static void mqtt_task(void *arg) {
                 last_prime=esp_timer_get_time()/1000;
             }
 #endif
-            if(announced && active && capabilities_dirty) { announce_capabilities(false); }
+            if(announced && active && capabilities_dirty) { announce_capabilities(false,NULL); }
             if(!announced && esp_timer_get_time()/1000-started>45000) { break; }
             if(active) {
                 command_t packet;
                 if(xQueueReceive(commands,&packet,0)==pdTRUE) { reply_command(&packet); }
                 image_upload_tick();
-                if(esp_timer_get_time()/1000-last_status>CONFIG_APP_STATUS_PERIOD_MS) {
+                cap_measure_tick(boot,esp_timer_get_time(),cap_result_emit);
+                if(first_status || esp_timer_get_time()/1000-last_status>=CONFIG_APP_STATUS_PERIOD_MS) {
                     cJSON *msg=app_message_new("telemetry");if(msg) {
                         cJSON_AddItemToObject(msg,"payload",app_status_payload());cJSON_AddStringToObject(msg,"boot_id",boot);
-                        publish("telemetry",msg,0,false);cJSON_Delete(msg);
+                        /* First live telemetry completes the host's readiness check.
+                         * Send now on every connection, then keep the normal cadence. */
+                        if(publish("telemetry",msg,first_status?1:0,false)>=0) {
+                            last_status=esp_timer_get_time()/1000;
+                            if(first_status) { access_phase("FIRST_TELEMETRY_ENQUEUED"); }
+                            first_status=false;
+                        }
+                        cJSON_Delete(msg);
                     }
-                    last_status=esp_timer_get_time()/1000;
                 }
             }
             vTaskDelay(pdMS_TO_TICKS(50));
         }
         task_agent_tick(false);
+        parent_auth_online(false);
+        cap_measure_clear();
         esp_mqtt_client_stop(client);esp_mqtt_client_destroy(client);client=NULL;
+        xEventGroupClearBits(state,CONNECTED|SUBSCRIBED|CLOCKED|TASK_READY);
+        xQueueReset(commands);
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }

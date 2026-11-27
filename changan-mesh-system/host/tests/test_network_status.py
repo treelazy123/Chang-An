@@ -6,7 +6,7 @@ import threading
 from types import SimpleNamespace
 import unittest
 
-from changan_ugv.nodes.controller import Registry
+from changan_ugv.nodes.controller import Controller, Registry
 from changan_ugv.protocol.messages import encode
 from changan_ugv.protocol.tunnel import Frame, Decoder, RESET, READY, NETWORK
 from changan_ugv.transport.serial_bridge import Engine
@@ -23,6 +23,34 @@ class NetworkStatusTests(unittest.TestCase):
     def receive(self, kind, **fields):
         return self.registry.receive(f'mesh/v1/nodes/{self.node}/{kind}',
             dict(v=1, type=kind, node_id=self.node, **fields))
+
+    def test_controller_wakes_only_for_valid_node_updates_and_disconnect(self):
+        controller=Controller.__new__(Controller)
+        controller.registry=self.registry
+        controller.condition=threading.Condition()
+        controller.node_listeners=set()
+        controller.pending={};controller.replies={}
+        controller.connected=threading.Event();controller.connected.set()
+        controller.refresh_inventory=lambda:None
+        received=[]
+        unsubscribe=controller.subscribe_nodes(lambda:received.append(controller.registry.ready(self.node)))
+        def deliver(kind, retained=False, **fields):
+            body=dict(v=1,type=kind,node_id=self.node,boot_id='current',**fields)
+            controller.on_message(None,None,SimpleNamespace(topic=f'mesh/v1/nodes/{self.node}/{kind}',
+                payload=json.dumps(body).encode(),retain=retained))
+        deliver('presence',online=True)
+        deliver('capabilities',operations=['ping'])
+        deliver('telemetry',True,payload={})  # Cached telemetry never grants live readiness.
+        self.assertEqual([False,False],received)
+        deliver('telemetry',payload={})
+        self.assertEqual([False,False,True],received)
+        deliver('capabilities',operations=['invalid'])
+        self.assertEqual(3,len(received))
+        controller.on_disconnect(None,None,None,None,None)
+        self.assertEqual([False,False,True,False],received)
+        unsubscribe()
+        deliver('presence',online=True)
+        self.assertEqual(4,len(received))
 
     def test_list_keeps_network_payload_and_exposes_freshness(self):
         payload = dict(role='micro_uav', level=3, sta_ip='192.168.5.2', ap_ip='192.168.6.1',

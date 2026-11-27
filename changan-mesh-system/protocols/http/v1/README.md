@@ -2,8 +2,7 @@
 
 The independent terminal communicates directly with UGV Service; no cloud simulator
 or terminal MQTT connection is involved. Default: `http://127.0.0.1:8080`.
-This is a loopback development interface, not a public 5G/cloud endpoint. Browser
-Origin requests are rejected. The server binds the caller to the stable local
+The default binding is loopback. Jetson may bind one explicit LAN address and allow configured peers through `[service].http_host` and `[service].http_allowed_peers`. The same peer and Host checks apply to all v1 routes, including MCI. Browser Origin requests are rejected. The server binds the caller to the stable local
 operator `http-local`; packet fields cannot select another owner or administrator.
 Persisted tasks retain their owner; state files are not rewritten automatically.
 
@@ -31,7 +30,8 @@ Requests use the existing operation names and business fields described in
 The HTTP envelope has `v:1`, `type`, `msg_id`, `deadline_unix`; the server binds node_id.
 Deadline is at most 60 seconds into the future. The adapter does not manufacture a
 new request ID or deadline on retry. JSON duplicate keys and non-finite values are rejected.
-Request limit is 16 KiB, independent of the 512-byte physical-node command limit.
+Request limit is 16 KiB. The physical-node command limit is 1024 bytes for
+upgraded nodes and 512 bytes for legacy nodes.
 
 List results aggregate the existing node pages into one `nodes` response with
 `more:false`. Task/event pagination retains cursor/more semantics. Protocol errors
@@ -40,6 +40,15 @@ overload returns service_busy. On request_timeout_query_state, query the task ID
 the operation might already have been persisted. No mutation is automatically retried.
 UGV_RECEIVED means persisted acceptance, not execution completion.
 
+## Capability diagnostics
+
+Capability diagnostics additionally expose `POST/GET /api/v1/capability-tests`,
+`GET /api/v1/capability-tests/BATCH` and `GET /api/v1/capability-tests/BATCH/export`.
+The independent terminal uses these additive v1 HTTP endpoints for measurement
+batches; existing operations continue through their existing MCI adapter.
+See [capability measurement v1](../../capability-measure/v1/README.md) for fields,
+idempotency, persistence and the one-way latency upper-bound interpretation.
+
 ## WebSocket
 
 `GET /api/v1/events?cursor=0` upgrades to a read-only event stream:
@@ -47,8 +56,10 @@ UGV_RECEIVED means persisted acceptance, not execution completion.
 - `task.event`: durable cursor plus task_id/state/state_seq/revision/progress etc.
   Events are scoped to http-local. Reconnect with the last processed cursor; history
   is read from SQLite, including while the local Broker is unavailable.
-- `nodes.snapshot`: current observed node list and broker_connected. Refreshed about
-  every two seconds; not a durable stream. No inference of physical parents is added.
+- `nodes.snapshot`: current observed node list and broker_connected. Valid node
+  observations and Broker connection changes wake streams immediately; a two-second
+  fallback refresh covers expiry and other changes. Updates may be coalesced and
+  are not a durable stream. No inference of physical parents is added.
 
 Client text messages close the stream; use HTTP for operations. A connection has
 heartbeat and bounded messages; clients can also recover via task.events HTTP queries.

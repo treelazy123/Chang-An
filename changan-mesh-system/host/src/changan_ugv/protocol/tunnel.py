@@ -4,7 +4,11 @@ from dataclasses import dataclass
 import struct
 RESET, READY, OPEN, OPEN_OK, DATA, ACK, CLOSE, PING, PONG = range(1, 10)
 NETWORK = 10  # Optional channel-255 report, negotiated by READY seq=1.
-CHUNK = 512
+PARENT_REQUEST, PARENT_GRANT = 11, 12  # READY seq=2 adds root authorization.
+LEGACY_CHUNK = 512
+CHUNK = 1024
+RESET_OFFER_1024 = 1
+READY_DATA_1024 = 0x100
 MAX_CHANNELS = 8
 HEADER = struct.Struct('!4sBBIIHHH')
 @dataclass(frozen=True)
@@ -16,7 +20,7 @@ class Frame:
     seq: int = 0
     data: bytes = b''
     def encode(self):
-        if not 1 <= self.kind <= NETWORK or len(self.data) > CHUNK:
+        if not 1 <= self.kind <= PARENT_GRANT or len(self.data) > (CHUNK if self.kind == DATA else LEGACY_CHUNK):
             raise ValueError('Invalid tunnel frame')
         head = HEADER.pack(b'MUX1', self.kind, self.channel, self.epoch, self.token,
                            self.seq, len(self.data), 0)
@@ -34,7 +38,7 @@ class Decoder:
             if len(self.buffer) < HEADER.size:
                 continue
             _, kind, ch, epoch, token, seq, size, crc = HEADER.unpack(self.buffer[:20])
-            if size > CHUNK or not 1 <= kind <= NETWORK:
+            if not 1 <= kind <= PARENT_GRANT or size > (CHUNK if kind == DATA else LEGACY_CHUNK):
                 self.buffer.clear()
                 raise ValueError('Invalid tunnel header; reset all streams')
             if len(self.buffer) < 20 + size:

@@ -157,6 +157,22 @@ class OperationTests(unittest.TestCase):
 
 
 class WindowTests(unittest.TestCase):
+    def test_raw_mci_messages_remain_visible_and_exportable_without_clearing_busy(self):
+        self.window.busy=True
+        raw=dict(protocol='MCI',path='/api/v1/mci/call',request=dict(service='Mesh_Task',method='Get_Task',params=dict(taskId='task-1')),
+                 response=dict(result=dict(task=dict(taskId='task-1',state='RUNNING'))))
+        self.worker.results.put(('wire',True,raw,0))
+        self.window._drain()
+        self.assertTrue(self.window.busy)
+        self.assertIn('Mesh_Task',self.window.output.get('1.0','end'))
+        self.assertIn('taskId',self.window.output.get('1.0','end'))
+        self.assertEqual(raw,self.window.records[-1]['result'])
+        with tempfile.TemporaryDirectory() as temporary:
+            path=Path(temporary)/'mci.jsonl'
+            with patch('car_terminal.gui.filedialog.asksaveasfilename',return_value=str(path)):self.window.export()
+            exported=json.loads(path.read_text(encoding='utf-8').splitlines()[-1])
+        self.assertEqual(raw['request'],exported['result']['request'])
+        self.assertEqual(raw['response'],exported['result']['response'])
     def test_parent_buttons_dispatch_and_complete_without_leaving_ui_busy(self):
         self.window.connected = True
         self.window.values['parent_child'].set('micro-001')

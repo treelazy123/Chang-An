@@ -11,14 +11,15 @@ import time
 import unittest
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'tools'))
-from tunnel_protocol import Frame,Decoder,RESET,READY,OPEN,OPEN_OK,DATA,ACK,CLOSE,CHUNK
+from tunnel_protocol import (Frame, Decoder, RESET, READY, OPEN, OPEN_OK, DATA, ACK, CLOSE, PING,
+                             NETWORK, CHUNK, LEGACY_CHUNK, RESET_OFFER_1024, READY_DATA_1024)
 from serial_tcp_bridge import Engine
 from provision_mqtt import provision
 from changan_ugv.nodes.controller import Registry
 
 class Framing(unittest.TestCase):
     def test_fragmentation_binary_and_coalescing(self):
-        source=Frame(DATA,2,0x01020304,42,65535,bytes(range(256))*2)
+        source=Frame(DATA,2,0x01020304,42,65535,bytes(range(256))*4)
         wire=source.encode()+Frame(ACK,2,0x01020304,42,65535).encode()
         decoder=Decoder();actual=[]
         for i in range(0,len(wire),7): actual.extend(decoder.feed(wire[i:i+7]))
@@ -31,8 +32,9 @@ class Framing(unittest.TestCase):
             with self.assertRaises(ValueError): Decoder().feed(corrupt)
     def test_garbage_is_bounded_and_oversize_is_rejected(self):
         d=Decoder();d.feed(b'x'*100000);self.assertLess(len(d.buffer),4)
-        with self.assertRaises(ValueError): Frame(DATA,data=b'x'*513).encode()
-        malformed=bytearray(Frame(DATA,data=b'x').encode());malformed[16:18]=struct.pack('!H',513)
+        with self.assertRaises(ValueError): Frame(DATA,data=b'x'*(CHUNK+1)).encode()
+        with self.assertRaises(ValueError): Frame(NETWORK,data=b'x'*(LEGACY_CHUNK+1)).encode()
+        malformed=bytearray(Frame(DATA,data=b'x').encode());malformed[16:18]=struct.pack('!H',CHUNK+1)
         with self.assertRaises(ValueError): Decoder().feed(malformed)
 
 class StreamLifecycle(unittest.TestCase):
@@ -42,6 +44,30 @@ class StreamLifecycle(unittest.TestCase):
         self.engine=Engine(self.output.append,self.listener.getsockname(),lambda:self.now)
         self.engine.receive(Frame(RESET,epoch=12))
     def tearDown(self): self.engine.reset();self.listener.close()
+    def test_startup_waits_for_firmware_without_writing_into_boot_rom(self):
+        output=[];engine=Engine(output.append,clock=lambda:self.now)
+        for _ in range(10):
+            engine.tick();self.now+=2
+        self.assertEqual([],output)
+        self.assertFalse(engine.firmware_seen)
+        engine.receive(Frame(RESET,epoch=7))
+        self.assertEqual(READY,Decoder().feed(output[-1])[0].kind)
+        self.assertEqual(7,engine.epoch)
+
+    def test_bridge_restart_can_request_new_session_after_valid_old_ping(self):
+        output=[];engine=Engine(output.append,clock=lambda:self.now)
+        engine.receive(Frame(PING,epoch=99));engine.tick()
+        self.assertTrue(engine.firmware_seen)
+        self.assertEqual(RESET,Decoder().feed(output[-1])[0].kind)
+        engine.receive(Frame(RESET,epoch=100))
+        self.assertEqual(100,engine.epoch)
+        self.assertEqual(READY,Decoder().feed(output[-1])[0].kind)
+
+    def test_non_handshake_frame_does_not_enable_startup_writes(self):
+        output=[];engine=Engine(output.append,clock=lambda:self.now)
+        engine.receive(Frame(DATA,epoch=99,data=b'noise'));engine.tick()
+        self.assertFalse(engine.firmware_seen)
+        self.assertEqual([],output)
     def connect(self,ch=0,token=1):
         self.engine.receive(Frame(OPEN,ch,12,token))
         for _ in range(100):
@@ -67,8 +93,18 @@ class StreamLifecycle(unittest.TestCase):
         self.engine.tick();count=len(self.output)
         self.engine.tick();self.assertEqual(count,len(self.output))
         first=Decoder().feed(self.output[-1])[0];self.assertEqual(DATA,first.kind)
+        self.assertEqual(LEGACY_CHUNK,len(first.data))
         self.engine.receive(Frame(ACK,0,12,1,first.seq));self.engine.tick()
         self.assertGreater(len(self.output),count)
+
+    def test_each_epoch_negotiates_large_data_without_changing_parent_auth_bits(self):
+        self.engine.on_parent_auth=lambda request: b''
+        self.engine.receive(Frame(RESET,epoch=13,seq=RESET_OFFER_1024))
+        ready=Decoder().feed(self.output[-1])[0]
+        self.assertEqual((READY,READY_DATA_1024|2,CHUNK),(ready.kind,ready.seq,self.engine.data_limit))
+        self.engine.receive(Frame(RESET,epoch=14))
+        ready=Decoder().feed(self.output[-1])[0]
+        self.assertEqual((READY,2,LEGACY_CHUNK),(ready.kind,ready.seq,self.engine.data_limit))
     def test_socket_eof_waits_for_last_data_ack(self):
         server=self.connect();self.output.clear();server.sendall(b'last record');server.shutdown(socket.SHUT_WR)
         self.engine.tick();last=Decoder().feed(self.output[-1])[0]
@@ -127,7 +163,7 @@ class RealTLS(unittest.TestCase):
                     sock,_=listener.accept();t=threading.Thread(target=serve,args=(sock,));workers.append(t);t.start()
             except OSError: pass
         accept_thread=threading.Thread(target=accept);accept_thread.start()
-        engine=Engine(output.append,listener.getsockname());engine.receive(Frame(RESET,epoch=88))
+        engine=Engine(output.append,listener.getsockname());engine.receive(Frame(RESET,epoch=88,seq=RESET_OFFER_1024))
         peers=[]
         for i,identity in enumerate(identities):
             if wrong_ca: c=ssl.create_default_context()
@@ -252,6 +288,44 @@ class ControllerTransactions(unittest.TestCase):
         with self.assertRaises(TimeoutError): c.command('uav-001','ping',timeout=.01)
         self.assertEqual(1,len(calls));self.assertFalse(c.pending)
         with self.assertRaises(ValueError): c.command('micro-001','ping')
+
+    def test_command_size_is_bound_to_node_boot_and_counts_utf8_bytes(self):
+        import json
+        from types import SimpleNamespace
+        c=self.make_controller()
+        node='uav-001'
+        topic=f'mesh/v1/nodes/{node}'
+        c.registry.receive(topic+'/capabilities',dict(v=1,type='capabilities',node_id=node,boot_id='a',operations=['echo']))
+        calls=[]
+        def publish(_,payload,**options):
+            calls.append(len(payload.encode('utf-8')))
+            ack=dict(v=1,type='ack',node_id=node,msg_id=json.loads(payload)['msg_id'],ok=True)
+            c.on_message(None,None,SimpleNamespace(topic=topic+'/acks',payload=json.dumps(ack).encode(),retain=False))
+            return SimpleNamespace(rc=0)
+        c.client=SimpleNamespace(publish=publish)
+        fixed=dict(v=1,type='command',target=node,msg_id='size-test',op='echo',deadline_unix=1795666402,payload='')
+        overhead=len(json.dumps(fixed,separators=(',',':')).encode('utf-8'))
+        def send(size):
+            chars,padding=divmod(size-overhead,3)
+            return c.command(node,'echo','测'*chars+'x'*padding,msg_id=fixed['msg_id'],deadline_unix=fixed['deadline_unix'])
+        send(512)
+        with self.assertRaisesRegex(ValueError,'512'):
+            send(513)
+
+        boot='0123456789abcdef'
+        params=dict(operations=['echo'],taskRole='uav',taskTypes=['diagnostics'],
+                    taskOperations=['start','pause','resume','cancel','query'],taskStatus='IDLE',capMeasureV=1)
+        wire=dict(v=1,service='Mesh_Node',method='Ntf_Capabilities',nodeId=node,bootId=boot,params=params)
+        self.assertFalse(c.registry.receive(topic+'/capabilities',dict(wire,nodeId='micro-001')))
+        self.assertTrue(c.registry.receive(topic+'/capabilities',wire))
+        self.assertEqual(512,c.registry.command_limit(node))
+        c.registry.receive(topic+'/presence',dict(v=1,type='presence',node_id=node,boot_id=boot,online=True))
+        c.registry.receive(topic+'/telemetry',dict(v=1,type='telemetry',node_id=node,boot_id=boot))
+        send(513)
+        send(1024)
+        with self.assertRaisesRegex(ValueError,'1024'):
+            send(1025)
+        self.assertEqual([512,513,1024],calls)
 
 class NewBuildMode(unittest.TestCase):
     def test_four_current_role_dry_runs_are_isolated(self):

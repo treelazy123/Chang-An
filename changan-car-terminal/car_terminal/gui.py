@@ -61,6 +61,23 @@ def open_transport(settings):
 def run_operation(client, action, values):
     """One serialized operation; mutations are never retried automatically."""
     api = TaskClient(client)
+    if action.startswith('cap_'):
+        batch=values.get('cap_batch','').strip()
+        if action=='cap_start':
+            nodes=[n.strip() for n in values.get('cap_nodes','').split(',') if n.strip()]
+            if not nodes or len(nodes)>16 or len(set(nodes))!=len(nodes) or any(not NODE_ID.fullmatch(n) for n in nodes):
+                raise ValueError('请填写1～16个不同节点ID，以逗号分隔')
+            count=int(values.get('cap_count','30'));period=int(values.get('cap_period','1000'))
+            if not 1<=count<=100 or not 200<=period<=10000:raise ValueError('每节点1～100条，间隔200～10000ms')
+            return client.capability_test('start',dict(batch_id=batch,nodes=nodes,count=count,period_ms=period))
+        if action=='cap_get':return client.capability_test('get',dict(batch_id=batch))
+        if action=='cap_history':return client.capability_test('list')
+        if action=='cap_export':
+            path=Path(values['cap_export_path']);format='csv' if path.suffix.lower()=='.csv' else 'jsonl'
+            content=client.capability_test('export',dict(batch_id=batch,format=format))
+            path.write_text(content,encoding='utf-8-sig' if format=='csv' else 'utf-8')
+            return dict(path=str(path),batch_id=batch,format=format)
+    if action=='mci_methods':return client.discover()
     if action in ('parent_get','parent_apply'):
         node=values['parent_child'].strip()
         if not NODE_ID.fullmatch(node):raise ValueError('请选择Micro节点')
@@ -209,6 +226,7 @@ class SessionWorker:
                         client = self.factory(values)
                         if isinstance(client,HTTPClient):
                             client.on_event=lambda body:self.results.put(('push',True,body,0))
+                            client.on_wire=lambda body:self.results.put(('wire',True,body,0))
                         result=dict(root_id=getattr(client,'root_id',None))
                     else:
                         if client is None:
@@ -225,6 +243,8 @@ class SessionWorker:
 
 
 LABELS = dict(connect='连接', disconnect='断开', nodes='刷新节点', ping='Ping',
+              cap_start='开始能力公告测试',cap_get='查询公告测试',cap_history='公告测试历史',cap_export='导出公告测试',
+              wire='MCI 原始报文',mci_methods='查看 MCI 方法',
               admit='授权接入',revoke='撤销授权',
               parent_get='查询连接配置',parent_apply='应用连接配置',
               status='节点状态', echo='Echo', create='创建服务任务', tasks='刷新任务', services='刷新服务',
@@ -251,6 +271,7 @@ class DebugWindow:
         self.values = {}
         self._target_initialized = False
         initial = dict(parent_child='',parent_uav='',parent_mode='自动',parent_revision='',base_url='http://127.0.0.1:8080',
+                       cap_nodes='',cap_count='30',cap_period='1000',cap_batch='',
                        target='', admission_revision='', echo='hello', duration='30', period='1000', task_id='',
                        executor='ugv-root', task_kind='网络诊断', watch_task_id='', stale_after='10',
                        area_id='A01',points='P01,P02,P03',point_seconds='3',anomaly_point='2',event_id='',test_verdict='inconclusive')
@@ -258,6 +279,10 @@ class DebugWindow:
         for key, value in initial.items():
             self.values[key] = tk.StringVar(root, value=str(value))
         self.watch = tk.BooleanVar(root, value=False)
+        self.cap_watch=tk.BooleanVar(root,value=False)
+        self.cap_summary=tk.StringVar(root,value='尚未测试；记录接收确认耗时，作为单向接收延迟上界。')
+        self._cap_poll_turn=False
+        self.cap_running=False
         self.state = tk.StringVar(root, value='未连接 · 选择传输方式后点击连接')
         self.summary = tk.StringVar(root, value='等待操作')
         self.revision = tk.StringVar(root, value='版本：—')
@@ -302,7 +327,11 @@ class DebugWindow:
         self._tasks(task_content)
         services = ttk.Frame(tabs, padding=10)
         tabs.add(services, text='  能力服务  ')
+        cap_page=ttk.Frame(tabs,padding=10)
+        tabs.add(cap_page,text='  能力公告验收  ')
+        self._capabilities(cap_page)
         self._button(services, '刷新服务', 'services')
+        self._button(services, '查看 MCI 方法', 'mci_methods')
         self.services = self._tree(services, [('service_id','服务 ID',260),('node_id','执行节点',130), ('agent_type','智能体类型',110),
             ('service_name','基础能力',190),('execution_mode','执行模式',130), ('availability','可用状态',170), ('task_status','当前任务状态',140)])
         self.services.bind('<<TreeviewSelect>>', self._select_service)
@@ -353,6 +382,44 @@ class DebugWindow:
         self.connect_button.grid(row=0,column=2,padx=8)
         self.disconnect_button=ttk.Button(box,text='断开',command=lambda:self.dispatch('disconnect'))
         self.disconnect_button.grid(row=0,column=3)
+
+    def _capabilities(self,parent):
+        form=ttk.Frame(parent);form.pack(fill='x')
+        self._field(form,'节点ID（逗号分隔）','cap_nodes',0,0,60)
+        self._field(form,'每节点公告数','cap_count',1,0,8)
+        self._field(form,'间隔 / ms','cap_period',1,2,9)
+        self.cap_batch_box=self._field(form,'批次ID','cap_batch',2,0,42,(),editable=True)
+        bar=ttk.Frame(parent);bar.pack(fill='x')
+        start=ttk.Button(bar,text='开始新测试',command=self._start_capability_test)
+        start.pack(side='left',padx=(0,7));self.operation_buttons.append(start)
+        for label,action in [('查询批次','cap_get'),('历史批次','cap_history')]:self._button(bar,label,action)
+        ttk.Checkbutton(bar,text='自动刷新',variable=self.cap_watch).pack(side='left')
+        export=ttk.Button(bar,text='导出 CSV / JSONL',command=self._export_capability_test)
+        export.pack(side='right');self.operation_buttons.append(export)
+        ttk.Label(parent,text='指标：接收确认耗时（单向接收延迟上界）≤800ms；超出上界不能直接认定单向延迟超标。',wraplength=1050).pack(anchor='w',pady=5)
+        ttk.Label(parent,textvariable=self.cap_summary,wraplength=1050).pack(anchor='w')
+        self.cap_table=self._tree(parent,[('node','节点',110),('seq','轮次',55),('cap_id','公告ID',240),
+            ('agent','智能体类型',95),('capabilities','基础能力',160),('task','任务状态',95),
+            ('elapsed','确认耗时 ms',105),('state','结果',170),('error','详情',180)])
+
+    def _start_capability_test(self):
+        if not self.connected or self.busy:return
+        if self.cap_running:
+            self.cap_summary.set('当前批次尚未结束，请先查询该批次或等待测量完成。');return
+        self.values['cap_batch'].set(uuid.uuid4().hex)
+        self.cap_watch.set(True)
+        self.dispatch('cap_start')
+
+    def _export_capability_test(self):
+        if not self.connected or self.busy:return
+        if not self.values['cap_batch'].get():
+            messagebox.showerror('请选择批次','先查询要导出的测试批次',parent=self.root);return
+        path=filedialog.asksaveasfilename(parent=self.root,title='导出后台持久化的完整批次记录',
+            initialfile='capability-'+self.values['cap_batch'].get()+'.jsonl',defaultextension='.jsonl',
+            filetypes=[('JSON Lines','*.jsonl'),('CSV','*.csv')])
+        if path:
+            values={key:value.get() for key,value in self.values.items()};values['cap_export_path']=path
+            self.busy=True;self._states();self.worker.submit('cap_export',values)
 
     def _button(self, parent, text, action):
         button = ttk.Button(parent, text=text, command=lambda: self.dispatch(action))
@@ -557,6 +624,9 @@ class DebugWindow:
         try:
             while True:
                 action, ok, result, elapsed = self.worker.results.get_nowait()
+                if action=='wire':
+                    self.record(action,'error' not in result.get('response',{}),result,elapsed)
+                    continue
                 if action=='push':
                     if self.connected:
                         if result.get('type')=='task.event':
@@ -587,6 +657,7 @@ class DebugWindow:
                 elif action == 'disconnect':
                     self.connected = False
                     self.watch.set(False)
+                    self.cap_watch.set(False)
                     self.state.set('已断开 · 列表保留为历史快照')
                     self.network.mark_stale('连接已断开')
                 elif ok:
@@ -602,12 +673,34 @@ class DebugWindow:
                     self.state.set('请求失败 · 检查链路及后台；列表为历史快照')
                     self.network.mark_stale('请求失败')
                 self.record(action, ok, result, elapsed)
+                if not ok and action.startswith('cap_'):self.cap_watch.set(False)
                 self._states()
         except queue.Empty:
             pass
         self.root.after(80, self._drain)
 
     def _apply(self, action, result):
+        if action=='cap_history':
+            self.cap_batch_box.configure(values=[r['batch_id'] for r in result['items']])
+            return
+        if action in ('cap_get','cap_start'):
+            self.values['cap_batch'].set(result['batch_id'])
+            summary=result['summary'];states=summary['states']
+            self.cap_running=not summary['complete']
+            def number(key):return '—' if summary[key] is None else f'{summary[key]:.2f}'
+            percentage=summary.get('proved_percent',100*summary['proved_within_800ms']/max(1,summary['total']))
+            self.cap_summary.set(f"计划 {summary['total']} 条 · 已登记 {summary.get('registered',summary['confirmed'])} · 已确认 {summary['confirmed']} · 证明≤800ms {summary['proved_within_800ms']}（{percentage:.1f}%） · "
+                f"超时 {states['TIMEOUT']} · 中断 {states['INTERRUPTED']} · 平均/P95/最大 {number('avg_ms')}/{number('p95_ms')}/{number('max_ms')} ms · "
+                +(('全部证明≤800ms' if summary.get('all_proved') else '测试结束，证据未全部满足') if summary['complete'] else '测量中'))
+            if summary['complete']:self.cap_watch.set(False)
+            self.cap_table.delete(*self.cap_table.get_children())
+            names={'WAIT':'等待','SENT':'请求已发送','RECEIVED':'公告已登记','PASS':'证明≤800ms',
+                   'UPPER_BOUND_EXCEEDED':'上界超过800ms','TIMEOUT':'超时','ERROR':'错误','NOT_READY':'节点未就绪','INTERRUPTED':'重启中断'}
+            for row in result['items']:
+                self.cap_table.insert('', 'end',values=(row['node_id'],row['ordinal']+1,row.get('cap_id') or '—',row.get('agent_type') or '—',
+                    ', '.join(row['basic_capabilities']),row.get('task_status') or '—',
+                    '—' if row['elapsed_ms'] is None else f"{row['elapsed_ms']:.3f}",names.get(row['state'],row['state']),row.get('error') or ''))
+            return
         if action in ('admit','revoke'):
             self.values['admission_revision'].set(str(result['admission_revision']))
             self.state.set('后台准入状态已保存；Broker ACL 待受控加载')
@@ -749,8 +842,11 @@ class DebugWindow:
     def _watch_tick(self):
         if self.closed:
             return
-        if self.watch.get() and self.connected and not self.busy:
-            self.dispatch('events')
+        if self.connected and not self.busy:
+            self._cap_poll_turn=not self._cap_poll_turn
+            if self.cap_watch.get() and self.values['cap_batch'].get() and (self._cap_poll_turn or not self.watch.get()):
+                self.dispatch('cap_get')
+            elif self.watch.get():self.dispatch('events')
         self.root.after(1500, self._watch_tick)
 
     def clear(self):
@@ -774,6 +870,7 @@ class DebugWindow:
     def close(self):
         self.closed = True
         self.watch.set(False)
+        self.cap_watch.set(False)
         self.worker.submit('stop')
         for callback in self.root.tk.splitlist(self.root.tk.call('after', 'info')):
             self.root.after_cancel(callback)

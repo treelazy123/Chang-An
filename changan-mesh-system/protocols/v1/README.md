@@ -6,8 +6,9 @@ UGV Service是唯一任务管理后台；汽车终端只使用[HTTP/WebSocket](.
 
 ## MQTT/TLS
 
-JSON为紧凑UTF-8，必须v=1，拒绝重复键和非有限数字。节点命令最大512字节，反馈/状态
-最大1024字节。证书CN、MQTT Client ID和node_id一致；Broker必须验证客户端证书及ACL。
+JSON为紧凑UTF-8，必须v=1，拒绝重复键和非有限数字。新版节点命令、反馈和状态报文上限均为1024字节。
+后台收到当前启动的 MCI 能力公告后才向该节点发送超过512字节的下行命令。
+证书CN、MQTT Client ID和报文节点标识一致，Broker必须验证客户端证书及ACL。
 
 | 主题 | 方向和用途 |
 | --- | --- |
@@ -19,6 +20,12 @@ JSON为紧凑UTF-8，必须v=1，拒绝重复键和非有限数字。节点命�
 | mesh/v1/nodes/NODE/task_commands | 后台到节点的内部任务操作 |
 | mesh/v1/nodes/NODE/task_events | 节点执行反馈 |
 | mesh/v1/clock | 后台时间公告 |
+
+能力公告可附加`cap_measure_v=1`及唯一公告编号、序号和节点单调时间。
+`cap.request`、`cap.receipt`沿用节点commands主题，`cap.result`沿用telemetry主题；
+不新增节点传输或终端MQTT入口，详见[能力公告测量v1](../capability-measure/v1/README.md)。
+
+新版节点接入、重连及任务状态或活动任务 ID 变化时使用 [MCI 能力公告](../mci/v1/node-capabilities.md)。
 
 节点只读写自己的主题，不能替其他节点发反馈或写控制命令。命令与任务消息不retained。
 ready需同一boot的在线声明、能力及新鲜遥测。uptime_ms是本机单调时间，不是UTC。
@@ -42,11 +49,17 @@ parent_bssid、rssi、channel、associated_children等可选字段。未上报�
 
 根C6监听MQTT TCP入口，通过原生USB复用多路TLS字节流；主机桥接分别连接本机Broker。
 TLS在节点与Broker间端到端完成，中继和USB桥接不解密。
-MUX1头20字节，含type、channel、epoch、token、seq、size及CRC16-CCITT，数据块最多512字节。
+MUX1头20字节，含type、channel、epoch、token、seq、size及CRC16-CCITT。
 RESET/READY协商会话，OPEN/OPEN_OK建立通道，DATA/ACK流控，CLOSE关闭，PING/PONG保活。
 CRC覆盖路由头和数据，旧epoch/token不能触碰新连接；当前最多8个通道。
 
+根板发送 `RESET`（通道255，空负载，`seq=1`）表示支持1024字节 DATA。
+新版桥接仅在收到该声明后，置位 `READY.seq` 的 `0x100`，本轮双方按1024字节分块。
+旧根板发送 `RESET.seq=0`，旧桥接回复的 READY 无该位，两种混合搭配均使用512字节 DATA。
+每个新 epoch 重新协商。控制帧负载预算仍为512字节。
+
 READY通道255、token0、空负载、seq1允许根板发NETWORK（类型10）只读报告。
+READY的低位值2进一步协商类型11/12的根父节点授权请求/证明；完整格式见[ESP-NOW父节点认证v1](../parent-auth/v1/README.md)。
 NETWORK为当前epoch、通道255、token/seq0、最多512字节JSON，周期约5秒。
 桥接核对node_id=ugv-root并写入runtime/ugv-network.json；重置时失效，后台新鲜度阈值12秒。
 该快照不能授予任何身份或业务权限。
@@ -57,3 +70,5 @@ command.op=parent的payload包含revision（1..2^32-1）、mode（auto/prefer/fi
 auto模式parent为null，不需要bssid/ssid。命令不retain，不自动重发，沿用deadline_unix及可信时钟检查。
 ACK只表示接收/持久化，实际效果通过遥测确认。Micro状态中的parent_policy包含revision、mode、parent及
 stage（pending/active/fallback）；实际连接仍看parent_connected与parent_bssid。中继另上报真实ap_ssid。
+所有模式还受连接前ESP-NOW验签约束；prefer/fixed除BSSID外校验已签名的父node_id。
+中继遥测parent_auth包含relay_authorized、relay_lease_ms及protocol，业务ready不自动赋予中继资格。

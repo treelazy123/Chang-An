@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 from changan_ugv.tasks.workflows import WORKFLOW_KINDS, MODE, config_valid as workflow_config
+from changan_ugv.protocol.messages import MAX_COMMAND
 
 ID = re.compile(r'^[A-Za-z0-9_-]{1,32}$')
 TERMINAL = {'SUCCEEDED', 'FAILED', 'CANCELLED', 'REJECTED', 'EXPIRED'}
@@ -336,10 +337,10 @@ class Store:
         if kind not in WORKFLOW_KINDS:return
         packet=dict(v=1,type='task.command',target=target,task_id=task_id,msg_id='x'*32,op='start',
                     op_seq=2147483647,revision=2147483647,boot_id='x'*16,deadline_unix=2147483647,kind=kind,config=config)
-        if len(dumps(packet).encode())>512:
+        if len(dumps(packet).encode())>MAX_COMMAND:
             raise ValueError('workflow_command_too_large')
 
-    def dispatch(self, operation, boot, concurrent_kinds=()):
+    def dispatch(self, operation, boot, concurrent_kinds=(), command_limit=MAX_COMMAND):
         with self.lock, self.db:
             row = self._row(operation['task_id'])
             if row['state'] in TERMINAL:
@@ -363,8 +364,10 @@ class Store:
                           boot_id=boot, deadline_unix=int(self.clock()) + 15)
             if operation['op'] == 'start':
                 packet.update(kind=row['kind'], config=json.loads(row['config']))
-            if len(dumps(packet).encode()) > 512:
-                raise ValueError('node_command_too_large')
+            if len(dumps(packet).encode()) > command_limit:
+                self.db.execute("UPDATE operations SET status='rejected' WHERE command_id=?", (operation['command_id'],))
+                self._change(row['task_id'], state='REJECTED', error='node_command_too_large')
+                return None
             self.db.execute("UPDATE operations SET status='sent',packet=?,sent=? WHERE command_id=? AND status='waiting'",
                             (dumps(packet), self.clock(), operation['command_id']))
             self._change(row['task_id'], boot=boot, node_seq=-1 if operation['op']=='start' else row['node_seq'],

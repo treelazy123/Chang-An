@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from changan_ugv.nodes.catalog import NodeCatalog
 from changan_ugv.nodes.admission import AdmissionManager
 from changan_ugv.nodes.parent_policy import ParentPolicies
+from changan_ugv.nodes.parent_authority import ParentAuthority
+from changan_ugv.nodes.capability_measurements import CapabilityMeasurements
 from changan_ugv.nodes.inventory import root_of
 from changan_ugv.nodes.controller import Controller
 from changan_ugv.protocol.messages import _unique_object, encode
@@ -35,6 +37,9 @@ class ServiceController(Controller):
         self.inbox=queue.Queue(16)
         self.task_inbox=queue.Queue(16)
         self.task_feedback=queue.Queue(128)
+        self.parent_auth_inbox=queue.Queue(32)
+        self.parent_auth_denied_at={}
+        self.capability_inbox=queue.Queue(256)
         self.tasks=None
         self.requests=Requests(self,inventory_loader=inventory_loader)
         from changan_ugv.nodes.image_sink import ImageSink
@@ -45,14 +50,18 @@ class ServiceController(Controller):
             self.tasks=Runtime(channel_factory(self),database=database or paths.task_database,
                                executor_factory=factory,inventory_loader=inventory_loader,ugv_id=ugv_id,operators=('http-local',))
             self.catalog=NodeCatalog(self.tasks.store)
+            self.capability_measurements=CapabilityMeasurements(self.tasks.store,self.capability_node_info,self.send_capability_packet)
             self.parents=ParentPolicies(self.tasks.store,self,inventory_loader,ugv_id)
             self.admission=AdmissionManager(self.tasks.store,paths.inventory_file,ugv_id,
                 self.broker_config.ca_file,self.broker_config.ca_file.parent,
                 paths.task_database.parent/'acl.pending.conf')
+            self.parent_authority=ParentAuthority(self.broker_config.ca_file.parent/'parent-auth',
+                inventory_loader,ugv_id,certificate=self.admission.certificate)
             self.requests=Requests(self,inventory_loader=inventory_loader)
             self.workers=[threading.Thread(target=self.request_loop,args=(inbox,),daemon=True)
                           for inbox in (self.inbox,self.task_inbox)]
             self.workers.append(threading.Thread(target=self.task_loop,daemon=True))
+            self.workers.append(threading.Thread(target=self.parent_auth_loop,daemon=True))
             for worker in self.workers:worker.start()
         except BaseException:
             super().close()
@@ -72,6 +81,18 @@ class ServiceController(Controller):
 
     def on_message(self,client,userdata,message):
         parts=message.topic.split('/')
+        if (len(parts)==5 and parts[:3]==['mesh','v1','nodes'] and parts[4]=='telemetry'
+                and not message.retain and len(message.payload)<=512):
+            try:
+                packet=json.loads(message.payload.decode('utf-8'),object_pairs_hook=_unique_object,
+                    parse_constant=lambda _:(_ for _ in ()).throw(ValueError('Non-finite JSON')))
+                if isinstance(packet,dict) and packet.get('type')=='cap.result':
+                    self.capability_inbox.put_nowait(('result',parts[3],packet,False,time.time(),None))
+                    return
+                if isinstance(packet,dict) and packet.get('type')=='parent.auth.request':
+                    self.parent_auth_inbox.put_nowait((time.monotonic(),parts[3],packet))
+                    return
+            except (ValueError,UnicodeError,queue.Full):return
         if len(parts)!=5 or parts[:3]!=['mesh','v1','nodes'] or parts[4]!='task_events':
             return super().on_message(client,userdata,message)
         if message.retain or len(message.payload)>1024:return
@@ -80,6 +101,42 @@ class ServiceController(Controller):
                 parse_constant=lambda _:(_ for _ in ()).throw(ValueError('Non-finite JSON')))
             if isinstance(packet,dict):self.task_feedback.put_nowait((parts[3],packet))
         except (ValueError,UnicodeError,queue.Full):logging.warning('Invalid task feedback rejected')
+
+    def accepted_capability(self,node,body,retained,wire):
+        if body.get('cap_measure_v')!=1:return
+        try:self.capability_inbox.put_nowait(('announcement',node,body,retained,time.time(),wire))
+        except queue.Full:logging.warning('Capability measurement queue full; no receipt issued')
+
+    def capability_node_info(self,node):
+        entry=next((e for e in self.tasks.inventory_loader()['nodes'] if e['node_id']==node),None)
+        if not entry or node==self.tasks.ugv_id or root_of(entry)!=self.tasks.ugv_id or not entry.get('enabled',True) or entry.get('trust_status','trusted')!='trusted':return None
+        with self.condition:
+            observation=self.registry.nodes.get(node,{})
+            cap=observation.get('capabilities',{})
+            return dict(role=entry['role'],boot_id=observation.get('presence',{}).get('boot_id'),
+                        ready=self.connected.is_set() and self.registry.ready(node),supported=cap.get('cap_measure_v')==1)
+
+    def send_capability_packet(self,node,packet):
+        if not self.connected.is_set():return False
+        payload=encode(packet)
+        with self.condition:
+            if len(payload)>self.registry.command_limit(node):
+                raise ValueError('capability_command_too_large')
+        return self.client.publish(f'mesh/v1/nodes/{node}/commands',payload,qos=1,retain=False).rc==0
+
+    def parent_auth_loop(self):
+        while not self.stopped.is_set():
+            try:received,node,packet=self.parent_auth_inbox.get(timeout=.2)
+            except queue.Empty:continue
+            if time.monotonic()-received>2 or not self.connected.is_set():continue
+            try:
+                reply=self.parent_authority.mqtt_reply(node,packet)
+                self.client.publish(f'mesh/v1/nodes/{node}/commands',reply,qos=1,retain=False)
+            except (ValueError,OSError,KeyError,TypeError) as exc:
+                now=time.monotonic()
+                if now-self.parent_auth_denied_at.get(node,-100)>10:
+                    self.parent_auth_denied_at[node]=now
+                    logging.getLogger(__name__).warning('PARENT_AUTH_DENIED node=%s reason=%s',node,exc)
 
     def request_loop(self,inbox):
         while not self.stopped.is_set():
@@ -108,6 +165,12 @@ class ServiceController(Controller):
         while not self.stopped.wait(.1):
             try:
                 self.refresh_inventory()
+                for _ in range(64):
+                    try:kind,node,body,retained,received,wire=self.capability_inbox.get_nowait()
+                    except queue.Empty:break
+                    if kind=='announcement':self.capability_measurements.announcement(node,body,retained,received,wire=wire)
+                    else:self.capability_measurements.result(node,body,retained)
+                self.capability_measurements.tick()
                 for _ in range(32):
                     try:node,packet=self.task_feedback.get_nowait()
                     except queue.Empty:break

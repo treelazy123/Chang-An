@@ -69,6 +69,8 @@ class ParentPolicies:
                 status=observed.get('status') or {};bssid=status.get('ap_mac','').lower();ssid=status.get('ap_ssid')
                 if not observed.get('ready') or status.get('level')!=3 or status.get('ap_enabled') is not True:
                     raise ValueError('parent_not_ready_level3')
+                if (status.get('parent_auth') or {}).get('relay_authorized') is not True:
+                    raise ValueError('parent_relay_not_authorized_update_firmware_or_wait_for_grant')
                 if not MAC.fullmatch(bssid) or bssid=='00:00:00:00:00:00' or int(bssid[:2],16)&1 or not isinstance(ssid,str) or '\0' in ssid or not 1<=len(ssid.encode())<=32:
                     raise ValueError('parent_radio_identity_missing_update_firmware')
                 policy.update(parent=parent,bssid=bssid,ssid=ssid)
