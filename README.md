@@ -22,8 +22,8 @@ Jetson 启动见 [启动指南](changan-mesh-system/docs/startup.md)，父节点
 
 - Chang-An 集成基线为 `5239528`。主系统来源为 `89ccba5` 加本次工作区改动，独立终端来源为 `0dac917` 加本次工作区改动。
 - 两端按 [HTTP/WebSocket v1](changan-mesh-system/protocols/http/v1/README.md)、[MCI v1](changan-mesh-system/protocols/mci/v1/README.md) 和 [能力公告测量 v1](changan-mesh-system/protocols/capability-measure/v1/README.md) 同步。
-- 集成主机回归结果待填。Jetson 实机复验、固件构建与烧录、C6/S31 混合组网待验收。当前固件构建目标为 ESP32-C6。
+- 集成分支通过主系统 247 项、独立车机 58 项回归，根节点配置 dry-run 通过。Jetson 实机复验、固件构建与烧录、C6/S31 混合组网待验收。当前固件构建目标为 ESP32-C6。
 
 下载的 Python 环境、运行缓存、本地 build 构建输出和 ZIP 不提交。已有第三方组件及其必要库/测试样例保留，用于复现现有工程；不包含本机新编译的固件。
 
-仓库既有的 `changan-mesh-system/secrets/` 和 `changan-mesh-system/changan-runtime/` 含凭据与部署配置。本次新增的父节点认证登记文件通过受控部署渠道交接。
+仓库既有的 `changan-mesh-system/secrets/` 和 `changan-mesh-system/changan-runtime/` 含凭据与部署配置。`changan-mesh-system/secrets/parent-auth/` 包含现有父节点认证登记表、授权签名密钥及各节点的签名密钥。部署时复用仓库中的现有文件，详见 [父节点认证交接](changan-mesh-system/docs/逐层父节点认证.md#身份准备)。
