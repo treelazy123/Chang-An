@@ -6,6 +6,7 @@ from changan_ugv.tasks.store import Store, HOST_KINDS, TERMINAL
 from changan_ugv.tasks.ports import NodeChannel, ExecutorFactory
 from changan_ugv.tasks.workflows import WORKFLOW_ROLES, WORKFLOW_KINDS, SERVICE_SUFFIX, MODE
 from changan_ugv.nodes.inventory import root_of
+from changan_ugv.protocol.messages import MAX_COMMAND
 
 
 class Runtime:
@@ -181,7 +182,8 @@ class Runtime:
             if not boot:
                 continue
             kinds = getattr(self.local, 'concurrent_kinds', ()) if op['target'] == self.ugv_id else ()
-            packet = self.store.dispatch(op,boot,concurrent_kinds=kinds)
+            command_limit = MAX_COMMAND if op['target'] == self.ugv_id else self.channel.snapshot(op['target']).command_limit
+            packet = self.store.dispatch(op,boot,concurrent_kinds=kinds,command_limit=command_limit)
             if packet and not self.publish(op['target'],packet):
                 self.store.uncertain(op['command_id'],'publish_failed')
         now = time.monotonic()

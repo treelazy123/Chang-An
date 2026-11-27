@@ -27,9 +27,11 @@ void network_mesh_lite_log_status(void)
     wifi_sta_list_t children = {0};
     esp_netif_ip_info_t sta_ip = {0}, ap_ip = {0};
 
-    ESP_ERROR_CHECK(esp_wifi_get_mac(WIFI_IF_STA, sta_mac));
-    ESP_ERROR_CHECK(esp_wifi_get_mac(WIFI_IF_AP, ap_mac));
-    ESP_ERROR_CHECK(esp_wifi_get_channel(&channel, &secondary));
+    /* AP/STA mode changes may race this diagnostic sample. A temporarily
+     * unavailable interface is not a reason to reboot the node. */
+    (void)esp_wifi_get_mac(WIFI_IF_STA, sta_mac);
+    (void)esp_wifi_get_mac(WIFI_IF_AP, ap_mac);
+    (void)esp_wifi_get_channel(&channel, &secondary);
     const bool parent_connected = esp_wifi_sta_get_ap_info(&parent) == ESP_OK;
     const esp_err_t children_result = esp_wifi_ap_get_sta_list(&children);
     const int associated_count = children_result == ESP_OK ? (int)children.num : -1;

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "sdkconfig.h"
 #include "parent_policy.h"
+#include "parent_auth.h"
 #include "node_role.h"
 #include "esp_mesh_lite.h"
 #include "esp_wifi.h"
@@ -50,12 +51,14 @@ static const uint8_t *candidate(const uint8_t *mac)
 {
     /* Mesh-Lite copies the returned SSID immediately; static storage outlives callback. */
     static uint8_t ssid[33];
+    char expected_parent[33]={0};
     xSemaphoreTake(lock,portMAX_DELAY);
     bool automatic=!strcmp(policy.mode,"auto") || fallback;
     bool allowed=mac && (automatic || !memcmp(mac,allowed_mac,6));
-    if (allowed && !automatic) { memcpy(ssid,policy.ssid,sizeof(ssid)); }
+    if (allowed && !automatic) { memcpy(ssid,policy.ssid,sizeof(ssid));memcpy(expected_parent,policy.parent,sizeof(expected_parent)); }
     xSemaphoreGive(lock);
     if (!allowed) { return NULL; }
+    if (!parent_auth_candidate(mac,expected_parent)) { return NULL; }
     if (automatic) {
         /* Match mesh_start's shared SSID convention without consuming scan records. */
 #if CONFIG_BRIDGE_SOFTAP_SSID_END_WITH_THE_MAC
@@ -89,9 +92,9 @@ static void policy_task(void *arg)
 }
 esp_err_t parent_policy_init(void)
 {
-    if (!node_role_is_leaf()) { return ESP_OK; }
+    if (node_role_is_root()) { return ESP_OK; }
     lock=xSemaphoreCreateMutex();if (!lock) { return ESP_ERR_NO_MEM; }
-    nvs_handle_t handle;esp_err_t result=nvs_open("parent_policy",NVS_READONLY,&handle);
+    nvs_handle_t handle;esp_err_t result=node_role_is_leaf() ? nvs_open("parent_policy",NVS_READONLY,&handle) : ESP_ERR_NVS_NOT_FOUND;
     if (result==ESP_OK) {
         policy_t loaded={0};size_t size=sizeof(loaded);
         result=nvs_get_blob(handle,"config",&loaded,&size);nvs_close(handle);
@@ -103,9 +106,14 @@ esp_err_t parent_policy_init(void)
     ESP_LOGW(TAG,"Maintenance recovery: ignoring saved parent binding for this boot");
 #endif
     if (strcmp(policy.mode,"auto")) { (void)parse_mac(policy.bssid,allowed_mac); }
+    if (node_role_is_leaf()) {
+        ESP_LOGI(TAG,"PARENT_POLICY node=%s mode=%s revision=%lu parent=%s bssid=%s",
+                 node_role_id(),policy.mode,(unsigned long)policy.revision,policy.parent,policy.bssid);
+    }
     attempt_at=esp_timer_get_time()/1000;
     result=esp_mesh_lite_get_ssid_by_mac_cb_register(candidate,true);
     if (result!=ESP_OK) { return result; }
+    if (!node_role_is_leaf()) { return ESP_OK; }
     return xTaskCreate(policy_task,"parent_policy",6144,NULL,4,NULL)==pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
 }
 const char *parent_policy_prepare(const cJSON *payload)

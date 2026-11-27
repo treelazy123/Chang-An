@@ -63,6 +63,8 @@ def sync_runtime(source,target):
             rel=path.relative_to(source/'secrets')
             if not path.is_file() or path.name.endswith('.lock') or 'build' in rel.parts:continue
             dest=target/'secrets'/rel
+            if dest.exists() and rel.parts[0]=='parent-auth' and dest.read_bytes()!=path.read_bytes():
+                raise ValueError('Existing parent-auth enrollment differs: '+str(rel))
             if dest.exists() and path.name in ('ca.pem','ca.key','client.pem','client.key') and dest.read_bytes()!=path.read_bytes():
                 raise ValueError('Existing key/certificate differs: '+str(rel))
             copies.append((path,dest))

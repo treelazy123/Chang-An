@@ -8,6 +8,7 @@ dependencies = [
     "paho-mqtt==2.1.0",
     "cryptography>=43,<47",
     "aiohttp>=3.11,<4",
+    "jsonschema>=4.23,<5",
 ]
 
 [build-system]

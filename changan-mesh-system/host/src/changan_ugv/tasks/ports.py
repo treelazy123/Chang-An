@@ -1,6 +1,7 @@
 """Task boundary: queued transmission is never an execution acknowledgement."""
 from dataclasses import dataclass
 from typing import Callable, Protocol
+from changan_ugv.protocol.messages import LEGACY_MAX_COMMAND
 
 @dataclass(frozen=True)
 class NodeSnapshot:
@@ -11,6 +12,7 @@ class NodeSnapshot:
     task_operations: tuple[str,...] = ()
     task_id: str | None = None
     task_state: str | None = None
+    command_limit: int = LEGACY_MAX_COMMAND
 
 @dataclass(frozen=True)
 class SendReceipt:

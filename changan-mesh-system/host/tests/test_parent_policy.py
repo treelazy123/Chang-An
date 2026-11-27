@@ -21,7 +21,7 @@ class ParentPolicyTests(unittest.TestCase):
         self.inventory=defaults();self.sent=[]
         self.rows=[dict(node_id='micro-001',ready=True,operations=['parent'],status={}),
             dict(node_id='uav-001',ready=True,status=dict(level=3,ap_enabled=True,
-                 ap_mac='aa:bb:cc:00:00:01',ap_ssid='changan_000001'))]
+                 ap_mac='aa:bb:cc:00:00:01',ap_ssid='changan_000001',parent_auth=dict(relay_authorized=True)))]
         self.controller=SimpleNamespace(condition=threading.Condition(),
             registry=SimpleNamespace(snapshot=lambda:self.rows),command=self.send)
         self.manager=ParentPolicies(self.store,self.controller,lambda:self.inventory,'ugv-root')
@@ -59,6 +59,8 @@ class ParentPolicyTests(unittest.TestCase):
                ('revoke',lambda:self.inventory['nodes'][2].update(trust_status='revoked')),
                ('wrong-root',lambda:self.inventory['nodes'][2].update(root_id='other')),
                ('offline',lambda:self.rows[1].update(ready=False)),
+               ('no-relay-grant',lambda:self.rows[1]['status'].update(parent_auth=dict(relay_authorized=False))),
+               ('old-parent-firmware',lambda:self.rows[1]['status'].pop('parent_auth')),
                ('wrong-level',lambda:self.rows[1]['status'].update(level=2)),
                ('no-ssid',lambda:self.rows[1]['status'].pop('ap_ssid'))]
         import copy

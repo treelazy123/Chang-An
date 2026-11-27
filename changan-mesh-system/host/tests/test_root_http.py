@@ -17,6 +17,7 @@ from types import SimpleNamespace
 from aiohttp import ClientSession,WSMsgType
 from aiohttp.test_utils import TestClient,TestServer
 from changan_ugv.nodes.catalog import NodeCatalog
+from changan_ugv.nodes.controller import Controller
 from changan_ugv.api.server import application
 from changan_ugv.agents.ugv import HostDiagnostics
 from changan_ugv.nodes.inventory import defaults,validate,clients,write_acl
@@ -42,6 +43,8 @@ class Channel:
 class Harness:
     request_loop=ServiceController.request_loop
     submit_local=ServiceController.submit_local
+    subscribe_nodes=Controller.subscribe_nodes
+    nodes_changed=Controller.nodes_changed
     def __init__(self,folder,inventory=None):
         self.inventory=inventory or defaults()
         self.stopped=threading.Event();self.connected=threading.Event();self.connected.set()
@@ -49,6 +52,7 @@ class Harness:
         self.channel=Channel()
         self.registry=SimpleNamespace(snapshot=lambda:[dict(node_id='ugv-001',ready=True,operations=['ping'])])
         self.condition=threading.Condition()
+        self.node_listeners=set()
         self.tasks=Runtime(self.channel,database=folder/'tasks.db',inventory_loader=lambda:self.inventory,
             executor_factory=lambda emit,snapshot:HostDiagnostics(folder/'agent.json','ugv-root',emit,snapshot),
             ugv_id='ugv-root',operators=('http-local',))
@@ -160,6 +164,46 @@ class HTTPContract(unittest.IsolatedAsyncioTestCase):
         async with self.client.ws_connect(f'/api/v1/events?cursor={cursor}') as ws:
             event=await ws.receive_json(timeout=3)
             self.assertGreater(event['cursor'],cursor);self.assertEqual('CANCELLED',event['state'])
+
+    async def test_node_change_wakes_all_streams_before_periodic_snapshot(self):
+        # Real HTTP/WS with the production cross-thread subscription mechanism.
+        async with self.client.ws_connect('/api/v1/events') as first, self.client.ws_connect('/api/v1/events') as second:
+            for ws in (first,second):
+                self.assertEqual('nodes.snapshot',(await ws.receive_json(timeout=2))['type'])
+            self.assertEqual(2,len(self.service.node_listeners))
+            self.service.registry.snapshot=lambda:[dict(node_id='ugv-001',ready=False,operations=['ping'])]
+            await asyncio.to_thread(self.service.nodes_changed)
+            for ws in (first,second):
+                event=await ws.receive_json(timeout=1)
+                self.assertFalse(next(n for n in event['nodes'] if n['node_id']=='ugv-001')['ready'])
+            self.service.registry.snapshot=lambda:[dict(node_id='ugv-001',ready=True,operations=['ping'])]
+            await asyncio.to_thread(self.service.nodes_changed)
+            for ws in (first,second):
+                event=await ws.receive_json(timeout=1)
+                self.assertTrue(next(n for n in event['nodes'] if n['node_id']=='ugv-001')['ready'])
+            # Broker changes must be pushed even when the node list is identical.
+            self.service.connected.clear()
+            await asyncio.to_thread(self.service.nodes_changed)
+            for ws in (first,second):
+                self.assertFalse((await ws.receive_json(timeout=1))['broker_connected'])
+        for _ in range(20):
+            if not self.service.node_listeners:break
+            await asyncio.sleep(.01)
+        self.assertFalse(self.service.node_listeners)
+
+    async def test_node_update_during_list_query_is_not_lost(self):
+        async with self.client.ws_connect('/api/v1/events') as ws:
+            await ws.receive_json(timeout=2)
+            def changing_snapshot():
+                self.service.registry.snapshot=lambda:[dict(node_id='ugv-001',ready=True,operations=['ping'])]
+                self.service.nodes_changed()
+                return [dict(node_id='ugv-001',ready=False,operations=['ping'])]
+            self.service.registry.snapshot=changing_snapshot
+            await asyncio.to_thread(self.service.nodes_changed)
+            event=await ws.receive_json(timeout=1)
+            self.assertFalse(next(n for n in event['nodes'] if n['node_id']=='ugv-001')['ready'])
+            event=await ws.receive_json(timeout=1)
+            self.assertTrue(next(n for n in event['nodes'] if n['node_id']=='ugv-001')['ready'])
 
     async def test_validation_loopback_origin_and_node_trust(self):
         reply=await self.client.post('/api/v1/requests',data='{"v":1,"v":1}')

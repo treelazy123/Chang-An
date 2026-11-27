@@ -174,18 +174,18 @@ esp_err_t task_agent_init(const char *boot,task_agent_emit_t callback) {
     }
     last_tick=esp_timer_get_time()/1000;return ESP_OK;
 }
-void task_agent_capabilities(cJSON *capabilities) {
-    cJSON *types=cJSON_AddArrayToObject(capabilities,"task_types");cJSON_AddItemToArray(types,cJSON_CreateString("diagnostics"));
+void task_agent_capabilities(cJSON *capabilities, bool mci) {
+    cJSON *types=cJSON_AddArrayToObject(capabilities,mci?"taskTypes":"task_types");cJSON_AddItemToArray(types,cJSON_CreateString("diagnostics"));
     if(!strcmp(node_role_name(),"micro_uav")) { cJSON_AddItemToArray(types,cJSON_CreateString("patrol")); }
     if(!strcmp(node_role_name(),"uav")) { cJSON_AddItemToArray(types,cJSON_CreateString("anomaly_review")); }
-    if(!strcmp(node_role_name(),"micro_uav") || !strcmp(node_role_name(),"uav")) { cJSON_AddStringToObject(capabilities,"execution_mode","esp32_test"); }
-    cJSON *ops=cJSON_AddArrayToObject(capabilities,"task_operations");
+    if(!strcmp(node_role_name(),"micro_uav") || !strcmp(node_role_name(),"uav")) { cJSON_AddStringToObject(capabilities,mci?"executionMode":"execution_mode","esp32_test"); }
+    cJSON *ops=cJSON_AddArrayToObject(capabilities,mci?"taskOperations":"task_operations");
     const char *names[]={"start","pause","resume","cancel","query"};
     for(unsigned i=0;i<sizeof(names)/sizeof(names[0]);i++) { cJSON_AddItemToArray(ops,cJSON_CreateString(names[i])); }
-    cJSON_AddStringToObject(capabilities,"task_role",node_role_name());
+    cJSON_AddStringToObject(capabilities,mci?"taskRole":"task_role",node_role_name());
     bool busy=journal.task_id[0] && !terminal(journal.state);
-    cJSON_AddStringToObject(capabilities,"task_status",busy?journal.state:"IDLE");
-    if(busy) { cJSON_AddStringToObject(capabilities,"task_id",journal.task_id); }
+    cJSON_AddStringToObject(capabilities,mci?"taskStatus":"task_status",busy?journal.state:"IDLE");
+    if(busy) { cJSON_AddStringToObject(capabilities,mci?"taskId":"task_id",journal.task_id); }
 }
 void task_agent_command(const cJSON *command,bool clocked) {
     const char *target=app_json_string(command,"target"),*task=app_json_string(command,"task_id");

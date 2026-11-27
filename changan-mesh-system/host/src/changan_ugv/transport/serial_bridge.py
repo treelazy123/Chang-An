@@ -10,7 +10,8 @@ from changan_ugv.paths import repository_root
 from changan_ugv.nodes.network import NetworkStatusFile, decode_network
 from dataclasses import dataclass
 from changan_ugv.protocol.tunnel import (Frame, Decoder, RESET, READY, OPEN, OPEN_OK, DATA, ACK,
-                             CLOSE, PING, PONG, NETWORK, CHUNK, MAX_CHANNELS)
+                             CLOSE, PING, PONG, NETWORK, PARENT_REQUEST, PARENT_GRANT, CHUNK, MAX_CHANNELS,
+                             LEGACY_CHUNK, RESET_OFFER_1024, READY_DATA_1024)
 LOG = logging.getLogger('serial_tcp_bridge')
 @dataclass
 class Channel:
@@ -23,13 +24,16 @@ class Channel:
     waiting: bool = False
     pending: bytes = b''
 class Engine:
-    def __init__(self, emit, target=('127.0.0.1', 8883), clock=time.monotonic, on_network=None):
+    def __init__(self, emit, target=('127.0.0.1', 8883), clock=time.monotonic, on_network=None, on_parent_auth=None):
         self.emit, self.target, self.clock = emit, target, clock
         self.channels = {}
         self.epoch = 0
+        self.data_limit = LEGACY_CHUNK
+        self.firmware_seen = False
         self.last_seen = clock()
         self.last_reset = -100.0
         self.on_network = on_network or (lambda body, epoch: None)
+        self.on_parent_auth=on_parent_auth
     def send(self, kind, channel=255, token=0, seq=0, data=b''):
         self.emit(Frame(kind, channel, self.epoch, token, seq, data).encode())
     def drop(self, channel, notify=True):
@@ -42,20 +46,40 @@ class Engine:
         for ch in list(self.channels):
             self.drop(ch, False)
         self.epoch = epoch
+        self.data_limit = LEGACY_CHUNK
         self.on_network(None, epoch)
     def receive(self, f):
         if f.kind == RESET:
-            if not f.epoch or f.channel != 255 or f.data:
+            if not f.epoch or f.channel != 255 or f.token or f.data:
                 raise ValueError('Invalid firmware reset')
+            self.firmware_seen = True
             if f.epoch != self.epoch:
                 self.reset(f.epoch)
+                if f.seq == RESET_OFFER_1024:
+                    self.data_limit = CHUNK
                 LOG.info('USB epoch=%s', self.epoch)
             self.last_seen = self.clock()
-            self.send(READY, seq=1)
+            features = 2 if self.on_parent_auth else 1
+            self.send(READY, seq=features | (READY_DATA_1024 if self.data_limit == CHUNK else 0))
             return
-        if not self.epoch or f.epoch != self.epoch:
+        if not self.epoch:
+            # A bridge restart can meet a root still in its previous USB
+            # session. Its valid PING proves the application is alive; ask it
+            # for a new epoch on tick. Never write blindly to a boot-ROM port.
+            if f.kind==PING and f.epoch and f.channel==255 and not f.token and not f.seq and not f.data:
+                self.firmware_seen=True
+            return
+        if f.epoch != self.epoch:
             return
         self.last_seen = self.clock()
+        if f.kind==PARENT_REQUEST and f.channel==255 and not f.token and not f.seq:
+            if self.on_parent_auth:
+                try:
+                    grant=self.on_parent_auth(f.data)
+                    self.send(PARENT_GRANT,data=grant)
+                except (ValueError,OSError,KeyError,TypeError):
+                    LOG.debug('Root parent authorization denied')
+            return
         if f.kind == NETWORK and f.channel == 255 and not f.token and not f.seq:
             try:
                 body = decode_network(f.data)
@@ -91,7 +115,7 @@ class Engine:
         elif f.kind == ACK and not f.data and c.waiting and f.seq == c.tx_seq:
             c.waiting = False
             c.tx_seq = (c.tx_seq + 1) & 0xffff
-        elif f.kind == DATA and not c.opening and f.data and not c.pending and f.seq == c.rx_seq:
+        elif f.kind == DATA and not c.opening and 0 < len(f.data) <= self.data_limit and not c.pending and f.seq == c.rx_seq:
             c.pending = f.data
             c.deadline = self.clock() + 15
         else:
@@ -101,7 +125,7 @@ class Engine:
         if self.epoch and now - self.last_seen > 5:
             self.reset()
         if not self.epoch:
-            if now - self.last_reset > 1:
+            if self.firmware_seen and now - self.last_reset > 1:
                 self.send(RESET)
                 self.last_reset = now
             return
@@ -135,7 +159,7 @@ class Engine:
                         self.send(ACK, ch, c.token, c.rx_seq)
                         c.rx_seq = (c.rx_seq + 1) & 0xffff
                 if not c.opening and not c.waiting and c.sock in readable:
-                    data = c.sock.recv(CHUNK)
+                    data = c.sock.recv(self.data_limit)
                     if not data:
                         self.drop(ch)
                         continue
@@ -152,9 +176,14 @@ def main():
     parser.add_argument('--broker-port', type=int, default=8883)
     parser.add_argument('--ugv-id', default='ugv-root', help='Expected root radio ID (must match firmware and backend)')
     parser.add_argument('--network-status', type=Path, default=repository_root()/'runtime/ugv-network.json')
+    parser.add_argument('--inventory',type=Path,default=repository_root()/'config/nodes.json')
+    parser.add_argument('--secrets',type=Path,default=repository_root()/'secrets')
     args = parser.parse_args()
     import serial
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+    from changan_ugv.nodes.parent_authority import ParentAuthority
+    from changan_ugv.nodes.inventory import load_inventory
+    authority=ParentAuthority(args.secrets/'parent-auth',lambda:load_inventory(path=args.inventory),args.ugv_id)
     while True:
         try:
             # No DTR/RTS reset; one process owns this COM port.
@@ -162,16 +191,23 @@ def main():
             link.dtr = link.rts = False
             link.port = args.port
             with link:
+                LOG.info('Opened %s; waiting for root MUX1 handshake (no automatic reset)',args.port)
+                wait_notice=time.monotonic()
                 def emit(packet):
                     view = memoryview(packet)
                     while view:
-                        count = link.write(view)
+                        try:
+                            count = link.write(view)
+                        except serial.SerialTimeoutException as exc:
+                            raise OSError(f'{args.port}: write timed out after receiving a MUX1 frame; '
+                                          'check root USB receive task and UART0 startup log') from exc
                         if not count:
                             raise OSError('Serial write made no progress')
                         view = view[count:]
                 network_status = NetworkStatusFile(args.network_status, args.ugv_id)
                 network_status(None, 0)
-                engine = Engine(emit, ('127.0.0.1', args.broker_port), on_network=network_status)
+                engine = Engine(emit, ('127.0.0.1', args.broker_port), on_network=network_status,
+                    on_parent_auth=lambda proof:authority.issue(proof,args.ugv_id,usb=True))
                 decoder = Decoder()
                 try:
                     while True:
@@ -184,6 +220,10 @@ def main():
                             engine.reset()
                             decoder = Decoder()
                         engine.tick()
+                        if not engine.firmware_seen and time.monotonic()-wait_notice>=10:
+                            LOG.warning('No root MUX1 frame on %s; port is open but root application '
+                                        'has not handshaken. Check RUN mode and UART0 startup log.',args.port)
+                            wait_notice=time.monotonic()
                         time.sleep(0.005)
                 finally:
                     engine.reset()

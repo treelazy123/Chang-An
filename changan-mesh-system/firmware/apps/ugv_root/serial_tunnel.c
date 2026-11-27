@@ -13,7 +13,11 @@
 #include "esp_log.h"
 #include "app_protocol.h"
 #include "mqtt_serial.h"
-#define CHUNK 512
+#include "parent_auth.h"
+#define LEGACY_CHUNK 512
+#define CHUNK 1024
+#define RESET_OFFER_1024 1
+#define READY_DATA_1024 0x100
 #define HEADER 20
 #define RESET 1
 #define READY 2
@@ -25,6 +29,8 @@
 #define PING 8
 #define PONG 9
 #define NETWORK 10
+#define PARENT_REQUEST 11
+#define PARENT_GRANT 12
 static const char *TAG="mqtt_tunnel";
 typedef struct {
     int fd;
@@ -39,6 +45,7 @@ static channel_t channels[CONFIG_APP_MQTT_MAX_CHANNELS];
 static uint32_t epoch, next_token;
 static bool ready, failed;
 static bool network_enabled;
+static size_t data_limit;
 static int64_t last_network;
 static int64_t last_host, last_hello;
 static uint8_t decoder[HEADER+CHUNK];
@@ -54,14 +61,13 @@ static void close_channel(int i) {
 }
 static bool frame(uint8_t type,int i,uint32_t token,uint16_t seq,const void *data,size_t size) {
     uint8_t out[HEADER+CHUNK];
-    if(size>CHUNK) { failed=true;return false; }
+    if(size>(type==DATA?data_limit:LEGACY_CHUNK)) { failed=true;return false; }
     memcpy(out,"MUX1",4);out[4]=type;out[5]=i;wr32(out+6,epoch);wr32(out+10,token);
     wr16(out+14,seq);wr16(out+16,size);
     if(size) { memcpy(out+HEADER,data,size); }
     /* CRC covers the routing header as well as payload. */
-    uint8_t check[16+CHUNK];memcpy(check,out+4,14);
-    if(size) { memcpy(check+14,data,size); }
-    wr16(out+18,app_crc16(check,14+size));
+    uint16_t crc=app_crc16(0xffff,out+4,14);
+    wr16(out+18,app_crc16(crc,out+HEADER,size));
     size_t sent=0;
     while(sent<HEADER+size) {
         int n=usb_serial_jtag_write_bytes(out+sent,HEADER+size-sent,pdMS_TO_TICKS(100));
@@ -70,9 +76,11 @@ static bool frame(uint8_t type,int i,uint32_t token,uint16_t seq,const void *dat
     return true;
 }
 static void reset_session(void) {
+    parent_auth_online(false);
     for(int i=0;i<CONFIG_APP_MQTT_MAX_CHANNELS;i++) { close_channel(i); }
     epoch=esp_random();if(!epoch) { epoch=1; }
-    decoded=0;ready=false;failed=false;network_enabled=false;last_network=0;last_hello=0;last_host=now_ms();
+    decoded=0;ready=false;failed=false;network_enabled=false;data_limit=LEGACY_CHUNK;
+    last_network=0;last_hello=0;last_host=now_ms();
     ESP_LOGW(TAG,"USB session reset epoch=%lu",(unsigned long)epoch);
 }
 static void receive_frame(void) {
@@ -81,8 +89,19 @@ static void receive_frame(void) {
     if(type==RESET) { failed=true;return; }
     if(session!=epoch) { return; }
     last_host=now_ms();
-    if(type==READY && i==255 && !token && !size) { ready=true;network_enabled=(seq==1);return; }
+    if(type==READY && i==255 && !token && !size) {
+        if(ready) { return; }
+        uint16_t features=seq & ~READY_DATA_1024;
+        if(features>2) { return; }
+        data_limit=(seq & READY_DATA_1024)?CHUNK:LEGACY_CHUNK;
+        ready=true;network_enabled=(features>=1);parent_auth_online(features==2);
+        if(features!=2) { ESP_LOGW(TAG,"Host lacks parent-auth negotiation; children remain unauthorized"); }
+        return;
+    }
     if(type==PONG && i==255 && !size) { return; }
+    if(type==PARENT_GRANT && ready && i==255 && !token && !seq && size==PA_GRANT_SIZE) {
+        (void)parent_auth_accept_grant(decoder+HEADER,size);return;
+    }
     if(!ready || i>=CONFIG_APP_MQTT_MAX_CHANNELS || channels[i].fd<0 || token!=channels[i].token) { return; }
     channel_t *c=&channels[i];
     if(type==CLOSE && !size) { close_channel(i); }
@@ -100,10 +119,10 @@ static void feed(uint8_t b) {
     }
     if(decoded<HEADER) { return; }
     uint16_t size=rd16(decoder+16);
-    if(size>CHUNK) { failed=true;decoded=0;return; }
+    if(size>(decoder[4]==DATA?data_limit:LEGACY_CHUNK)) { failed=true;decoded=0;return; }
     if(decoded<HEADER+size) { return; }
-    uint8_t check[14+CHUNK];memcpy(check,decoder+4,14);memcpy(check+14,decoder+HEADER,size);
-    if(rd16(decoder+18)!=app_crc16(check,14+size)) { failed=true; }
+    uint16_t crc=app_crc16(0xffff,decoder+4,14);
+    if(rd16(decoder+18)!=app_crc16(crc,decoder+HEADER,size)) { failed=true; }
     else { receive_frame(); }
     decoded=0;
 }
@@ -113,11 +132,11 @@ static void report_network(void) {
     cJSON *status=app_status_payload();
     if(message && status) {
         /* Keep the optional diagnostic control frame within the 512-byte MUX budget. */
-        const char *omit[]={"heap","heap_min","uptime_ms","topology"};
+        const char *omit[]={"heap","heap_min","uptime_ms","topology","parent_auth"};
         for(unsigned k=0;k<sizeof(omit)/sizeof(omit[0]);k++) { cJSON_DeleteItemFromObjectCaseSensitive(status,omit[k]); }
         cJSON_AddItemToObject(message,"payload",status);status=NULL;
         char *json=cJSON_PrintUnformatted(message);
-        if(json && strlen(json)<=CHUNK) { frame(NETWORK,255,0,0,json,strlen(json)); }
+        if(json && strlen(json)<=LEGACY_CHUNK) { frame(NETWORK,255,0,0,json,strlen(json)); }
         cJSON_free(json);
     }
     cJSON_Delete(status);cJSON_Delete(message);
@@ -134,9 +153,15 @@ static void tunnel_task(void *arg) {
     reset_session();ESP_LOGI(TAG,"TCP TLS byte tunnel listening port=%d",CONFIG_APP_MQTT_PORT);
     for(;;) {
         if(failed || now_ms()-last_host>5000) { reset_session(); }
-        if(now_ms()-last_hello>1000) { frame(ready?PING:RESET,255,0,0,NULL,0);last_hello=now_ms(); }
+        if(now_ms()-last_hello>1000) {
+            frame(ready?PING:RESET,255,0,ready?0:RESET_OFFER_1024,NULL,0);last_hello=now_ms();
+        }
         uint8_t input[CHUNK];int n=usb_serial_jtag_read_bytes(input,sizeof(input),0);
         for(int k=0;k<n;k++) { feed(input[k]);if(failed) { break; } }
+        if(ready && !failed) {
+            pa_request_t request;
+            if(parent_auth_take_request(&request)) { frame(PARENT_REQUEST,255,0,0,&request,sizeof(request)); }
+        }
         if(ready && network_enabled && !failed && now_ms()-last_network>5000) {
             report_network();last_network=now_ms();
         }
@@ -159,7 +184,7 @@ static void tunnel_task(void *arg) {
                 else if(n==0 || !would_block()) { drop=true; }
             }
             if(c->open && !c->waiting) {
-                n=recv(c->fd,input,sizeof(input),0);
+                n=recv(c->fd,input,data_limit,0);
                 if(n>0) { frame(DATA,i,c->token,c->tx_seq,input,n);c->waiting=true;c->deadline=now_ms()+15000; }
                 else if(n==0 || !would_block()) { drop=true; }
             }

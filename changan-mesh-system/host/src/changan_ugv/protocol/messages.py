@@ -4,7 +4,8 @@ import re
 import uuid
 
 MAX_JSON = 1024
-MAX_COMMAND = 512
+LEGACY_MAX_COMMAND = 512
+MAX_COMMAND = 1024
 NODE_ID = re.compile(r'^[A-Za-z0-9_-]{1,32}$')
 
 
@@ -59,5 +60,5 @@ def command(line, msg_id=None):
     else:
         raise ValueError('Supported commands: list, ping, status, echo')
     if len(encode(message)) > MAX_COMMAND:
-        raise ValueError('PC request exceeds the 512-byte command limit')
+        raise ValueError(f'Command exceeds {MAX_COMMAND} UTF-8 bytes')
     return message

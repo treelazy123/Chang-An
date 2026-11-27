@@ -28,6 +28,49 @@ class ProtocolContracts(unittest.TestCase):
             self.assertEqual(encode(body),module.encode(body))
 
 class MigrationBoundaries(unittest.TestCase):
+    def test_parent_auth_early_requirements_without_sdkconfig_or_enrollment(self):
+        cmake=shutil.which('cmake')
+        if not cmake:
+            candidates=sorted(Path('C:/Espressif/tools/cmake').glob('*/bin/cmake.exe'))
+            if candidates:cmake=str(candidates[-1])
+        if not cmake:self.skipTest('CMake unavailable for script-only requirements check')
+        with tempfile.TemporaryDirectory() as directory:
+            temp=Path(directory);output=temp/'requires.txt';script=temp/'early.cmake'
+            component=ROOT/'firmware/components/parent_auth/CMakeLists.txt'
+            # Match IDF's early macro: return exits the included component file.
+            # Deliberately provide no MESH_SYSTEM_ROOT, CONFIG_* or key files.
+            script.write_text('''cmake_minimum_required(VERSION 3.22)
+macro(idf_component_register)
+    cmake_parse_arguments(COMP "" "" "SRCS;INCLUDE_DIRS;REQUIRES;EMBED_FILES" ${ARGN})
+    if(COMP_EMBED_FILES)
+        message(FATAL_ERROR "Early dependency scan must not embed device identities")
+    endif()
+    file(WRITE "${CHECK_OUTPUT}" "${COMP_REQUIRES}")
+    return()
+endmacro()
+set(CMAKE_BUILD_EARLY_EXPANSION 1)
+'''+f'set(CHECK_OUTPUT "{output.as_posix()}")\ninclude("{component.as_posix()}")\n',encoding='utf-8')
+            result=subprocess.run([cmake,'-P',str(script)],capture_output=True,text=True)
+            self.assertEqual(0,result.returncode,result.stderr)
+            requirements=output.read_text().split(';')
+            for required in ('mesh_lite','node_role','mbedtls','esp_wifi','freertos'):
+                self.assertIn(required,requirements)
+            # The normal pass still fails closed when a real enrollment is absent
+            # or malformed; the early-pass exception must not weaken that check.
+            script.write_text('''cmake_minimum_required(VERSION 3.22)
+function(idf_component_register)
+endfunction()
+'''+f'set(MESH_SYSTEM_ROOT "{temp.as_posix()}")\nset(CONFIG_APP_NODE_ID "ugv-root")\ninclude("{component.as_posix()}")\n',encoding='utf-8')
+            result=subprocess.run([cmake,'-P',str(script)],capture_output=True,text=True)
+            self.assertNotEqual(0,result.returncode)
+            self.assertIn('Missing parent-auth enrollment',result.stderr)
+            auth=temp/'secrets/parent-auth';(auth/'nodes/ugv-root').mkdir(parents=True)
+            (auth/'nodes/ugv-root/auth.key').write_bytes(b'wrong')
+            (auth/'authority.pub').write_bytes(b'P'*65)
+            result=subprocess.run([cmake,'-P',str(script)],capture_output=True,text=True)
+            self.assertNotEqual(0,result.returncode)
+            self.assertIn('Invalid raw P-256',result.stderr)
+
     def test_third_party_source_bytes_preserved(self):
         manifest=json.loads((ROOT/'legacy/verification/migration-source-manifest.json').read_text(encoding='utf-8'))
         vendors={p.name for p in (ROOT/'third_party').iterdir() if p.is_dir()}
@@ -49,11 +92,13 @@ class MigrationBoundaries(unittest.TestCase):
             temp=Path(temp)
             for name in ('ca.pem','client.pem','client.key'):
                 p=temp/'secrets/test-node'/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('fixture')
+            auth=temp/'secrets/parent-auth';(auth/'nodes/test-node').mkdir(parents=True)
+            (auth/'authority.pub').write_bytes(b'P'*65);(auth/'nodes/test-node/auth.key').write_bytes(b'K'*32)
             # idf_component_register stub checks declarations only; no compiler/IDF is invoked.
             preamble=r"""cmake_minimum_required(VERSION 3.22)
 function(idf_component_register)
-    cmake_parse_arguments(COMP "" "" "SRCS;INCLUDE_DIRS;REQUIRES;EMBED_TXTFILES" ${ARGN})
-    foreach(source IN LISTS COMP_SRCS COMP_EMBED_TXTFILES)
+    cmake_parse_arguments(COMP "" "" "SRCS;INCLUDE_DIRS;REQUIRES;EMBED_TXTFILES;EMBED_FILES" ${ARGN})
+    foreach(source IN LISTS COMP_SRCS COMP_EMBED_TXTFILES COMP_EMBED_FILES)
         get_filename_component(resolved "${source}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_LIST_DIR}")
         if(NOT EXISTS "${resolved}")
             message(FATAL_ERROR "Missing declared source: ${resolved}")
@@ -67,7 +112,7 @@ endfunction()
                     output=temp/f'{role}-{mqtt}.txt'
                     script=temp/'check.cmake'
                     s=preamble+f'\nset(CHECK_OUTPUT "{output.as_posix()}")\nset(MESH_SYSTEM_ROOT "{temp.as_posix()}")\nset(CONFIG_APP_NODE_ID "test-node")\nset(CONFIG_APP_ROLE_{role.upper()} 1)\nset(CONFIG_APP_TRANSPORT_MQTT_SERIAL {mqtt})\n'
-                    for directory in ('main','components/parent_policy','components/network_mesh_lite','components/mqtt_serial','components/task_agent'):
+                    for directory in ('main','components/parent_auth','components/parent_policy','components/network_mesh_lite','components/mqtt_serial','components/task_agent'):
                         s+=f'include("{(ROOT/"firmware"/directory/"CMakeLists.txt").as_posix()}")\n'
                     script.write_text(s,encoding='utf-8')
                     result=subprocess.run([cmake,'-P',str(script)],capture_output=True,text=True)
@@ -78,6 +123,9 @@ endfunction()
                         self.assertNotIn(f'/apps/{other}/app.c',sources)
                     self.assertEqual(role=='ugv_root','/apps/ugv_root/serial_tunnel.c' in sources)
                     self.assertIn('/task_agent/task_agent.c',sources)
+                    self.assertIn('/parent_auth/parent_auth.c',sources)
+                    self.assertIn('/parent-auth/nodes/test-node/auth.key',sources)
+                    self.assertIn('/parent-auth/authority.pub',sources)
             output=temp/'ugv-v2.txt'
             s=preamble+f'\nset(CHECK_OUTPUT "{output.as_posix()}")\nset(MESH_SYSTEM_ROOT "{temp.as_posix()}")\nset(CONFIG_APP_NODE_ID "test-node")\nset(CONFIG_APP_ROLE_UGV 1)\nset(CONFIG_APP_TRANSPORT_MQTT_SERIAL 1)\n'
             s+=f'include("{(ROOT/"firmware/components/mqtt_serial/CMakeLists.txt").as_posix()}")\n'
@@ -122,4 +170,12 @@ class RuntimeHandoff(unittest.TestCase):
         (self.source/'secrets/ca.pem').write_text('wrong CA')
         with self.assertRaisesRegex(ValueError,'CA differs'):sync_runtime(self.source,self.target)
         self.assertEqual(old,(self.target/'secrets/ca.pem').read_bytes())
+    def test_parent_authority_identity_conflict_is_rejected_before_runtime_copy(self):
+        source=self.source/'secrets/parent-auth/authority.key'
+        target=self.target/'secrets/parent-auth/authority.key'
+        source.parent.mkdir();target.parent.mkdir()
+        source.write_bytes(b's'*32);target.write_bytes(b't'*32)
+        with self.assertRaisesRegex(ValueError,'parent-auth enrollment differs'):sync_runtime(self.source,self.target)
+        self.assertEqual(b't'*32,target.read_bytes())
+        self.assertFalse((self.target/'runtime/ugv-root/tasks.sqlite3').exists())
 if __name__=='__main__':unittest.main()
